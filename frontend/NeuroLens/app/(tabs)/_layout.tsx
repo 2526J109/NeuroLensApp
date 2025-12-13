@@ -19,9 +19,12 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarStyle: Platform.select({
           ios: {
-            position: 'absolute', // Transparent background on iOS
+            position: 'absolute',
+            backgroundColor: Colors[colorScheme ?? 'light'].background, // Use theme background
           },
-          default: {},
+          default: {
+            backgroundColor: Colors[colorScheme ?? 'light'].background,
+          },
         }),
       }}>
       <Tabs.Screen

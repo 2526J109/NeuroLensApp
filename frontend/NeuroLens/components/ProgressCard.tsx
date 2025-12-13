@@ -44,8 +44,7 @@ export const ProgressCard = () => {
                             strokeDasharray={circumference}
                             strokeDashoffset={strokeDashoffset}
                             strokeLinecap="round"
-                            rotation="-90"
-                            origin="50, 50"
+                            transform="rotate(-90, 50, 50)"
                         />
                     </Svg>
                     <View style={styles.percentageContainer}>
