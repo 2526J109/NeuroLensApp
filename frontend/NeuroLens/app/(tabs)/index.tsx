@@ -44,6 +44,7 @@ export default function HomeScreen() {
           icon={Mic}
           color="#A855F7" // Purple
           isCompleted={false}
+          onPress={() => router.push('/voice-analysis')}
         />
 
         <AssessmentTestItem
