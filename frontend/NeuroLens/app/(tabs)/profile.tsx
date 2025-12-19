@@ -8,6 +8,7 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import {
   Mail,
   Phone,
@@ -15,9 +16,11 @@ import {
   Bell,
   Shield,
   LogOut,
+  ArrowLeft,
 } from 'lucide-react-native';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const [pushNotifications, setPushNotifications] = useState(true);
   const [dataPrivacyMode, setDataPrivacyMode] = useState(false);
 
@@ -35,9 +38,13 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Custom Header */}
       <View style={styles.header}>
-        <View style={styles.headerPlaceholder} />
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <ArrowLeft size={24} color="#0F172A" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={styles.headerPlaceholder} />
       </View>
 
       <ScrollView
@@ -160,22 +167,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
-  headerPlaceholder: {
-    width: 40,
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+    marginRight: 12,
   },
   headerTitle: {
-    flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
     color: '#0F172A',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   scrollContent: {
     padding: 20,
