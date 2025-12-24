@@ -25,8 +25,8 @@ export default function ProfileScreen() {
   const [dataPrivacyMode, setDataPrivacyMode] = useState(false);
 
   const handleSignOut = () => {
-    // TODO: Implement sign out logic
-    console.log('Sign out pressed');
+    // Navigate to onboarding screen on signout
+    router.replace('/onboarding');
   };
 
   const handlePrivacySecurity = () => {
