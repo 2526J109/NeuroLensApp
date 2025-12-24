@@ -53,6 +53,7 @@ export default function HomeScreen() {
           icon={PenTool}
           color="#F97316" // Orange
           isCompleted={false}
+          onPress={() => router.push('/drawing-test')}
         />
 
         <AssessmentTestItem
