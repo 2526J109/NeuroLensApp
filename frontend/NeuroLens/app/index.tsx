@@ -6,17 +6,22 @@ export default function Index() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if onboarding is completed (you can use AsyncStorage or similar)
-    // For now, always show onboarding first
-    // TODO: Add logic to check if user has completed onboarding
-    const hasCompletedOnboarding = false; // Replace with actual check
+    // Use requestAnimationFrame to ensure navigation happens after render
+    const frameId = requestAnimationFrame(() => {
+      // Check if onboarding is completed (you can use AsyncStorage or similar)
+      // For now, always show onboarding first
+      // TODO: Add logic to check if user has completed onboarding
+      const hasCompletedOnboarding = false; // Replace with actual check
 
-    if (hasCompletedOnboarding) {
-      router.replace('/login');
-    } else {
-      router.replace('/onboarding');
-    }
-  }, []);
+      if (hasCompletedOnboarding) {
+        router.replace('/login');
+      } else {
+        router.replace('/onboarding');
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [router]);
 
   return (
     <View style={styles.container}>

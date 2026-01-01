@@ -35,7 +35,7 @@ export default function VoiceAnalysisScreen() {
   const [recordings, setRecordings] = useState<{ [key: number]: any }>({});
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const isUnloadingRef = useRef(false);
 
