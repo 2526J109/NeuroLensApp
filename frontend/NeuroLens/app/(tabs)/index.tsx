@@ -62,6 +62,7 @@ export default function HomeScreen() {
           icon={Brain}
           color="#10B981" // Green
           isCompleted={false}
+          onPress={() => router.push('/cognitive-test')}
         />
 
         <TipCard />
