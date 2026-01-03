@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -77,19 +78,24 @@ const DEFAULT_TEST_RESULTS: TestResult[] = [
   },
 ];
 
-const CircularProgress = ({ percentage, size = 120 }: { percentage: number; size?: number }) => {
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmallScreen = SCREEN_WIDTH < 375;
+
+const CircularProgress = ({ percentage, size }: { percentage: number; size?: number }) => {
+  const defaultSize = isSmallScreen ? 100 : 120;
+  const progressSize = size || defaultSize;
   const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
+  const radius = (progressSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percentage / 100) * circumference;
 
   return (
-    <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size}>
+    <View style={{ width: progressSize, height: progressSize }}>
+      <Svg width={progressSize} height={progressSize}>
         {/* Background circle */}
         <Circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={progressSize / 2}
+          cy={progressSize / 2}
           r={radius}
           stroke="#E2E8F0"
           strokeWidth={strokeWidth}
@@ -97,8 +103,8 @@ const CircularProgress = ({ percentage, size = 120 }: { percentage: number; size
         />
         {/* Progress circle */}
         <Circle
-          cx={size / 2}
-          cy={size / 2}
+          cx={progressSize / 2}
+          cy={progressSize / 2}
           r={radius}
           stroke="#14B8A6"
           strokeWidth={strokeWidth}
@@ -106,10 +112,10 @@ const CircularProgress = ({ percentage, size = 120 }: { percentage: number; size
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          transform={`rotate(-90 ${progressSize / 2} ${progressSize / 2})`}
         />
       </Svg>
-      <View style={[styles.progressContent, { width: size, height: size }]}>
+      <View style={[styles.progressContent, { width: progressSize, height: progressSize }]}>
         <Text style={styles.progressPercentage}>{percentage}%</Text>
         <Text style={styles.progressLabel}>Complete</Text>
       </View>
@@ -292,8 +298,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: isSmallScreen ? 16 : 20,
+    paddingVertical: isSmallScreen ? 12 : 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
@@ -301,22 +307,23 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
-    marginRight: 12,
+    marginRight: isSmallScreen ? 8 : 12,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
     color: '#0F172A',
     textAlign: 'left',
+    flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: isSmallScreen ? 12 : 20,
   },
   overallScoreCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
+    borderRadius: isSmallScreen ? 12 : 16,
+    padding: isSmallScreen ? 16 : 24,
+    marginBottom: isSmallScreen ? 16 : 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -324,10 +331,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   overallScoreCardLabel: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     fontWeight: '500',
     color: '#64748B',
-    marginBottom: 12,
+    marginBottom: isSmallScreen ? 8 : 12,
   },
   overallScoreHeader: {
     flexDirection: 'row',
@@ -336,12 +343,13 @@ const styles = StyleSheet.create({
   },
   overallScoreLeft: {
     flex: 1,
+    marginRight: isSmallScreen ? 8 : 12,
   },
   overallScoreTitle: {
-    fontSize: 24,
+    fontSize: isSmallScreen ? 18 : 24,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginBottom: 12,
+    marginBottom: isSmallScreen ? 8 : 12,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -349,14 +357,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1FAE5',
     borderWidth: 1,
     borderColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: isSmallScreen ? 8 : 10,
+    paddingVertical: isSmallScreen ? 4 : 6,
     borderRadius: 16,
     alignSelf: 'flex-start',
     gap: 4,
   },
   statusBadgeText: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 10 : 12,
     fontWeight: '600',
     color: '#059669',
   },
@@ -366,26 +374,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressPercentage: {
-    fontSize: 28,
+    fontSize: isSmallScreen ? 22 : 28,
     fontWeight: 'bold',
     color: '#0F172A',
   },
   progressLabel: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 10 : 12,
     color: '#64748B',
     marginTop: 4,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginBottom: 16,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   testResultCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: isSmallScreen ? 12 : 16,
+    padding: isSmallScreen ? 14 : 20,
+    marginBottom: isSmallScreen ? 12 : 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -395,24 +403,25 @@ const styles = StyleSheet.create({
   testResultHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: isSmallScreen ? 10 : 12,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: isSmallScreen ? 40 : 48,
+    height: isSmallScreen ? 40 : 48,
+    borderRadius: isSmallScreen ? 10 : 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: isSmallScreen ? 10 : 12,
   },
   testResultContent: {
     flex: 1,
+    minWidth: 0,
   },
   testResultTitle: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: '600',
     color: '#0F172A',
-    marginBottom: 8,
+    marginBottom: isSmallScreen ? 6 : 8,
   },
   progressBarContainer: {
     height: 6,
@@ -426,88 +435,89 @@ const styles = StyleSheet.create({
   },
   testResultRight: {
     alignItems: 'flex-end',
-    marginLeft: 12,
+    marginLeft: isSmallScreen ? 8 : 12,
+    flexShrink: 0,
   },
   testResultPercentage: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: 'bold',
     color: '#0F172A',
     marginBottom: 4,
   },
   statusIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: isSmallScreen ? 18 : 20,
+    height: isSmallScreen ? 18 : 20,
+    borderRadius: isSmallScreen ? 9 : 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   testResultDescription: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     color: '#64748B',
-    lineHeight: 20,
+    lineHeight: isSmallScreen ? 18 : 20,
   },
   recommendationsCard: {
     backgroundColor: '#F0FDFA',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: isSmallScreen ? 12 : 16,
+    padding: isSmallScreen ? 16 : 20,
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   recommendationsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   infoIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: isSmallScreen ? 28 : 32,
+    height: isSmallScreen ? 28 : 32,
+    borderRadius: isSmallScreen ? 14 : 16,
     backgroundColor: '#14B8A6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: isSmallScreen ? 10 : 12,
   },
   recommendationsTitle: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: 'bold',
     color: '#0F172A',
   },
   recommendationsList: {
-    gap: 12,
+    gap: isSmallScreen ? 10 : 12,
   },
   recommendationItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   bullet: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     color: '#14B8A6',
-    marginRight: 8,
-    lineHeight: 22,
+    marginRight: isSmallScreen ? 6 : 8,
+    lineHeight: isSmallScreen ? 20 : 22,
   },
   recommendationText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     color: '#0F172A',
-    lineHeight: 22,
+    lineHeight: isSmallScreen ? 20 : 22,
   },
   disclaimer: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 11 : 12,
     color: '#64748B',
-    lineHeight: 18,
+    lineHeight: isSmallScreen ? 16 : 18,
     textAlign: 'center',
     marginTop: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: isSmallScreen ? 12 : 20,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: isSmallScreen ? 12 : 16,
     gap: 8,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     color: '#64748B',
   },
 });
