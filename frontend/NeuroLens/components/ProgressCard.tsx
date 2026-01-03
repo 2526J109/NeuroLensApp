@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 export const ProgressCard = () => {
@@ -10,6 +10,17 @@ export const ProgressCard = () => {
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
+    const handleViewResults = () => {
+        const url = 'http://localhost:8081/results';
+        if (Platform.OS === 'web') {
+            // Navigate in the same tab for web
+            window.location.href = url;
+        } else {
+            // Use Linking for native platforms
+            Linking.openURL(url);
+        }
+    };
+
     return (
         <View style={styles.card}>
             <View style={styles.contentContainer}>
@@ -17,7 +28,10 @@ export const ProgressCard = () => {
                     <Text style={styles.cardTitle}>Your Progress</Text>
                     <Text style={styles.subtitle}>1 of 4 tests completed</Text>
 
-                    <TouchableOpacity style={styles.button}>
+                    <TouchableOpacity 
+                        style={styles.button}
+                        onPress={handleViewResults}
+                    >
                         <Text style={styles.buttonText}>View Results</Text>
                     </TouchableOpacity>
                 </View>

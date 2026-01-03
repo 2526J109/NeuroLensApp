@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -188,6 +189,9 @@ export default function HistoryScreen() {
   );
 }
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmallScreen = SCREEN_WIDTH < 400;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -196,8 +200,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: isSmallScreen ? 16 : 20,
+    paddingVertical: isSmallScreen ? 12 : 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
@@ -205,24 +209,24 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
-    marginRight: 12,
+    marginRight: isSmallScreen ? 8 : 12,
   },
   headerPlaceholder: {
     width: 0,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: isSmallScreen ? 18 : 20,
     fontWeight: 'bold',
     color: '#0F172A',
   },
   scrollContent: {
-    padding: 20,
+    padding: isSmallScreen ? 12 : 20,
   },
   summaryCard: {
     backgroundColor: '#D1FAE5',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: isSmallScreen ? 12 : 16,
+    padding: isSmallScreen ? 16 : 20,
+    marginBottom: isSmallScreen ? 16 : 20,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
@@ -232,13 +236,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: isSmallScreen ? 12 : 14,
     color: '#0F172A',
-    marginBottom: 8,
+    marginBottom: isSmallScreen ? 6 : 8,
     fontWeight: '500',
   },
   summaryValue: {
-    fontSize: 32,
+    fontSize: isSmallScreen ? 24 : 32,
     fontWeight: 'bold',
     color: '#0F172A',
   },
@@ -247,60 +251,70 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     width: 1,
-    height: 50,
+    height: isSmallScreen ? 40 : 50,
     backgroundColor: '#A7F3D0',
   },
   assessmentCard: {
     backgroundColor: '#F1F5F9',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: isSmallScreen ? 12 : 16,
+    padding: isSmallScreen ? 14 : 20,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   assessmentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: isSmallScreen ? 6 : 8,
+    flex: 1,
   },
   dateText: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: '600',
     color: '#0F172A',
+    flexShrink: 1,
   },
   scoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: isSmallScreen ? 4 : 6,
+    marginLeft: 8,
   },
   overallScoreText: {
-    fontSize: 18,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: 'bold',
     color: '#14B8A6',
   },
   categoriesContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: 16,
+    justifyContent: 'space-between',
+    width: '100%',
   },
   categoryItem: {
-    flex: 1,
-    minWidth: '22%',
+    ...(isSmallScreen ? {
+      width: '48%',
+      maxWidth: '48%',
+    } : {
+      width: '22%',
+      maxWidth: '22%',
+    }),
     alignItems: 'center',
+    marginBottom: isSmallScreen ? 12 : 0,
   },
   categoryLabel: {
-    fontSize: 12,
+    fontSize: isSmallScreen ? 11 : 12,
     color: '#64748B',
     marginBottom: 4,
     fontWeight: '500',
+    textAlign: 'center',
   },
   categoryScore: {
-    fontSize: 16,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: 'bold',
     color: '#0F172A',
   },
