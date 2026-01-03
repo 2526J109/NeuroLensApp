@@ -10,8 +10,9 @@ import { useRouter } from 'expo-router';
 // ==========================================
 const { width } = Dimensions.get('window');
 const CELL_SIZE = (width - 60) / 3; 
+const MAX_LEVEL = 3;
 
-type GameState = "intro" | "memorize" | "recall" | "result";
+type GameState = "intro" | "memorize" | "recall" | "result" | "completed";
 
 export default function CognitiveTestScreen() {
   const router = useRouter();
@@ -84,9 +85,18 @@ export default function CognitiveTestScreen() {
 
     // Check if level complete
     if (newInput.length === sequence.length) {
-      setScore((prev) => prev + level * 10);
-      setLevel((prev) => prev + 1);
-      setTimeout(() => setGameState("result"), 500); 
+      const newScore = score + level * 10;
+      setScore(newScore);
+      
+      // Check if reached max level
+      if (level >= MAX_LEVEL) {
+        // Test completed
+        setTimeout(() => setGameState("completed"), 500);
+      } else {
+        // Continue to next level
+        setLevel((prev) => prev + 1);
+        setTimeout(() => setGameState("result"), 500);
+      }
     }
   };
 
@@ -186,6 +196,7 @@ export default function CognitiveTestScreen() {
                   <Ionicons name="trophy" size={50} color="#fff" />
                 </View>
                 <Text style={styles.title}>Level Complete!</Text>
+                <Text style={styles.subtitle}>Level {level - 1} of {MAX_LEVEL}</Text>
                 <TouchableOpacity style={styles.primaryButton} onPress={startGame}>
                   <Text style={styles.btnText}>Next Level</Text>
                 </TouchableOpacity>
@@ -207,6 +218,24 @@ export default function CognitiveTestScreen() {
                 </View>
               </>
             )}
+          </View>
+        )}
+
+        {/* COMPLETION SCREEN */}
+        {gameState === "completed" && (
+          <View style={styles.centerContainer}>
+            <View style={[styles.circleIcon, { backgroundColor: '#4CAF50' }]}>
+              <Ionicons name="checkmark-circle" size={50} color="#fff" />
+            </View>
+            <Text style={styles.title}>Test Completed!</Text>
+            <Text style={styles.subtitle}>You've completed all {MAX_LEVEL} levels</Text>
+            <View style={styles.scoreContainer}>
+              <Text style={styles.scoreLabel}>Final Score</Text>
+              <Text style={styles.scoreValue}>{score}</Text>
+            </View>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
+              <Text style={styles.btnText}>Finish</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -242,5 +271,8 @@ const styles = StyleSheet.create({
   cell: { width: CELL_SIZE, height: CELL_SIZE, backgroundColor: '#1E1E1E', borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   cellHigh: { backgroundColor: '#4CAF50', transform: [{ scale: 1.05 }] },
   cellSel: { backgroundColor: '#2196F3', borderWidth: 2, borderColor: '#64B5F6' },
-  cellText: { fontSize: 32, fontWeight: 'bold', color: '#fff' }
+  cellText: { fontSize: 32, fontWeight: 'bold', color: '#fff' },
+  scoreContainer: { marginTop: 20, marginBottom: 30, alignItems: 'center' },
+  scoreLabel: { fontSize: 14, color: '#aaa', marginBottom: 8 },
+  scoreValue: { fontSize: 36, fontWeight: 'bold', color: '#4CAF50' }
 });
