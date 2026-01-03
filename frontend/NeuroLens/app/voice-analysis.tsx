@@ -327,18 +327,8 @@ export default function VoiceAnalysisScreen() {
 
       const result = await response.json();
       
-      // Navigate to results page with prediction result directly
-      // No database storage - pass result directly via route params
-      router.push({
-        pathname: '/(tabs)/results',
-        params: { 
-          voiceAnalysisResult: JSON.stringify({
-            percentage: result.result?.percentage || 0,
-            status: result.result?.status || 'warning',
-            description: result.result?.description || 'Analysis completed',
-          })
-        },
-      });
+      // Navigate to home page after completion
+      router.replace('/(tabs)');
       
     } catch (error) {
       console.error('Error analyzing voice recordings:', error);
