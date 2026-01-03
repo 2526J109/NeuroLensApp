@@ -1,23 +1,18 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router'; // CHANGED: Added Redirect import
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 export default function Index() {
-  const router = useRouter();
+  // CHANGED: Set to 'true' temporarily so you go straight to the Home Screen (Tabs) to test your game
+  const hasCompletedOnboarding = true; 
 
-  useEffect(() => {
-    // Check if onboarding is completed (you can use AsyncStorage or similar)
-    // For now, always show onboarding first
-    // TODO: Add logic to check if user has completed onboarding
-    const hasCompletedOnboarding = false; // Replace with actual check
+  // CHANGED: Replaced the crashing useEffect logic with safe <Redirect> components
+  if (hasCompletedOnboarding) {
+    return <Redirect href="/(tabs)" />;
+  } else {
+    return <Redirect href="/onboarding" />;
+  }
 
-    if (hasCompletedOnboarding) {
-      router.replace('/login');
-    } else {
-      router.replace('/onboarding');
-    }
-  }, []);
-
+  // This UI is technically skipped now, but kept to preserve your styling code
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#14B8A6" />
@@ -33,4 +28,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 });
-
