@@ -66,9 +66,10 @@ export default function DrawingTestScreen() {
             setCurrentTest('wave');
             handleClear();
         } else {
-            // Both tests completed - could navigate back or show completion
+            // Both tests completed - navigate to home page
             console.log('🎉 All drawing tests completed!');
             handleClear();
+            router.replace('/(tabs)');
         }
     };
 
