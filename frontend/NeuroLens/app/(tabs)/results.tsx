@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   Watch,
   Mic,
@@ -19,6 +20,7 @@ import {
   ArrowLeft,
 } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
+// No API import needed - results passed directly via route params
 
 interface TestResult {
   id: string;
@@ -31,7 +33,8 @@ interface TestResult {
   description: string;
 }
 
-const TEST_RESULTS: TestResult[] = [
+// Default test results (fallback)
+const DEFAULT_TEST_RESULTS: TestResult[] = [
   {
     id: 'movement',
     title: 'Movement Analysis',
@@ -124,7 +127,44 @@ const ProgressBar = ({ percentage, color }: { percentage: number; color: string 
 
 export default function ResultsScreen() {
   const router = useRouter();
-  const overallScore = 82;
+  const params = useLocalSearchParams();
+  const [testResults, setTestResults] = useState<TestResult[]>(DEFAULT_TEST_RESULTS);
+  const [overallScore, setOverallScore] = useState(82);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Get voice analysis result from route params (passed directly, no database)
+    const voiceAnalysisResultParam = params.voiceAnalysisResult as string;
+    if (voiceAnalysisResultParam) {
+      try {
+        const voiceResult = JSON.parse(voiceAnalysisResultParam);
+        
+        // Update voice analysis result
+        const updatedResults = [...DEFAULT_TEST_RESULTS];
+        const voiceIndex = updatedResults.findIndex(r => r.id === 'voice');
+        
+        if (voiceIndex !== -1) {
+          updatedResults[voiceIndex] = {
+            ...updatedResults[voiceIndex],
+            percentage: voiceResult.percentage || 0,
+            status: voiceResult.status === 'good' ? 'good' : 'warning',
+            description: voiceResult.description || 'Voice analysis completed',
+            iconColor: voiceResult.status === 'good' ? '#10B981' : '#F97316',
+            backgroundColor: voiceResult.status === 'good' ? '#D1FAE5' : '#FED7AA',
+          };
+        }
+        
+        setTestResults(updatedResults);
+        
+        // Recalculate overall score (average of all test results)
+        const avgScore = updatedResults.reduce((sum, r) => sum + r.percentage, 0) / updatedResults.length;
+        setOverallScore(Math.round(avgScore));
+      } catch (error) {
+        console.error('Error parsing voice analysis result:', error);
+        // Keep default results on error
+      }
+    }
+  }, [params.voiceAnalysisResult]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -161,7 +201,14 @@ export default function ResultsScreen() {
         {/* Test Results Section */}
         <Text style={styles.sectionTitle}>Test Results</Text>
 
-        {TEST_RESULTS.map((result) => {
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#14B8A6" />
+            <Text style={styles.loadingText}>Loading voice analysis results...</Text>
+          </View>
+        )}
+
+        {testResults.map((result) => {
           const IconComponent = result.icon;
           return (
             <View key={result.id} style={styles.testResultCard}>
@@ -451,5 +498,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748B',
   },
 });
