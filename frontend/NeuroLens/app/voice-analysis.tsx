@@ -6,11 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
   Animated,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Mic, ArrowLeft, Play, Square, Check, Volume2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
+import { API_ENDPOINTS } from '../constants/api';
 
 const PROMPTS = [
   {
@@ -35,7 +38,8 @@ export default function VoiceAnalysisScreen() {
   const [recordings, setRecordings] = useState<{ [key: number]: any }>({});
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const isUnloadingRef = useRef(false);
 
@@ -280,9 +284,72 @@ export default function VoiceAnalysisScreen() {
     }
   };
 
-  const handleCompleteTest = () => {
-    // Navigate back to home or show completion message
-    router.back();
+  const handleCompleteTest = async () => {
+    // Check if all recordings are complete
+    const allRecordingsComplete = PROMPTS.every((_, index) => recordings[index]);
+    
+    if (!allRecordingsComplete) {
+      Alert.alert(
+        'Incomplete Test',
+        'Please complete all recordings before submitting.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
+    try {
+      // Prepare recordings data for API
+      const recordingsData = PROMPTS.map((prompt, index) => {
+        const recording = recordings[index];
+        return {
+          prompt_id: prompt.id,
+          duration: recording.duration || 0,
+          uri: recording.uri || '',
+        };
+      });
+
+      // Send to backend for analysis
+      const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recordings: recordingsData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Navigate to results page with prediction result directly
+      // No database storage - pass result directly via route params
+      router.push({
+        pathname: '/(tabs)/results',
+        params: { 
+          voiceAnalysisResult: JSON.stringify({
+            percentage: result.result?.percentage || 0,
+            status: result.result?.status || 'warning',
+            description: result.result?.description || 'Analysis completed',
+          })
+        },
+      });
+      
+    } catch (error) {
+      console.error('Error analyzing voice recordings:', error);
+      Alert.alert(
+        'Analysis Error',
+        'Failed to analyze voice recordings. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const currentPrompt = PROMPTS[currentPromptIndex];
@@ -400,12 +467,22 @@ export default function VoiceAnalysisScreen() {
             </TouchableOpacity>
           ) : isLastPrompt && hasRecording ? (
             <TouchableOpacity
-              style={styles.completeButton}
+              style={[styles.completeButton, isAnalyzing && styles.completeButtonDisabled]}
               onPress={handleCompleteTest}
               activeOpacity={0.8}
+              disabled={isAnalyzing}
             >
-              <Check size={20} color="#FFFFFF" />
-              <Text style={styles.completeButtonText}>Complete Test</Text>
+              {isAnalyzing ? (
+                <>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.completeButtonText}>Analyzing...</Text>
+                </>
+              ) : (
+                <>
+                  <Check size={20} color="#FFFFFF" />
+                  <Text style={styles.completeButtonText}>Complete Test</Text>
+                </>
+              )}
             </TouchableOpacity>
           ) : hasRecording ? (
             <TouchableOpacity
@@ -605,6 +682,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
     width: '100%',
+  },
+  completeButtonDisabled: {
+    opacity: 0.6,
   },
   completeButtonText: {
     fontSize: 16,
