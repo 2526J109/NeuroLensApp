@@ -75,8 +75,8 @@ export default function SignupScreen() {
     if (validateForm()) {
       // TODO: Implement signup logic
       console.log('Create account pressed', { fullName, email, password });
-      // After successful signup, navigate to home
-      router.replace('/(tabs)');
+      // After successful signup, navigate to login page
+      router.replace('/login');
     }
   };
 
