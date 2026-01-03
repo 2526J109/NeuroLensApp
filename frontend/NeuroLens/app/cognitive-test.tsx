@@ -1,368 +1,371 @@
-import React, { useState, useEffect } from "react";
+console.log("### NEW COGNITIVE FILE LOADED ###");
+
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  TouchableOpacity,
   Dimensions,
-  ScrollView,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Stack, useRouter } from "expo-router";
+import { Brain } from "lucide-react-native";
 
-// ==========================================
-// CONFIGURATION
-// ==========================================
 const { width } = Dimensions.get("window");
-const CELL_SIZE = (width - 60) / 3;
 
-type GameState = "intro" | "memorize" | "recall" | "result";
+/* ================= CONFIG ================= */
 
-export default function CognitiveTestScreen() {
+// FLOW
+type Stage = "intro" | "task1" | "task2" | "done";
+
+// TASK 1 – QUICK CHOICE (processing speed)
+const TASK1_MAX_RESPONSES = 8;
+const TASK1_MAX_TIME = 15_000; // 15 seconds
+const TASK1_SYMBOLS = ["▲", "●", "■"];
+
+// TASK 2 – ODD ONE OUT (visual search)
+const TASK2_MAX_ROUNDS = 6;
+const TASK2_MAX_TIME = 12_000; // 12 seconds
+const TASK2_BASE_GRID = ["●", "●", "●", "●", "▲"];
+
+/* ================= COMPONENT ================= */
+
+export default function CognitiveTest() {
   const router = useRouter();
+  const [stage, setStage] = useState<Stage>("intro");
 
-  // STATE
-  const [gameState, setGameState] = useState<GameState>("intro");
-  const [level, setLevel] = useState(1);
-  const [score, setScore] = useState(0);
-  const [sequence, setSequence] = useState<number[]>([]);
-  const [userInput, setUserInput] = useState<number[]>([]);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [highlightedCell, setHighlightedCell] = useState<number | null>(null);
+  /* -------- TASK 1 STATE -------- */
+  const [t1Count, setT1Count] = useState(0);
+  const [t1Symbol, setT1Symbol] = useState("▲");
+  const t1StartRef = useRef<number>(0);
+  const t1GlobalStart = useRef<number>(0);
+  const [task1Data, setTask1Data] = useState<any[]>([]);
 
-  const sequenceLength = level + 2;
-  // Maximum levels before the game stops
-  const MAX_LEVEL = 5;
-  const [finished, setFinished] = useState(false);
+  /* -------- TASK 2 STATE -------- */
+  const [t2Round, setT2Round] = useState(0);
+  const [grid, setGrid] = useState<string[]>([]);
+  const [target, setTarget] = useState("▲");
+  const t2StartRef = useRef<number>(0);
+  const t2GlobalStart = useRef<number>(0);
+  const [task2Data, setTask2Data] = useState<any[]>([]);
 
-  // LOGIC: Generate random sequence (1-9)
-  const generateSequence = (length: number): number[] => {
-    return Array.from({ length }, () => Math.floor(Math.random() * 9) + 1);
+  /* ================= HELPERS ================= */
+
+  const randomSymbol = () =>
+    TASK1_SYMBOLS[Math.floor(Math.random() * TASK1_SYMBOLS.length)];
+
+  /* ================= TASK 1 ================= */
+
+  const startTask1 = () => {
+    setTask1Data([]);
+    setT1Count(0);
+    setT1Symbol(randomSymbol());
+    t1StartRef.current = Date.now();
+    t1GlobalStart.current = Date.now();
+    setStage("task1");
   };
 
-  // TIMER LOGIC
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (gameState === "memorize" && timeLeft > 0) {
-      timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (gameState === "memorize" && timeLeft === 0) {
-      setGameState("recall");
-    }
-    return () => clearTimeout(timer);
-  }, [gameState, timeLeft]);
+  const handleTask1Press = (choice: string) => {
+    const now = Date.now();
 
-  // SEQUENCE PLAYBACK LOGIC
-  useEffect(() => {
-    if (gameState === "memorize") {
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index < sequence.length) {
-          setHighlightedCell(sequence[index]);
-          setTimeout(() => setHighlightedCell(null), 400); // Highlight duration
-          index++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 800); // Speed of sequence
-      return () => clearInterval(interval);
-    }
-  }, [gameState, sequence]);
+    setTask1Data((d) => [
+      ...d,
+      {
+        rt: now - t1StartRef.current,
+        correct: choice === t1Symbol,
+      },
+    ]);
 
-  // HANDLERS
-  const startGame = () => {
-    if (finished) return;
+    const nextCount = t1Count + 1;
+    setT1Count(nextCount);
 
-    const newSequence = generateSequence(sequenceLength);
-    setSequence(newSequence);
-    setUserInput([]);
-    setTimeLeft(sequenceLength + 2);
-    setGameState("memorize");
-  };
-
-  const handleCellTap = (num: number) => {
-    if (gameState !== "recall") return;
-
-    const newInput = [...userInput, num];
-    setUserInput(newInput);
-
-    // Check if wrong immediately
-    const currentIndex = newInput.length - 1;
-    if (newInput[currentIndex] !== sequence[currentIndex]) {
-      setGameState("result"); // Game Over
+    // STOP CONDITIONS
+    if (
+      nextCount >= TASK1_MAX_RESPONSES ||
+      now - t1GlobalStart.current >= TASK1_MAX_TIME
+    ) {
+      startTask2();
       return;
     }
 
-    // Check if level complete
-    if (newInput.length === sequence.length) {
-      setScore((prev) => prev + level * 10);
-      const nextLevel = level + 1;
-      if (nextLevel > MAX_LEVEL) {
-        setFinished(true);
-      } else {
-        setLevel(nextLevel);
-      }
-      setTimeout(() => setGameState("result"), 500);
+    setT1Symbol(randomSymbol());
+    t1StartRef.current = now;
+  };
+
+  /* ================= TASK 2 ================= */
+
+  const startTask2 = () => {
+    setTask2Data([]);
+    setT2Round(0);
+    nextGrid();
+    t2GlobalStart.current = Date.now();
+    setStage("task2");
+  };
+
+  const nextGrid = () => {
+    const shuffled = [...TASK2_BASE_GRID].sort(() => Math.random() - 0.5);
+    setGrid(shuffled);
+    setTarget("▲");
+    t2StartRef.current = Date.now();
+  };
+
+  const handleGridPress = (symbol: string) => {
+    const now = Date.now();
+
+    setTask2Data((d) => [
+      ...d,
+      {
+        rt: now - t2StartRef.current,
+        correct: symbol === target,
+      },
+    ]);
+
+    const nextRound = t2Round + 1;
+    setT2Round(nextRound);
+
+    if (
+      nextRound >= TASK2_MAX_ROUNDS ||
+      now - t2GlobalStart.current >= TASK2_MAX_TIME
+    ) {
+      setStage("done");
+      return;
     }
+
+    nextGrid();
   };
 
-  const resetGame = () => {
-    setLevel(1);
-    setScore(0);
-    setGameState("intro");
-    setFinished(false);
-  };
+  /* ================= UI ================= */
 
-  // UI RENDER
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cognitive Test</Text>
-      </View>
+      <Stack.Screen
+        options={{
+          headerTitle: "Cognitive Assessment",
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: "#FFFFFF" },
+          headerTitleStyle: {
+            fontSize: 20,
+            fontWeight: "700",
+            color: "#0F172A",
+          },
+          headerTintColor: "#0F172A",
+        }}
+      />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* STATS BAR */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Ionicons name="brain" size={20} color="#4CAF50" />
-            <View style={{ marginLeft: 8 }}>
-              <Text style={styles.label}>Level</Text>
-              <Text style={styles.value}>{level}</Text>
-            </View>
+      {/* INTRO */}
+      {stage === "intro" && (
+        <View style={styles.center}>
+          <View style={styles.iconCircle}>
+            <Brain size={42} color="#10B981" />
           </View>
-          <View style={styles.statBox}>
-            <Ionicons name="trophy" size={20} color="#FFC107" />
-            <Text style={[styles.value, { marginLeft: 8 }]}>{score}</Text>
-          </View>
+          <Text style={styles.title}>Cognitive Test</Text>
+          <Text style={styles.subtitle}>
+            Two short tasks · takes under 30 seconds
+          </Text>
+
+          <TouchableOpacity style={styles.primaryBtn} onPress={startTask1}>
+            <Text style={styles.primaryText}>Start</Text>
+          </TouchableOpacity>
         </View>
+      )}
 
-        {/* INTRO SCREEN */}
-        {gameState === "intro" && (
-          <View style={styles.centerContainer}>
-            <View style={[styles.circleIcon, { backgroundColor: "#2196F3" }]}>
-              <Ionicons name="brain" size={50} color="#fff" />
-            </View>
-            <Text style={styles.title}>Memory Challenge</Text>
-            <Text style={styles.subtitle}>
-              Memorize the highlighted numbers.
-            </Text>
+      {/* TASK 1 */}
+      {stage === "task1" && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            Tap the matching shape
+          </Text>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={startGame}>
-              <Text style={styles.btnText}>Start Game</Text>
-            </TouchableOpacity>
-
-            <View style={styles.instructions}>
-              <Text style={styles.instTitle}>How to Play</Text>
-              <Text style={styles.instText}>• Watch the pattern</Text>
-              <Text style={styles.instText}>• Repeat the sequence</Text>
-            </View>
+          <View style={styles.symbolBox}>
+            <Text style={styles.symbol}>{t1Symbol}</Text>
           </View>
-        )}
 
-        {/* GAME SCREEN */}
-        {(gameState === "memorize" || gameState === "recall") && (
-          <View style={styles.gameContainer}>
-            <Text style={styles.statusText}>
-              {gameState === "memorize"
-                ? `Memorize! (${timeLeft}s)`
-                : "Your Turn"}
-            </Text>
-
-            <View style={styles.grid}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => {
-                const isHigh = highlightedCell === num;
-                const isSel = userInput.includes(num);
-                return (
-                  <TouchableOpacity
-                    key={num}
-                    activeOpacity={0.6}
-                    disabled={gameState !== "recall"}
-                    onPress={() => handleCellTap(num)}
-                    style={[
-                      styles.cell,
-                      isHigh && styles.cellHigh,
-                      isSel && styles.cellSel,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.cellText,
-                        (isHigh || isSel) && { color: "#fff" },
-                      ]}
-                    >
-                      {num}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <View style={styles.row}>
+            {TASK1_SYMBOLS.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={styles.choiceBtn}
+                onPress={() => handleTask1Press(s)}
+              >
+                <Text style={styles.choiceText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        )}
 
-        {/* RESULT SCREEN */}
-        {gameState === "result" && (
-          <View style={styles.centerContainer}>
-            {userInput.length === sequence.length || finished ? (
-              <>
-                <View
-                  style={[styles.circleIcon, { backgroundColor: "#4CAF50" }]}
-                >
-                  <Ionicons name="trophy" size={50} color="#fff" />
-                </View>
-                <Text style={styles.title}>
-                  {finished ? "All Levels Complete!" : "Level Complete!"}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={resetGame}
-                  >
-                    <Text style={styles.secBtnText}>
-                      {finished ? "Restart" : "Exit"}
-                    </Text>
-                  </TouchableOpacity>
-                  {!finished && (
-                    <TouchableOpacity
-                      style={styles.primaryButton}
-                      onPress={startGame}
-                    >
-                      <Text style={styles.btnText}>Next Level</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </>
-            ) : (
-              <>
-                <View
-                  style={[styles.circleIcon, { backgroundColor: "#F44336" }]}
-                >
-                  <Ionicons name="close" size={50} color="#fff" />
-                </View>
-                <Text style={styles.title}>Game Over</Text>
-                <Text style={styles.subtitle}>
-                  Sequence: {sequence.join(" - ")}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={resetGame}
-                  >
-                    <Text style={styles.secBtnText}>Exit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={startGame}
-                  >
-                    <Text style={styles.btnText}>Retry</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
+          <Text style={styles.progress}>
+            {t1Count + 1} / {TASK1_MAX_RESPONSES}
+          </Text>
+        </View>
+      )}
+
+      {/* TASK 2 */}
+      {stage === "task2" && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>
+            Find the different symbol
+          </Text>
+
+          <View style={styles.grid}>
+            {grid.map((s, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.gridCell}
+                onPress={() => handleGridPress(s)}
+              >
+                <Text style={styles.gridText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        )}
-      </ScrollView>
+
+          <Text style={styles.progress}>
+            {t2Round + 1} / {TASK2_MAX_ROUNDS}
+          </Text>
+        </View>
+      )}
+
+      {/* DONE */}
+      {stage === "done" && (
+        <View style={styles.center}>
+          <Text style={styles.title}>Completed</Text>
+          <Text style={styles.subtitle}>
+            Thank you for completing the assessment.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.primaryText}>Return</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#121212" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: 40,
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    padding: 24,
   },
-  backButton: { padding: 8 },
-  headerTitle: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginLeft: 16,
-  },
-  scrollContent: { padding: 20, paddingBottom: 50 },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 30,
-  },
-  statBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1E1E1E",
-    padding: 10,
-    borderRadius: 12,
-  },
-  label: { color: "#888", fontSize: 10, textTransform: "uppercase" },
-  value: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  centerContainer: { alignItems: "center", marginTop: 40 },
-  circleIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+
+  center: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
   },
-  title: { fontSize: 28, fontWeight: "bold", color: "#fff", marginBottom: 10 },
-  subtitle: { fontSize: 16, color: "#aaa", marginBottom: 30 },
-  primaryButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 15,
-    paddingHorizontal: 40,
-    borderRadius: 30,
+
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
   },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#666",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 30,
+
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 8,
   },
-  btnText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  secBtnText: { color: "#ccc", fontSize: 18, fontWeight: "bold" },
-  instructions: {
-    marginTop: 40,
-    backgroundColor: "#1E1E1E",
-    padding: 20,
+
+  subtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+
+  primaryBtn: {
+    backgroundColor: "#10B981",
+    paddingVertical: 16,
+    paddingHorizontal: 48,
     borderRadius: 16,
-    width: "100%",
   },
-  instTitle: { color: "#fff", fontWeight: "bold", marginBottom: 10 },
-  instText: { color: "#aaa", marginBottom: 5 },
-  gameContainer: { alignItems: "center" },
-  statusText: {
-    color: "#4CAF50",
-    fontSize: 20,
-    fontWeight: "bold",
+
+  primaryText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  card: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+  },
+
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#0F172A",
     marginBottom: 20,
   },
+
+  symbolBox: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+
+  symbol: {
+    fontSize: 48,
+  },
+
+  row: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+
+  choiceBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  choiceText: {
+    fontSize: 28,
+  },
+
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    width: width - 40,
     justifyContent: "center",
-    gap: 10,
+    gap: 16,
+    marginBottom: 16,
   },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    backgroundColor: "#1E1E1E",
+
+  gridCell: {
+    width: 72,
+    height: 72,
     borderRadius: 16,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-  cellHigh: { backgroundColor: "#4CAF50", transform: [{ scale: 1.05 }] },
-  cellSel: {
-    backgroundColor: "#2196F3",
-    borderWidth: 2,
-    borderColor: "#64B5F6",
+
+  gridText: {
+    fontSize: 28,
   },
-  cellText: { fontSize: 32, fontWeight: "bold", color: "#fff" },
+
+  progress: {
+    fontSize: 13,
+    color: "#64748B",
+  },
 });
