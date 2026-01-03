@@ -1,4 +1,5 @@
-import { Redirect } from 'expo-router'; // CHANGED: Added Redirect import
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 export default function Index() {
