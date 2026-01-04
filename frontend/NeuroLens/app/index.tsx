@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 export default function Index() {
@@ -23,7 +23,6 @@ export default function Index() {
     return () => cancelAnimationFrame(frameId);
   }, [router]);
 
-  // This UI is technically skipped now, but kept to preserve your styling code
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#14B8A6" />
@@ -39,3 +38,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 });
+
