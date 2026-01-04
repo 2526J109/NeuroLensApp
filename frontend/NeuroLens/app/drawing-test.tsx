@@ -13,6 +13,7 @@ import { RotateCcw } from 'lucide-react-native';
 import { DrawingCanvas, DrawingPoint } from '@/components/DrawingCanvas';
 import { SpiralGuide } from '@/components/SpiralGuide';
 import { WaveGuide } from '@/components/WaveGuide';
+import { formatDrawingData, DrawingDataJSON } from '@/utils/dataExport';
 
 const CANVAS_SIZE = Math.min(Dimensions.get('window').width - 80, 350);
 const WAVE_WIDTH = CANVAS_SIZE;
@@ -26,6 +27,10 @@ export default function DrawingTestScreen() {
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
     const [canvasKey, setCanvasKey] = useState(0);
     const [completedTests, setCompletedTests] = useState<TestType[]>([]);
+    
+    // Store JSON data for both tests
+    const [spiralDataJSON, setSpiralDataJSON] = useState<DrawingDataJSON | null>(null);
+    const [waveDataJSON, setWaveDataJSON] = useState<DrawingDataJSON | null>(null);
 
     const handleDrawingUpdate = (points: DrawingPoint[]) => {
         setDrawingData(points);
@@ -50,13 +55,21 @@ export default function DrawingTestScreen() {
             return;
         }
 
-        console.log(`=== SAVED ${currentTest.toUpperCase()} DRAWING DATA ===`);
-        console.log('Total points captured:', drawingData.length);
-        console.log('Duration (ms):', drawingData[drawingData.length - 1]?.timestamp || 0);
-        console.log('\nX coordinates:', drawingData.map(p => p.x));
-        console.log('\nY coordinates:', drawingData.map(p => p.y));
-        console.log('\nTimestamps (ms):', drawingData.map(p => p.timestamp));
-        console.log('==============================================');
+        // Create JSON object for current test
+        const jsonData = formatDrawingData(currentTest, drawingData);
+        
+        // Store JSON based on test type
+        if (currentTest === 'spiral') {
+            setSpiralDataJSON(jsonData);
+            console.log('=== SPIRAL DATA JSON ===');
+            console.log(JSON.stringify(jsonData, null, 2));
+            console.log('========================');
+        } else {
+            setWaveDataJSON(jsonData);
+            console.log('=== WAVE DATA JSON ===');
+            console.log(JSON.stringify(jsonData, null, 2));
+            console.log('======================');
+        }
 
         // Mark current test as completed
         setCompletedTests(prev => [...prev, currentTest]);
@@ -66,10 +79,25 @@ export default function DrawingTestScreen() {
             setCurrentTest('wave');
             handleClear();
         } else {
-            // Both tests completed - navigate to home page
-            console.log('🎉 All drawing tests completed!');
-            handleClear();
-            router.replace('/(tabs)');
+            // Both tests completed - navigate to results page
+            console.log('All drawing tests completed!')
+            console.log('\n=== ALL TEST DATA ===');
+            if (spiralDataJSON) {
+                console.log('Spiral Data:', JSON.stringify(spiralDataJSON, null, 2));
+            }
+            if (jsonData) {
+                console.log('Wave Data:', JSON.stringify(jsonData, null, 2));
+            }
+            console.log('=====================');
+            
+            // Navigate to results screen with data
+            router.push({
+                pathname: '/test-results',
+                params: {
+                    spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
+                    waveData: jsonData ? JSON.stringify(jsonData) : '',
+                }
+            });
         }
     };
 
@@ -130,7 +158,7 @@ export default function DrawingTestScreen() {
                     <View style={[styles.canvasWrapper, { width: canvasWidth, height: canvasHeight }]}>
                         {/* Guide Pattern */}
                         {isSpiral ? (
-                            <SpiralGuide size={CANVAS_SIZE} rounds={5} />
+                            <SpiralGuide size={CANVAS_SIZE} rounds={2} />
                         ) : (
                             <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={40} />
                         )}
@@ -196,9 +224,6 @@ export default function DrawingTestScreen() {
                                 {drawingData[drawingData.length - 1]?.y.toFixed(1)}
                             </Text>
                         </View>
-                        <Text style={styles.infoNote}>
-                            Check console for full X, Y, and timestamp arrays
-                        </Text>
                     </View>
                 )}
 
