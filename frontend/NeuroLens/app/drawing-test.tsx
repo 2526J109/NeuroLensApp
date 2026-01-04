@@ -158,7 +158,7 @@ export default function DrawingTestScreen() {
                     <View style={[styles.canvasWrapper, { width: canvasWidth, height: canvasHeight }]}>
                         {/* Guide Pattern */}
                         {isSpiral ? (
-                            <SpiralGuide size={CANVAS_SIZE} rounds={5} />
+                            <SpiralGuide size={CANVAS_SIZE} rounds={2} />
                         ) : (
                             <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={40} />
                         )}
