@@ -219,12 +219,16 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  textContentType="password"
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
+                  editable={true}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
                 >
                   {showPassword ? (
                     <EyeOff size={20} color="#64748B" />
