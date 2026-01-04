@@ -67,7 +67,7 @@ export default function DrawingTestScreen() {
             handleClear();
         } else {
             // Both tests completed - navigate to home page
-            console.log('🎉 All drawing tests completed!');
+            console.log('All drawing tests completed!');
             handleClear();
             router.replace('/(tabs)');
         }
@@ -196,9 +196,6 @@ export default function DrawingTestScreen() {
                                 {drawingData[drawingData.length - 1]?.y.toFixed(1)}
                             </Text>
                         </View>
-                        <Text style={styles.infoNote}>
-                            Check console for full X, Y, and timestamp arrays
-                        </Text>
                     </View>
                 )}
 

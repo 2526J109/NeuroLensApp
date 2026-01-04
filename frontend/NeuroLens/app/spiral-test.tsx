@@ -155,9 +155,6 @@ export default function SpiralTestScreen() {
                                 {drawingData[drawingData.length - 1]?.y.toFixed(1)}
                             </Text>
                         </View>
-                        <Text style={styles.infoNote}>
-                            Check console for full X, Y, and timestamp arrays
-                        </Text>
                     </View>
                 )}
 
