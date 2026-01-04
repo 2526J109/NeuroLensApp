@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -30,8 +30,12 @@ export const DrawingCanvas = ({
     // Support both size (square) and width/height (rectangle)
     const canvasWidth = width || size || 300;
     const canvasHeight = height || size || 300;
+    
     const [paths, setPaths] = useState<string[]>([]);
+    const pathsRef = useRef<string[]>([]); // Keep ref in sync with state
     const [currentPath, setCurrentPath] = useState<string>('');
+    const currentPathRef = useRef<string>('');
+    
     const drawingPointsRef = useRef<DrawingPoint[]>([]);
     const startTimeRef = useRef<number>(0);
     const containerRef = useRef<View>(null);
@@ -43,21 +47,30 @@ export const DrawingCanvas = ({
             onMoveShouldSetPanResponder: () => true,
             
             onPanResponderGrant: (evt: GestureResponderEvent) => {
-                startTimeRef.current = Date.now();
+                // Only set start time on the very first touch
+                if (drawingPointsRef.current.length === 0) {
+                    startTimeRef.current = Date.now();
+                }
+                
                 const { locationX, locationY } = evt.nativeEvent;
+                const currentTime = Date.now() - startTimeRef.current;
                 
                 const newPoint: DrawingPoint = {
                     x: locationX,
                     y: locationY,
-                    timestamp: 0, // First point at time 0
+                    timestamp: currentTime,
                 };
                 
-                drawingPointsRef.current = [newPoint];
-                setCurrentPath(`M ${locationX} ${locationY}`);
-                updateCountRef.current = 0;
+                // Continue accumulating points
+                drawingPointsRef.current.push(newPoint);
+                
+                // Start a new path segment
+                const newPath = `M ${locationX} ${locationY}`;
+                currentPathRef.current = newPath;
+                setCurrentPath(newPath);
                 
                 if (onDrawingUpdate) {
-                    onDrawingUpdate([newPoint]);
+                    onDrawingUpdate([...drawingPointsRef.current]);
                 }
             },
             
@@ -71,13 +84,15 @@ export const DrawingCanvas = ({
                     timestamp: currentTime,
                 };
                 
-                // Accumulate points in ref
+                // Accumulate points
                 drawingPointsRef.current.push(newPoint);
                 
-                // Update path for visual feedback
-                setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
+                // Update path
+                const updatedPath = `${currentPathRef.current} L ${locationX} ${locationY}`;
+                currentPathRef.current = updatedPath;
+                setCurrentPath(updatedPath);
                 
-                // Only update parent every 10 points to avoid too many updates
+                // Only update parent every 10 points
                 updateCountRef.current++;
                 if (updateCountRef.current % 10 === 0 && onDrawingUpdate) {
                     onDrawingUpdate([...drawingPointsRef.current]);
@@ -85,10 +100,17 @@ export const DrawingCanvas = ({
             },
             
             onPanResponderRelease: () => {
-                setPaths(prev => [...prev, currentPath]);
-                setCurrentPath('');
+                // Save the current stroke
+                if (currentPathRef.current) {
+                    const newPaths = [...pathsRef.current, currentPathRef.current];
+                    pathsRef.current = newPaths;
+                    setPaths(newPaths);
+                    
+                    currentPathRef.current = '';
+                    setCurrentPath('');
+                }
                 
-                // Final update with all points
+                // Final update
                 if (onDrawingUpdate) {
                     onDrawingUpdate([...drawingPointsRef.current]);
                 }
@@ -102,7 +124,9 @@ export const DrawingCanvas = ({
 
     const clearCanvas = () => {
         setPaths([]);
+        pathsRef.current = [];
         setCurrentPath('');
+        currentPathRef.current = '';
         drawingPointsRef.current = [];
         startTimeRef.current = 0;
         updateCountRef.current = 0;
