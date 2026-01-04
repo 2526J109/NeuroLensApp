@@ -20,10 +20,12 @@ export const SpiralGuide = ({
     // Generate Archimedean spiral path
     const generateSpiralPath = () => {
         const points: string[] = [];
-        const totalPoints = rounds * 100; // 100 points per round for smoothness
+        // Add extra 0.25 rotation to complete the final circle visually
+        const effectiveRounds = rounds + 0.25;
+        const totalPoints = Math.floor(effectiveRounds * 100); // 100 points per round for smoothness
         
         for (let i = 0; i <= totalPoints; i++) {
-            const angle = (i / totalPoints) * rounds * 2 * Math.PI;
+            const angle = (i / totalPoints) * effectiveRounds * 2 * Math.PI;
             const radius = (i / totalPoints) * maxRadius;
             
             const x = centerX + radius * Math.cos(angle);

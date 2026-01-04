@@ -89,7 +89,7 @@ export default function SpiralTestScreen() {
                 <View style={styles.canvasContainer}>
                     <View style={styles.canvasWrapper}>
                         {/* Spiral Guide - positioned absolutely */}
-                        <SpiralGuide size={CANVAS_SIZE} rounds={5} />
+                        <SpiralGuide size={CANVAS_SIZE} rounds={3} />
                         
                         {/* Drawing Canvas - positioned absolutely on top */}
                         <DrawingCanvas
