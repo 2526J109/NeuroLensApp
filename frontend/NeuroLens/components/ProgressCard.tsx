@@ -1,12 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isSmallScreen = SCREEN_WIDTH < 375;
+const isTablet = SCREEN_WIDTH >= 768;
 
 export const ProgressCard = () => {
     // 25% progress
     const percentage = 25;
-    const radius = 35;
-    const strokeWidth = 8;
+    
+    // Responsive sizing
+    const chartSize = isSmallScreen ? 80 : isTablet ? 120 : 100;
+    const radius = isSmallScreen ? 28 : isTablet ? 42 : 35;
+    const strokeWidth = isSmallScreen ? 6 : isTablet ? 10 : 8;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
@@ -36,12 +43,12 @@ export const ProgressCard = () => {
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.chartContainer}>
-                    <Svg height="100" width="100" viewBox="0 0 100 100">
+                <View style={[styles.chartContainer, { width: chartSize, height: chartSize }]}>
+                    <Svg height={chartSize} width={chartSize} viewBox={`0 0 ${chartSize} ${chartSize}`}>
                         {/* Background Circle */}
                         <Circle
-                            cx="50"
-                            cy="50"
+                            cx={chartSize / 2}
+                            cy={chartSize / 2}
                             r={radius}
                             stroke="#F1F5F9"
                             strokeWidth={strokeWidth}
@@ -49,8 +56,8 @@ export const ProgressCard = () => {
                         />
                         {/* Progress Circle */}
                         <Circle
-                            cx="50"
-                            cy="50"
+                            cx={chartSize / 2}
+                            cy={chartSize / 2}
                             r={radius}
                             stroke="#14B8A6" // Teal 500
                             strokeWidth={strokeWidth}
@@ -58,7 +65,7 @@ export const ProgressCard = () => {
                             strokeDasharray={circumference}
                             strokeDashoffset={strokeDashoffset}
                             strokeLinecap="round"
-                            transform="rotate(-90, 50, 50)"
+                            transform={`rotate(-90 ${chartSize / 2} ${chartSize / 2})`}
                         />
                     </Svg>
                     <View style={styles.percentageContainer}>
@@ -74,52 +81,54 @@ export const ProgressCard = () => {
 const styles = StyleSheet.create({
     card: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 20,
+        borderRadius: isSmallScreen ? 16 : isTablet ? 24 : 20,
+        padding: isSmallScreen ? 16 : isTablet ? 28 : 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 3,
-        marginBottom: 24,
+        marginBottom: isSmallScreen ? 20 : isTablet ? 32 : 24,
     },
     contentContainer: {
-        flexDirection: 'row',
+        flexDirection: isSmallScreen ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: isSmallScreen ? 'flex-start' : 'center',
+        gap: isSmallScreen ? 16 : 0,
     },
     textContainer: {
         flex: 1,
-        paddingRight: 16,
+        paddingRight: isSmallScreen ? 0 : 16,
+        width: isSmallScreen ? '100%' : 'auto',
     },
     cardTitle: {
-        fontSize: 18,
+        fontSize: isSmallScreen ? 16 : isTablet ? 22 : 18,
         fontWeight: '700',
         color: '#0F172A',
         marginBottom: 4,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
         color: '#64748B',
-        marginBottom: 16,
+        marginBottom: isSmallScreen ? 12 : 16,
     },
     button: {
         backgroundColor: '#14B8A6', // Teal
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 10,
-        alignSelf: 'flex-start',
+        paddingVertical: isSmallScreen ? 8 : isTablet ? 12 : 10,
+        paddingHorizontal: isSmallScreen ? 14 : isTablet ? 20 : 16,
+        borderRadius: isSmallScreen ? 8 : isTablet ? 12 : 10,
+        alignSelf: isSmallScreen ? 'stretch' : 'flex-start',
     },
     buttonText: {
         color: '#FFFFFF',
         fontWeight: '600',
-        fontSize: 14,
+        fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
+        textAlign: isSmallScreen ? 'center' : 'left',
     },
     chartContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        width: 100,
-        height: 100,
+        alignSelf: isSmallScreen ? 'center' : 'flex-end',
     },
     percentageContainer: {
         position: 'absolute',
@@ -127,12 +136,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     percentageText: {
-        fontSize: 20,
+        fontSize: isSmallScreen ? 18 : isTablet ? 26 : 20,
         fontWeight: 'bold',
         color: '#0F172A',
     },
     completeText: {
-        fontSize: 10,
+        fontSize: isSmallScreen ? 9 : isTablet ? 12 : 10,
         color: '#64748B',
     },
 });

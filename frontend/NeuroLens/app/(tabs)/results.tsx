@@ -26,68 +26,97 @@ import Svg, { Circle } from 'react-native-svg';
 interface TestResult {
   id: string;
   title: string;
-  percentage: number;
+  percentage: number; // This is the model output (0-100), will be converted to risk score
   icon: React.ComponentType<any>;
   iconColor: string;
   backgroundColor: string;
-  status: 'good' | 'warning';
+  status: 'low' | 'medium' | 'high'; // Risk levels
   description: string;
 }
 
-// Default test results (fallback)
+// Convert model percentage to risk score (invert: high percentage = low risk, low percentage = high risk)
+const getRiskScore = (percentage: number): number => {
+  return Math.round(100 - percentage);
+};
+
+// Determine risk level based on risk score
+const getRiskLevel = (riskScore: number): 'low' | 'medium' | 'high' => {
+  if (riskScore <= 30) return 'low';
+  if (riskScore <= 60) return 'medium';
+  return 'high';
+};
+
+// Get color based on risk level
+const getRiskColor = (riskLevel: 'low' | 'medium' | 'high'): { icon: string; background: string } => {
+  switch (riskLevel) {
+    case 'low':
+      return { icon: '#10B981', background: '#D1FAE5' }; // Green
+    case 'medium':
+      return { icon: '#F97316', background: '#FED7AA' }; // Orange
+    case 'high':
+      return { icon: '#EF4444', background: '#FEE2E2' }; // Red
+  }
+};
+
+// Get risk description
+const getRiskDescription = (title: string, riskScore: number, riskLevel: 'low' | 'medium' | 'high'): string => {
+  switch (riskLevel) {
+    case 'low':
+      return `${title} shows low risk indicators. Results are within normal parameters.`;
+    case 'medium':
+      return `${title} shows moderate risk. Some abnormalities detected. Monitor regularly.`;
+    case 'high':
+      return `${title} shows elevated risk. Significant abnormalities detected. Consult healthcare provider.`;
+  }
+};
+
+// Helper to create test result with proper risk-based styling
+const createTestResult = (
+  id: string,
+  title: string,
+  percentage: number, // Model output (0-100, where higher = healthier)
+  icon: React.ComponentType<any>
+): TestResult => {
+  const riskScore = getRiskScore(percentage);
+  const riskLevel = getRiskLevel(riskScore);
+  const colors = getRiskColor(riskLevel);
+  
+  return {
+    id,
+    title,
+    percentage,
+    icon,
+    iconColor: colors.icon,
+    backgroundColor: colors.background,
+    status: riskLevel,
+    description: getRiskDescription(title, riskScore, riskLevel),
+  };
+};
+
+// Default test results (fallback) - percentages are model outputs, will be converted to risk scores
 const DEFAULT_TEST_RESULTS: TestResult[] = [
-  {
-    id: 'movement',
-    title: 'Movement Analysis',
-    percentage: 85,
-    icon: Watch,
-    iconColor: '#10B981',
-    backgroundColor: '#D1FAE5',
-    status: 'good',
-    description: 'Tremor frequency within normal range. Gait pattern shows minor variations.',
-  },
-  {
-    id: 'voice',
-    title: 'Voice Analysis',
-    percentage: 72,
-    icon: Mic,
-    iconColor: '#F97316',
-    backgroundColor: '#FED7AA',
-    status: 'warning',
-    description: 'Slight voice tremor detected. Pitch variation slightly reduced.',
-  },
-  {
-    id: 'motor',
-    title: 'Motor Control',
-    percentage: 78,
-    icon: PenTool,
-    iconColor: '#10B981',
-    backgroundColor: '#D1FAE5',
-    status: 'good',
-    description: 'Drawing accuracy within expected range. Minor hesitation patterns observed.',
-  },
-  {
-    id: 'cognitive',
-    title: 'Cognitive Function',
-    percentage: 92,
-    icon: Brain,
-    iconColor: '#10B981',
-    backgroundColor: '#D1FAE5',
-    status: 'good',
-    description: 'Memory recall excellent. Response time within normal parameters.',
-  },
+  createTestResult('movement', 'Movement Analysis', 75, Watch), // 15% risk (all green)
+  createTestResult('voice', 'Voice Analysis', 60, Mic), // 40% risk (green 0-30% + orange 30-40%)
+  createTestResult('motor', 'Motor Control', 78, PenTool), // 22% risk (all green)
+  createTestResult('cognitive', 'Cognitive Function', 85, Brain), // 8% risk (all green)
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 375;
+const isTablet = SCREEN_WIDTH >= 768;
 
-const CircularProgress = ({ percentage, size }: { percentage: number; size?: number }) => {
-  const defaultSize = isSmallScreen ? 100 : 120;
+const CircularProgress = ({ riskScore, size }: { riskScore: number; size?: number }) => {
+  const defaultSize = isSmallScreen ? 90 : isTablet ? 140 : 120;
   const progressSize = size || defaultSize;
-  const strokeWidth = 8;
+  const strokeWidth = isSmallScreen ? 6 : isTablet ? 10 : 8;
   const radius = (progressSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
+  const offset = circumference - (riskScore / 100) * circumference;
+  
+  // Get color based on risk level
+  const riskLevel = getRiskLevel(riskScore);
+  const colors = getRiskColor(riskLevel);
+  const strokeColor = colors.icon;
 
   return (
     <View style={{ width: progressSize, height: progressSize }}>
@@ -101,12 +130,12 @@ const CircularProgress = ({ percentage, size }: { percentage: number; size?: num
           strokeWidth={strokeWidth}
           fill="transparent"
         />
-        {/* Progress circle */}
+        {/* Risk circle */}
         <Circle
           cx={progressSize / 2}
           cy={progressSize / 2}
           r={radius}
-          stroke="#14B8A6"
+          stroke={strokeColor}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={circumference}
@@ -116,17 +145,25 @@ const CircularProgress = ({ percentage, size }: { percentage: number; size?: num
         />
       </Svg>
       <View style={[styles.progressContent, { width: progressSize, height: progressSize }]}>
-        <Text style={styles.progressPercentage}>{percentage}%</Text>
-        <Text style={styles.progressLabel}>Complete</Text>
+        <Text style={styles.progressPercentage}>{riskScore}%</Text>
+        <Text style={styles.progressLabel}>Risk</Text>
       </View>
     </View>
   );
 };
 
-const ProgressBar = ({ percentage, color }: { percentage: number; color: string }) => {
+const ProgressBar = ({ riskScore }: { riskScore: number }) => {
+  // Determine risk level and get corresponding color
+  const riskLevel = getRiskLevel(riskScore);
+  const colors = getRiskColor(riskLevel);
+  const barColor = colors.icon;
+  
   return (
     <View style={styles.progressBarContainer}>
-      <View style={[styles.progressBarFill, { width: `${percentage}%`, backgroundColor: color }]} />
+      <View style={[styles.progressBarFill, { 
+        width: `${riskScore}%`, 
+        backgroundColor: barColor,
+      }]} />
     </View>
   );
 };
@@ -135,7 +172,11 @@ export default function ResultsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const [testResults, setTestResults] = useState<TestResult[]>(DEFAULT_TEST_RESULTS);
-  const [overallScore, setOverallScore] = useState(82);
+  // Calculate initial overall risk score from default results
+  const initialRiskScore = Math.round(
+    DEFAULT_TEST_RESULTS.reduce((sum, r) => sum + getRiskScore(r.percentage), 0) / DEFAULT_TEST_RESULTS.length
+  );
+  const [overallScore, setOverallScore] = useState(initialRiskScore);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -150,21 +191,29 @@ export default function ResultsScreen() {
         const voiceIndex = updatedResults.findIndex(r => r.id === 'voice');
         
         if (voiceIndex !== -1) {
+          const modelPercentage = voiceResult.percentage || 0;
+          const riskScore = getRiskScore(modelPercentage);
+          const riskLevel = getRiskLevel(riskScore);
+          const colors = getRiskColor(riskLevel);
+          
           updatedResults[voiceIndex] = {
             ...updatedResults[voiceIndex],
-            percentage: voiceResult.percentage || 0,
-            status: voiceResult.status === 'good' ? 'good' : 'warning',
-            description: voiceResult.description || 'Voice analysis completed',
-            iconColor: voiceResult.status === 'good' ? '#10B981' : '#F97316',
-            backgroundColor: voiceResult.status === 'good' ? '#D1FAE5' : '#FED7AA',
+            percentage: modelPercentage, // Store original model output
+            status: riskLevel,
+            description: getRiskDescription('Voice Analysis', riskScore, riskLevel),
+            iconColor: colors.icon,
+            backgroundColor: colors.background,
           };
         }
         
         setTestResults(updatedResults);
         
-        // Recalculate overall score (average of all test results)
-        const avgScore = updatedResults.reduce((sum, r) => sum + r.percentage, 0) / updatedResults.length;
-        setOverallScore(Math.round(avgScore));
+        // Recalculate overall risk score (average of all test risk scores)
+        const avgRiskScore = updatedResults.reduce((sum, r) => {
+          const risk = getRiskScore(r.percentage);
+          return sum + risk;
+        }, 0) / updatedResults.length;
+        setOverallScore(Math.round(avgRiskScore));
       } catch (error) {
         console.error('Error parsing voice analysis result:', error);
         // Keep default results on error
@@ -189,18 +238,30 @@ export default function ResultsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Overall Score Card */}
+        {/* Overall Risk Score Card */}
         <View style={styles.overallScoreCard}>
-          <Text style={styles.overallScoreCardLabel}>Overall Score</Text>
+          <Text style={styles.overallScoreCardLabel}>Overall Risk Score</Text>
           <View style={styles.overallScoreHeader}>
             <View style={styles.overallScoreLeft}>
-              <Text style={styles.overallScoreTitle}>Combined Analysis</Text>
-              <View style={styles.statusBadge}>
-                <Check size={12} color="#10B981" />
-                <Text style={styles.statusBadgeText}>Normal</Text>
+              <Text style={styles.overallScoreTitle}>Combined Risk Assessment</Text>
+              <View style={[styles.statusBadge, { 
+                backgroundColor: getRiskColor(getRiskLevel(overallScore)).background,
+                borderColor: getRiskColor(getRiskLevel(overallScore)).icon 
+              }]}>
+                {getRiskLevel(overallScore) === 'low' ? (
+                  <Check size={12} color={getRiskColor(getRiskLevel(overallScore)).icon} />
+                ) : (
+                  <AlertCircle size={12} color={getRiskColor(getRiskLevel(overallScore)).icon} />
+                )}
+                <Text style={[styles.statusBadgeText, { 
+                  color: getRiskColor(getRiskLevel(overallScore)).icon 
+                }]}>
+                  {getRiskLevel(overallScore) === 'low' ? 'Low Risk' : 
+                   getRiskLevel(overallScore) === 'medium' ? 'Medium Risk' : 'High Risk'}
+                </Text>
               </View>
             </View>
-            <CircularProgress percentage={overallScore} />
+            <CircularProgress riskScore={overallScore} />
           </View>
         </View>
 
@@ -216,6 +277,10 @@ export default function ResultsScreen() {
 
         {testResults.map((result) => {
           const IconComponent = result.icon;
+          const riskScore = getRiskScore(result.percentage);
+          const riskLevel = result.status;
+          const colors = getRiskColor(riskLevel);
+          
           return (
             <View key={result.id} style={styles.testResultCard}>
               <View style={styles.testResultHeader}>
@@ -224,18 +289,22 @@ export default function ResultsScreen() {
                 </View>
                 <View style={styles.testResultContent}>
                   <Text style={styles.testResultTitle}>{result.title}</Text>
-                  <ProgressBar percentage={result.percentage} color={result.iconColor} />
+                  <ProgressBar riskScore={riskScore} />
                 </View>
                 <View style={styles.testResultRight}>
-                  <Text style={styles.testResultPercentage}>
-                    {result.percentage}%
+                  <Text style={[styles.testResultPercentage, { color: result.iconColor }]}>
+                    {riskScore}%
                   </Text>
-                  {result.status === 'good' ? (
-                    <View style={[styles.statusIcon, { backgroundColor: '#10B981' }]}>
+                  {riskLevel === 'low' ? (
+                    <View style={[styles.statusIcon, { backgroundColor: colors.icon }]}>
                       <Check size={12} color="#FFFFFF" />
                     </View>
+                  ) : riskLevel === 'medium' ? (
+                    <View style={[styles.statusIcon, { backgroundColor: colors.icon }]}>
+                      <AlertCircle size={12} color="#FFFFFF" />
+                    </View>
                   ) : (
-                    <View style={[styles.statusIcon, { backgroundColor: '#F97316' }]}>
+                    <View style={[styles.statusIcon, { backgroundColor: colors.icon }]}>
                       <AlertCircle size={12} color="#FFFFFF" />
                     </View>
                   )}
@@ -321,35 +390,40 @@ const styles = StyleSheet.create({
   },
   overallScoreCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: isSmallScreen ? 12 : 16,
-    padding: isSmallScreen ? 16 : 24,
-    marginBottom: isSmallScreen ? 16 : 24,
+    borderRadius: isSmallScreen ? 12 : isTablet ? 20 : 16,
+    padding: isSmallScreen ? 16 : isTablet ? 32 : 24,
+    marginBottom: isSmallScreen ? 16 : isTablet ? 32 : 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    maxWidth: isTablet ? 800 : '100%',
+    alignSelf: 'center',
+    width: '100%',
   },
   overallScoreCardLabel: {
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
     fontWeight: '500',
     color: '#64748B',
-    marginBottom: isSmallScreen ? 8 : 12,
+    marginBottom: isSmallScreen ? 8 : isTablet ? 16 : 12,
   },
   overallScoreHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: isSmallScreen ? 'column' : 'row',
+    alignItems: isSmallScreen ? 'flex-start' : 'center',
     justifyContent: 'space-between',
+    gap: isSmallScreen ? 16 : 0,
   },
   overallScoreLeft: {
     flex: 1,
-    marginRight: isSmallScreen ? 8 : 12,
+    marginRight: isSmallScreen ? 0 : isTablet ? 20 : 12,
+    width: isSmallScreen ? '100%' : 'auto',
   },
   overallScoreTitle: {
-    fontSize: isSmallScreen ? 18 : 24,
+    fontSize: isSmallScreen ? 18 : isTablet ? 28 : 24,
     fontWeight: 'bold',
     color: '#0F172A',
-    marginBottom: isSmallScreen ? 8 : 12,
+    marginBottom: isSmallScreen ? 8 : isTablet ? 16 : 12,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -357,14 +431,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1FAE5',
     borderWidth: 1,
     borderColor: '#10B981',
-    paddingHorizontal: isSmallScreen ? 8 : 10,
-    paddingVertical: isSmallScreen ? 4 : 6,
-    borderRadius: 16,
+    paddingHorizontal: isSmallScreen ? 8 : isTablet ? 14 : 10,
+    paddingVertical: isSmallScreen ? 4 : isTablet ? 8 : 6,
+    borderRadius: isSmallScreen ? 14 : isTablet ? 20 : 16,
     alignSelf: 'flex-start',
-    gap: 4,
+    gap: isSmallScreen ? 4 : isTablet ? 6 : 4,
   },
   statusBadgeText: {
-    fontSize: isSmallScreen ? 10 : 12,
+    fontSize: isSmallScreen ? 10 : isTablet ? 14 : 12,
     fontWeight: '600',
     color: '#059669',
   },
@@ -374,12 +448,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressPercentage: {
-    fontSize: isSmallScreen ? 22 : 28,
+    fontSize: isSmallScreen ? 20 : isTablet ? 36 : 28,
     fontWeight: 'bold',
     color: '#0F172A',
   },
   progressLabel: {
-    fontSize: isSmallScreen ? 10 : 12,
+    fontSize: isSmallScreen ? 9 : isTablet ? 14 : 12,
     color: '#64748B',
     marginTop: 4,
   },
@@ -391,14 +465,17 @@ const styles = StyleSheet.create({
   },
   testResultCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: isSmallScreen ? 12 : 16,
-    padding: isSmallScreen ? 14 : 20,
-    marginBottom: isSmallScreen ? 12 : 16,
+    borderRadius: isSmallScreen ? 12 : isTablet ? 20 : 16,
+    padding: isSmallScreen ? 14 : isTablet ? 28 : 20,
+    marginBottom: isSmallScreen ? 12 : isTablet ? 24 : 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
+    maxWidth: isTablet ? 800 : '100%',
+    alignSelf: 'center',
+    width: '100%',
   },
   testResultHeader: {
     flexDirection: 'row',
@@ -406,28 +483,29 @@ const styles = StyleSheet.create({
     marginBottom: isSmallScreen ? 10 : 12,
   },
   iconContainer: {
-    width: isSmallScreen ? 40 : 48,
-    height: isSmallScreen ? 40 : 48,
-    borderRadius: isSmallScreen ? 10 : 12,
+    width: isSmallScreen ? 40 : isTablet ? 64 : 48,
+    height: isSmallScreen ? 40 : isTablet ? 64 : 48,
+    borderRadius: isSmallScreen ? 10 : isTablet ? 16 : 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: isSmallScreen ? 10 : 12,
+    marginRight: isSmallScreen ? 10 : isTablet ? 16 : 12,
   },
   testResultContent: {
     flex: 1,
     minWidth: 0,
   },
   testResultTitle: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 14 : isTablet ? 20 : 16,
     fontWeight: '600',
     color: '#0F172A',
-    marginBottom: isSmallScreen ? 6 : 8,
+    marginBottom: isSmallScreen ? 6 : isTablet ? 12 : 8,
   },
   progressBarContainer: {
     height: 6,
     backgroundColor: '#E2E8F0',
     borderRadius: 3,
     overflow: 'hidden',
+    position: 'relative',
   },
   progressBarFill: {
     height: '100%',
@@ -439,29 +517,32 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   testResultPercentage: {
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: isSmallScreen ? 16 : isTablet ? 24 : 18,
     fontWeight: 'bold',
     color: '#0F172A',
     marginBottom: 4,
   },
   statusIcon: {
-    width: isSmallScreen ? 18 : 20,
-    height: isSmallScreen ? 18 : 20,
-    borderRadius: isSmallScreen ? 9 : 10,
+    width: isSmallScreen ? 18 : isTablet ? 28 : 20,
+    height: isSmallScreen ? 18 : isTablet ? 28 : 20,
+    borderRadius: isSmallScreen ? 9 : isTablet ? 14 : 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   testResultDescription: {
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
     color: '#64748B',
-    lineHeight: isSmallScreen ? 18 : 20,
+    lineHeight: isSmallScreen ? 18 : isTablet ? 24 : 20,
   },
   recommendationsCard: {
     backgroundColor: '#F0FDFA',
-    borderRadius: isSmallScreen ? 12 : 16,
-    padding: isSmallScreen ? 16 : 20,
+    borderRadius: isSmallScreen ? 12 : isTablet ? 20 : 16,
+    padding: isSmallScreen ? 16 : isTablet ? 28 : 20,
     marginTop: 8,
-    marginBottom: isSmallScreen ? 12 : 16,
+    marginBottom: isSmallScreen ? 12 : isTablet ? 24 : 16,
+    maxWidth: isTablet ? 800 : '100%',
+    alignSelf: 'center',
+    width: '100%',
   },
   recommendationsHeader: {
     flexDirection: 'row',
@@ -478,7 +559,7 @@ const styles = StyleSheet.create({
     marginRight: isSmallScreen ? 10 : 12,
   },
   recommendationsTitle: {
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: isSmallScreen ? 16 : isTablet ? 22 : 18,
     fontWeight: 'bold',
     color: '#0F172A',
   },
@@ -497,9 +578,9 @@ const styles = StyleSheet.create({
   },
   recommendationText: {
     flex: 1,
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
     color: '#0F172A',
-    lineHeight: isSmallScreen ? 20 : 22,
+    lineHeight: isSmallScreen ? 20 : isTablet ? 24 : 22,
   },
   disclaimer: {
     fontSize: isSmallScreen ? 11 : 12,
