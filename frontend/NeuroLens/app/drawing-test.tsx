@@ -79,8 +79,8 @@ export default function DrawingTestScreen() {
             setCurrentTest('wave');
             handleClear();
         } else {
-            // Both tests completed - navigate to home page
-            console.log('All drawing tests completed!');
+            // Both tests completed - navigate to results page
+            console.log('All drawing tests completed!')
             console.log('\n=== ALL TEST DATA ===');
             if (spiralDataJSON) {
                 console.log('Spiral Data:', JSON.stringify(spiralDataJSON, null, 2));
@@ -89,8 +89,15 @@ export default function DrawingTestScreen() {
                 console.log('Wave Data:', JSON.stringify(jsonData, null, 2));
             }
             console.log('=====================');
-            handleClear();
-            router.replace('/(tabs)');
+            
+            // Navigate to results screen with data
+            router.push({
+                pathname: '/test-results',
+                params: {
+                    spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
+                    waveData: jsonData ? JSON.stringify(jsonData) : '',
+                }
+            });
         }
     };
 
