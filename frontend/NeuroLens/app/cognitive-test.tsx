@@ -1,156 +1,173 @@
-console.log("### NEW COGNITIVE FILE LOADED ###");
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   ScrollView,
+  Dimensions,
+  Vibration,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
-import { Brain, Zap, Search } from "lucide-react-native";
+import {
+  Brain,
+  Zap,
+  ChevronRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+} from "lucide-react-native";
 
 const { width } = Dimensions.get("window");
 
-/* ================= CONFIG ================= */
+/* ================= TYPES & CONFIG ================= */
 
-// FLOW
-type Stage = "intro" | "task1" | "task2" | "done";
+type Stage = "intro" | "instr1" | "task1" | "instr2" | "task2" | "done";
 
-// TASK 1 – QUICK CHOICE (processing speed)
-const TASK1_MAX_RESPONSES = 8;
-const TASK1_MAX_TIME = 15_000; // 15 seconds
-const TASK1_SYMBOLS = ["▲", "●", "■"];
+// Task 1: Digital Symbol-Digit Modalities Test (SDMT)
+const SDMT_TRIALS_TOTAL = 12;
+const SDMT_SYMBOL_MAP = [
+  { symbol: "▲", value: 1 },
+  { symbol: "●", value: 2 },
+  { symbol: "■", value: 3 },
+];
 
-// TASK 2 – ODD ONE OUT (visual search)
-const TASK2_MAX_ROUNDS = 6;
-const TASK2_MAX_TIME = 12_000; // 12 seconds
-const TASK2_BASE_GRID = ["●", "●", "●", "●", "▲"];
+// Task 2: Sequence Manipulation (Letter-Number Sequencing Proxy)
+const LNS_ROUNDS_TOTAL = 5;
+const NUMBER_POOL = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const MEMORY_FLASH_TIME = 3500; // 3.5 Seconds for encoding
 
 /* ================= COMPONENT ================= */
 
-export default function CognitiveTest() {
+export default function CognitiveAssessment() {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("intro");
 
-  /* -------- TASK 1 STATE -------- */
-  const [t1Count, setT1Count] = useState(0);
-  const [t1Symbol, setT1Symbol] = useState("▲");
-  const t1StartRef = useRef<number>(0);
-  const t1GlobalStart = useRef<number>(0);
-  const [task1Data, setTask1Data] = useState<any[]>([]);
+  /* -------- TASK STATE -------- */
+  const [sdmtTrial, setSdmtTrial] = useState(0);
+  const [sdmtTarget, setSdmtTarget] = useState(SDMT_SYMBOL_MAP[0]);
 
-  /* -------- TASK 2 STATE -------- */
-  const [t2Round, setT2Round] = useState(0);
-  const [grid, setGrid] = useState<string[]>([]);
-  const [target, setTarget] = useState("▲");
-  const t2StartRef = useRef<number>(0);
-  const t2GlobalStart = useRef<number>(0);
-  const [task2Data, setTask2Data] = useState<any[]>([]);
+  const [lnsRound, setLnsRound] = useState(0);
+  const [sequence, setSequence] = useState<number[]>([]);
+  const [options, setOptions] = useState<number[][]>([]);
+  const [isMemorizing, setIsMemorizing] = useState(false);
 
-  /* ================= HELPERS ================= */
+  /* -------- RAW DATA STORAGE (For Feature Extraction) -------- */
+  const task1Results = useRef<any[]>([]);
+  const task2Results = useRef<any[]>([]);
+  const startTimeRef = useRef<number>(0);
 
-  const randomSymbol = () =>
-    TASK1_SYMBOLS[Math.floor(Math.random() * TASK1_SYMBOLS.length)];
+  /* ================= LOGIC HELPERS ================= */
 
-  /* ================= TASK 1 ================= */
+  const randomSdmtTarget = () =>
+    SDMT_SYMBOL_MAP[Math.floor(Math.random() * SDMT_SYMBOL_MAP.length)];
+
+  const generateSequence = (length: number) =>
+    [...NUMBER_POOL].sort(() => Math.random() - 0.5).slice(0, length);
+
+  /**
+   * RESEARCH LOGIC:
+   * Option A: Correct Numbers + Correct Sorted Order
+   * Option B: Correct Numbers + WRONG Order (Tests Manipulation/Executive Function)
+   * Option C: WRONG Numbers + Correct Sorted Order (Tests Storage/Memory)
+   */
+  const generateOptions = (seq: number[]) => {
+    const correct = [...seq].sort((a, b) => a - b);
+
+    // Distractor: Wrong Order
+    let wrongOrder = [...seq];
+    if (JSON.stringify(wrongOrder) === JSON.stringify(correct)) {
+      if (wrongOrder.length >= 2)
+        [wrongOrder[0], wrongOrder[1]] = [wrongOrder[1], wrongOrder[0]];
+    }
+
+    // Distractor: Wrong Numbers (Replace one item with a distractor)
+    const pool = NUMBER_POOL.filter((n) => !seq.includes(n));
+    let wrongNumbers = [...correct];
+    wrongNumbers[Math.floor(Math.random() * wrongNumbers.length)] =
+      pool[Math.floor(Math.random() * pool.length)];
+    wrongNumbers.sort((a, b) => a - b);
+
+    return [correct, wrongOrder, wrongNumbers].sort(() => Math.random() - 0.5);
+  };
+
+  /* ================= TASK HANDLERS ================= */
 
   const startTask1 = () => {
-    setTask1Data([]);
-    setT1Count(0);
-    setT1Symbol(randomSymbol());
-    t1StartRef.current = Date.now();
-    t1GlobalStart.current = Date.now();
+    setSdmtTrial(1);
+    setSdmtTarget(randomSdmtTarget());
+    startTimeRef.current = Date.now();
     setStage("task1");
   };
 
-  const handleTask1Press = (choice: string) => {
-    const now = Date.now();
+  const handleSdmtPress = (value: number) => {
+    const reactionTime = Date.now() - startTimeRef.current;
+    const isCorrect = value === sdmtTarget.value;
 
-    setTask1Data((d) => [
-      ...d,
-      {
-        rt: now - t1StartRef.current,
-        correct: choice === t1Symbol,
-      },
-    ]);
+    task1Results.current.push({ rt: reactionTime, correct: isCorrect });
 
-    const nextCount = t1Count + 1;
-    setT1Count(nextCount);
-
-    // STOP CONDITIONS
-    if (
-      nextCount >= TASK1_MAX_RESPONSES ||
-      now - t1GlobalStart.current >= TASK1_MAX_TIME
-    ) {
-      startTask2();
+    if (sdmtTrial >= SDMT_TRIALS_TOTAL) {
+      setStage("instr2");
       return;
     }
 
-    setT1Symbol(randomSymbol());
-    t1StartRef.current = now;
+    setSdmtTrial((t) => t + 1);
+    setSdmtTarget(randomSdmtTarget());
+    startTimeRef.current = Date.now();
   };
 
-  /* ================= TASK 2 ================= */
-
   const startTask2 = () => {
-    setTask2Data([]);
-    setT2Round(0);
-    nextGrid();
-    t2GlobalStart.current = Date.now();
+    setLnsRound(1);
+    triggerNewMemoryRound(1);
     setStage("task2");
   };
 
-  const nextGrid = () => {
-    const shuffled = [...TASK2_BASE_GRID].sort(() => Math.random() - 0.5);
-    setGrid(shuffled);
-    setTarget("▲");
-    t2StartRef.current = Date.now();
+  const triggerNewMemoryRound = (round: number) => {
+    const len = Math.min(2 + Math.floor(round / 2), 4);
+    const seq = generateSequence(len);
+
+    setSequence(seq);
+    setOptions(generateOptions(seq));
+
+    setIsMemorizing(true);
+    setTimeout(() => {
+      setIsMemorizing(false);
+      startTimeRef.current = Date.now(); // Start timing when options appear
+    }, MEMORY_FLASH_TIME);
   };
 
-  const handleGridPress = (symbol: string) => {
-    const now = Date.now();
+  const handleLnsSelect = (choice: number[]) => {
+    if (isMemorizing) return;
 
-    setTask2Data((d) => [
-      ...d,
-      {
-        rt: now - t2StartRef.current,
-        correct: symbol === target,
-      },
-    ]);
+    const reactionTime = Date.now() - startTimeRef.current;
+    const correctOrder = [...sequence].sort((a, b) => a - b);
+    const isCorrect = JSON.stringify(choice) === JSON.stringify(correctOrder);
 
-    const nextRound = t2Round + 1;
-    setT2Round(nextRound);
+    task2Results.current.push({
+      rt: reactionTime,
+      correct: isCorrect,
+      span: sequence.length,
+    });
 
-    if (
-      nextRound >= TASK2_MAX_ROUNDS ||
-      now - t2GlobalStart.current >= TASK2_MAX_TIME
-    ) {
+    if (lnsRound >= LNS_ROUNDS_TOTAL) {
       setStage("done");
-      return;
+    } else {
+      const nextRound = lnsRound + 1;
+      setLnsRound(nextRound);
+      triggerNewMemoryRound(nextRound);
     }
-
-    nextGrid();
   };
-
-  /* ================= UI ================= */
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container}>
       <Stack.Screen
         options={{
-          headerTitle: "Cognitive Assessment",
+          headerTitle: "Assessment",
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: "#FFFFFF" },
-          headerTitleStyle: {
-            fontSize: 20,
-            fontWeight: "700",
-            color: "#0F172A",
-          },
-          headerTintColor: "#0F172A",
+          headerTintColor: "#10B981",
+          headerTitleStyle: { color: "#1E293B", fontWeight: "700" },
+          headerStyle: { backgroundColor: "#F8FAFC" },
         }}
       />
 
@@ -158,475 +175,419 @@ export default function CognitiveTest() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* INTRO */}
         {stage === "intro" && (
-          <View style={styles.introContainer}>
-            <View style={styles.header}>
-              <View style={styles.iconBadge}>
-                <Brain size={24} color="#10B981" />
-              </View>
-              <Text style={styles.title}>Cognitive Test</Text>
-              <Text style={styles.subtitle}>
-                Two short tasks to assess your cognitive abilities
-              </Text>
+          <View style={styles.card}>
+            <View style={styles.iconCircle}>
+              <Brain size={40} color="#10B981" />
             </View>
-
-            <View style={styles.taskPreview}>
-              <View style={styles.taskPreviewItem}>
-                <View style={[styles.taskIcon, { backgroundColor: "#ECFDF5" }]}>
-                  <Zap size={20} color="#10B981" />
-                </View>
-                <Text style={styles.taskPreviewTitle}>Task 1: Quick Match</Text>
-                <Text style={styles.taskPreviewDesc}>
-                  Tap the matching shape as fast as you can
-                </Text>
-              </View>
-
-              <View style={styles.taskPreviewItem}>
-                <View style={[styles.taskIcon, { backgroundColor: "#F0F9FF" }]}>
-                  <Search size={20} color="#0EA5E9" />
-                </View>
-                <Text style={styles.taskPreviewTitle}>Task 2: Find Different</Text>
-                <Text style={styles.taskPreviewDesc}>
-                  Find the symbol that's different from the rest
-                </Text>
-              </View>
+            <Text style={styles.mainTitle}>Cognitive Health</Text>
+            <Text style={styles.description}>
+              We will check your mental processing speed and working memory.
+            </Text>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>• Task 1: Pattern Matching</Text>
+              <Text style={styles.infoText}>• Task 2: Logical Sequencing</Text>
             </View>
-
             <TouchableOpacity
               style={styles.primaryBtn}
-              onPress={startTask1}
-              activeOpacity={0.8}
+              onPress={() => setStage("instr1")}
             >
-              <Text style={styles.primaryText}>Start Assessment</Text>
+              <Text style={styles.primaryBtnText}>Continue</Text>
+              <ChevronRight color="#FFF" size={20} />
             </TouchableOpacity>
           </View>
         )}
 
-        {/* TASK 1 */}
+        {stage === "instr1" && (
+          <View style={styles.card}>
+            <Text style={styles.stepTag}>Step 1</Text>
+            <Text style={styles.cardTitle}>Quick Match</Text>
+            <Text style={styles.description}>
+              Look at the key at the top. Match the center symbol to its number
+              as fast as you can.
+            </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={startTask1}>
+              <Text style={styles.primaryBtnText}>Start Activity</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {stage === "task1" && (
-          <View style={styles.taskContainer}>
-            {/* Progress Indicator */}
-            <View style={styles.progressContainer}>
-              <View
-                style={[
-                  styles.progressDot,
-                  styles.progressDotActive,
-                ]}
-              />
-              <View style={styles.progressLine} />
-              <View style={[styles.progressDot, styles.progressDotInactive]} />
+          <View style={styles.taskFrame}>
+            <View style={styles.keyContainer}>
+              {SDMT_SYMBOL_MAP.map((m) => (
+                <View key={m.value} style={styles.keyItem}>
+                  <Text style={styles.keySymbol}>{m.symbol}</Text>
+                  <View style={styles.keyDivider} />
+                  <Text style={styles.keyValue}>{m.value}</Text>
+                </View>
+              ))}
             </View>
 
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={[styles.iconBadge, { backgroundColor: "#ECFDF5" }]}>
-                <Zap size={20} color="#10B981" />
-              </View>
-              <Text style={styles.title}>Quick Match</Text>
-              <Text style={styles.subtitle}>
-                Tap the shape that matches the one shown
-              </Text>
+            <View style={styles.targetCard}>
+              <Text style={styles.targetSymbol}>{sdmtTarget.symbol}</Text>
             </View>
 
-            {/* Task Card */}
-            <View style={styles.taskCard}>
-              <View style={styles.symbolBox}>
-                <Text style={styles.symbol}>{t1Symbol}</Text>
-              </View>
+            <View style={styles.buttonGrid}>
+              {SDMT_SYMBOL_MAP.map((m) => (
+                <TouchableOpacity
+                  key={m.value}
+                  style={styles.numpadBtn}
+                  onPress={() => handleSdmtPress(m.value)}
+                >
+                  <Text style={styles.numpadText}>{m.value}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-              <View style={styles.row}>
-                {TASK1_SYMBOLS.map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    style={styles.choiceBtn}
-                    onPress={() => handleTask1Press(s)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.choiceText}>{s}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${((t1Count + 1) / TASK1_MAX_RESPONSES) * 100}%`,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressText}>
-                {t1Count + 1} of {TASK1_MAX_RESPONSES}
+            <View style={styles.footer}>
+              <Text style={styles.progressLabel}>
+                Progress: {sdmtTrial} / {SDMT_TRIALS_TOTAL}
               </Text>
             </View>
           </View>
         )}
 
-        {/* TASK 2 */}
+        {stage === "instr2" && (
+          <View style={styles.card}>
+            <Text style={styles.stepTag}>Step 2</Text>
+            <Text style={styles.cardTitle}>Sequence Memory</Text>
+            <Text style={styles.description}>
+              A sequence will flash. Remember the numbers, then pick the option
+              that shows them
+              <Text style={{ fontWeight: "600", color: "#475569" }}>
+                {" "}
+                Sorted (Smallest to Largest)
+              </Text>
+              .
+            </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={startTask2}>
+              <Text style={styles.primaryBtnText}>Start Activity</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {stage === "task2" && (
-          <View style={styles.taskContainer}>
-            {/* Progress Indicator */}
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressDot, styles.progressDotCompleted]} />
-              <View style={[styles.progressLine, styles.progressLineActive]} />
-              <View
+          <View style={styles.taskFrame}>
+            <View style={styles.badge}>
+              {isMemorizing ? (
+                <Eye size={14} color="#10B981" />
+              ) : (
+                <EyeOff size={14} color="#94A3B8" />
+              )}
+              <Text
                 style={[
-                  styles.progressDot,
-                  styles.progressDotActive,
+                  styles.badgeText,
+                  !isMemorizing && { color: "#94A3B8" },
                 ]}
-              />
-            </View>
-
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={[styles.iconBadge, { backgroundColor: "#F0F9FF" }]}>
-                <Search size={20} color="#0EA5E9" />
-              </View>
-              <Text style={styles.title}>Find Different</Text>
-              <Text style={styles.subtitle}>
-                Tap the symbol that's different from the others
+              >
+                {isMemorizing ? "MEMORIZE NOW" : "RECALL ORDER"}
               </Text>
             </View>
 
-            {/* Task Card */}
-            <View style={styles.taskCard}>
-              <View style={styles.grid}>
-                {grid.map((s, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={styles.gridCell}
-                    onPress={() => handleGridPress(s)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.gridText}>{s}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.progressBar}>
+            <View style={styles.sequenceRow}>
+              {sequence.map((n, i) => (
                 <View
+                  key={i}
                   style={[
-                    styles.progressBarFill,
-                    {
-                      width: `${((t2Round + 1) / TASK2_MAX_ROUNDS) * 100}%`,
-                    },
+                    styles.memCard,
+                    !isMemorizing && styles.memCardHidden,
                   ]}
-                />
-              </View>
-              <Text style={styles.progressText}>
-                {t2Round + 1} of {TASK2_MAX_ROUNDS}
-              </Text>
+                >
+                  <Text
+                    style={[styles.memText, !isMemorizing && { opacity: 0 }]}
+                  >
+                    {n}
+                  </Text>
+                  {!isMemorizing && <Text style={styles.hiddenMark}>?</Text>}
+                </View>
+              ))}
             </View>
-          </View>
-        )}
 
-        {/* DONE */}
-        {stage === "done" && (
-          <View style={styles.completedContainer}>
-            <View style={styles.completedIcon}>
-              <Brain size={48} color="#10B981" />
-            </View>
-            <Text style={styles.completedTitle}>Assessment Complete!</Text>
-            <Text style={styles.completedSubtitle}>
-              Thank you for completing the cognitive assessment.
+            <Text style={styles.label}>
+              {isMemorizing
+                ? "Keep the numbers in mind..."
+                : "Select the correct sorted order:"}
             </Text>
 
+            {!isMemorizing ? (
+              <View style={styles.optionContainer}>
+                {options.map((opt, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={styles.optionCard}
+                    onPress={() => handleLnsSelect(opt)}
+                  >
+                    <View style={styles.optPillRow}>
+                      {opt.map((val, idx) => (
+                        <React.Fragment key={idx}>
+                          <Text style={styles.optValText}>{val}</Text>
+                          {idx < opt.length - 1 && (
+                            <ChevronRight size={14} color="#CBD5E1" />
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View
+                style={[styles.optionContainer, { opacity: 0 }]}
+                pointerEvents="none"
+              >
+                <View style={styles.optionCard}>
+                  <Text> </Text>
+                </View>
+                <View style={styles.optionCard}>
+                  <Text> </Text>
+                </View>
+                <View style={styles.optionCard}>
+                  <Text> </Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.footer}>
+              <Text style={styles.progressLabel}>
+                Round {lnsRound} of {LNS_ROUNDS_TOTAL}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {stage === "done" && (
+          <View style={styles.card}>
+            <View style={styles.iconCircle}>
+              <CheckCircle2 size={40} color="#10B981" />
+            </View>
+            <Text style={styles.mainTitle}>Success</Text>
+            <Text style={styles.description}>
+              Your cognitive assessment is complete. Results have been recorded.
+            </Text>
             <TouchableOpacity
               style={styles.primaryBtn}
               onPress={() => router.back()}
-              activeOpacity={0.8}
             >
-              <Text style={styles.primaryText}>Return to Home</Text>
+              <Text style={styles.primaryBtnText}>Return Home</Text>
             </TouchableOpacity>
           </View>
         )}
-
-        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* ================= STYLES ================= */
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   scrollContent: {
-    padding: 24,
-    alignItems: "center",
-  },
-
-  /* INTRO STYLES */
-  introContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
-
-  header: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-
-  iconBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#ECFDF5",
-    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    flexGrow: 1,
     justifyContent: "center",
-    marginBottom: 16,
   },
 
-  title: {
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 30,
+    padding: 30,
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+  },
+  taskFrame: { width: "100%", alignItems: "center" },
+
+  mainTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#0F172A",
+    textAlign: "center",
+  },
+  cardTitle: {
     fontSize: 24,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 8,
-    textAlign: "center",
   },
-
-  subtitle: {
-    fontSize: 14,
-    color: "#94A3B8",
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
-  taskPreview: {
-    width: "100%",
-    gap: 16,
-    marginBottom: 32,
-  },
-
-  taskPreviewItem: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 16,
-    padding: 20,
-    width: "100%",
-  },
-
-  taskIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-  },
-
-  taskPreviewTitle: {
+  description: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 4,
-  },
-
-  taskPreviewDesc: {
-    fontSize: 13,
     color: "#64748B",
-    lineHeight: 18,
+    textAlign: "center",
+    lineHeight: 24,
+    marginVertical: 15,
+  },
+  stepTag: {
+    color: "#10B981",
+    fontWeight: "800",
+    fontSize: 13,
+    textTransform: "uppercase",
+    marginBottom: 5,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#94A3B8",
+    textTransform: "uppercase",
+    marginBottom: 15,
+    textAlign: "center",
   },
 
   primaryBtn: {
+    flexDirection: "row",
     backgroundColor: "#10B981",
     paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    width: "100%",
+    borderRadius: 18,
     alignItems: "center",
+    width: "100%",
     justifyContent: "center",
+    marginTop: 10,
+  },
+  primaryBtnText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "700",
+    marginRight: 8,
   },
 
-  primaryText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  /* TASK STYLES */
-  taskContainer: {
-    width: "100%",
-    alignItems: "center",
-  },
-
-  progressContainer: {
+  badge: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
-    width: "100%",
-    justifyContent: "center",
-  },
-
-  progressDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#E2E8F0",
-  },
-
-  progressDotActive: {
-    backgroundColor: "#10B981",
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-
-  progressDotCompleted: {
-    backgroundColor: "#10B981",
-  },
-
-  progressLine: {
-    width: 60,
-    height: 2,
-    backgroundColor: "#E2E8F0",
-    marginHorizontal: 8,
-  },
-
-  progressLineActive: {
-    backgroundColor: "#10B981",
-  },
-
-  progressDotInactive: {
-    backgroundColor: "#E2E8F0",
-  },
-
-  taskCard: {
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
-    padding: 32,
-    alignItems: "center",
-    width: "100%",
+    marginBottom: 20,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#10B981",
+    marginLeft: 8,
   },
 
-  symbolBox: {
+  keyContainer: {
+    flexDirection: "row",
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 15,
+    marginBottom: 25,
+    width: "100%",
+    justifyContent: "space-evenly",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+  },
+  keyItem: { alignItems: "center" },
+  keySymbol: { fontSize: 22, fontWeight: "800", color: "#1E293B" },
+  keyDivider: {
+    height: 2,
+    width: 15,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 6,
+  },
+  keyValue: { fontSize: 18, fontWeight: "800", color: "#10B981" },
+  targetCard: {
     width: 140,
     height: 140,
-    borderRadius: 70,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
+    backgroundColor: "#FFF",
+    borderRadius: 35,
     justifyContent: "center",
-    marginBottom: 32,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    alignItems: "center",
+    marginBottom: 40,
+    elevation: 12,
+    shadowColor: "#10B981",
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+  },
+  targetSymbol: { fontSize: 75, color: "#1E293B" },
+  buttonGrid: { flexDirection: "row", gap: 18 },
+  numpadBtn: {
+    width: 85,
+    height: 85,
+    backgroundColor: "#FFF",
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    elevation: 4,
+  },
+  numpadText: { fontSize: 32, fontWeight: "800", color: "#1E293B" },
+
+  sequenceRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    width: "100%",
+    gap: 12,
+    marginBottom: 25,
+  },
+  memCard: {
+    backgroundColor: "#FFF",
+    width: width * 0.18,
+    aspectRatio: 0.8,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#10B981",
     elevation: 3,
   },
-
-  symbol: {
-    fontSize: 64,
+  memCardHidden: { backgroundColor: "#F1F5F9", borderColor: "#CBD5E1" },
+  memText: { color: "#1E293B", fontSize: 30, fontWeight: "800" },
+  hiddenMark: {
+    position: "absolute",
+    fontSize: 28,
+    color: "#94A3B8",
+    fontWeight: "800",
   },
 
-  row: {
+  optionContainer: { width: "100%", gap: 14 },
+  optionCard: {
+    backgroundColor: "#FFF",
+    paddingVertical: 20,
+    borderRadius: 22,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#F1F5F9",
+    elevation: 1,
+  },
+  optPillRow: {
     flexDirection: "row",
-    gap: 20,
-    marginBottom: 24,
-    justifyContent: "center",
-  },
-
-  choiceBtn: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  choiceText: {
-    fontSize: 32,
-  },
-
-  grid: {
-    flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 16,
-    marginBottom: 24,
-    width: "100%",
+    gap: 10,
   },
+  optValText: { fontSize: 20, fontWeight: "800", color: "#1E293B" },
 
-  gridCell: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+  iconCircle: {
+    width: 85,
+    height: 85,
+    borderRadius: 42,
+    backgroundColor: "#F0FDF4",
+    justifyContent: "center",
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 20,
   },
-
-  gridText: {
-    fontSize: 32,
-  },
-
-  progressBar: {
+  infoBox: {
+    backgroundColor: "#F8FAFC",
+    padding: 18,
+    borderRadius: 18,
     width: "100%",
-    height: 6,
-    backgroundColor: "#E2E8F0",
-    borderRadius: 3,
-    marginBottom: 12,
-    overflow: "hidden",
+    marginTop: 5,
   },
-
-  progressBarFill: {
-    height: "100%",
-    backgroundColor: "#10B981",
-    borderRadius: 3,
-  },
-
-  progressText: {
-    fontSize: 13,
+  infoText: {
+    fontSize: 14,
     color: "#64748B",
+    marginVertical: 3,
     fontWeight: "500",
   },
-
-  /* COMPLETED STYLES */
-  completedContainer: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-
-  completedIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#ECFDF5",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-  },
-
-  completedTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-
-  completedSubtitle: {
-    fontSize: 14,
-    color: "#94A3B8",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 20,
+  footer: { marginTop: 40 },
+  progressLabel: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#CBD5E1",
+    letterSpacing: 1.5,
   },
 });
