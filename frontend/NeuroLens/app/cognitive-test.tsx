@@ -524,9 +524,10 @@ const styles = StyleSheet.create({
   },
   memCard: {
     backgroundColor: "#FFF",
-    width: width * 0.18,
+    flex: 1,
+    maxWidth: 75,
     aspectRatio: 0.8,
-    borderRadius: 16,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
