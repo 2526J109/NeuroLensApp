@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, ArrowLeft, Globe, ChevronDown, Check, AlertCircle, Calendar } from 'lucide-react-native';
+import { Eye, EyeOff, ArrowLeft, Globe, ChevronDown, Check, Calendar } from 'lucide-react-native';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -24,14 +24,6 @@ export default function SignupScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ 
-    fullName?: string; 
-    email?: string; 
-    password?: string;
-    birthday?: string;
-    gender?: string;
-    handedness?: string;
-  }>({});
   
   // New fields
   const [gender, setGender] = useState<string>('');
@@ -54,105 +46,9 @@ export default function SignupScreen() {
     { code: 'ta', label: 'LK தமிழ்', flag: 'LK' },
   ];
 
-  const validateForm = () => {
-    const newErrors: { 
-      fullName?: string; 
-      email?: string; 
-      password?: string;
-      birthday?: string;
-      gender?: string;
-      handedness?: string;
-    } = {};
-
-    // Validate full name first
-    if (!fullName.trim()) {
-      newErrors.fullName = 'Please fill out this field';
-      setErrors(newErrors);
-      return false;
-    } else if (fullName.trim().length < 2) {
-      newErrors.fullName = 'Name must be at least 2 characters';
-      setErrors(newErrors);
-      return false;
-    }
-
-    // Only validate email if full name is valid
-    if (!email.trim()) {
-      newErrors.email = 'Please fill out this field';
-      setErrors(newErrors);
-      return false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
-      setErrors(newErrors);
-      return false;
-    }
-
-    // Only validate password if email is valid
-    if (!password.trim()) {
-      newErrors.password = 'Please fill out this field';
-      setErrors(newErrors);
-      return false;
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-      setErrors(newErrors);
-      return false;
-    }
-
-    // Validate gender
-    if (!gender) {
-      newErrors.gender = 'Please select your gender';
-      setErrors(newErrors);
-      return false;
-    }
-
-    // Validate birthday
-    if (!birthday.trim()) {
-      newErrors.birthday = 'Please enter your birthday';
-      setErrors(newErrors);
-      return false;
-    } else {
-      // Validate date format (YYYY-MM-DD or DD/MM/YYYY)
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/;
-      if (!dateRegex.test(birthday)) {
-        newErrors.birthday = 'Please enter a valid date (YYYY-MM-DD)';
-        setErrors(newErrors);
-        return false;
-      }
-      // Validate that date is in the past and reasonable
-      const date = new Date(birthday);
-      const today = new Date();
-      const minDate = new Date('1900-01-01');
-      if (isNaN(date.getTime()) || date > today || date < minDate) {
-        newErrors.birthday = 'Please enter a valid date of birth';
-        setErrors(newErrors);
-        return false;
-      }
-    }
-
-    // Validate handedness
-    if (!handedness) {
-      newErrors.handedness = 'Please select your handedness';
-      setErrors(newErrors);
-      return false;
-    }
-
-    setErrors({});
-    return true;
-  };
-
   const handleCreateAccount = () => {
-    if (validateForm()) {
-      // TODO: Implement signup logic
-      console.log('Create account pressed', { 
-        fullName, 
-        email, 
-        password, 
-        birthday,
-        gender, 
-        handedness 
-      });
-      // After successful signup, navigate to login page
-      router.replace('/login');
-    }
+    // Skip validation and redirect directly to tabs
+    router.replace('/(tabs)');
   };
 
   const handleSignIn = () => {
@@ -266,29 +162,13 @@ export default function SignupScreen() {
                   placeholder="Enter your full name"
                   placeholderTextColor="#94A3B8"
                   value={fullName}
-                  onChangeText={(text) => {
-                    setFullName(text);
-                    if (errors.fullName) {
-                      setErrors({ ...errors, fullName: undefined });
-                    }
-                  }}
+                  onChangeText={setFullName}
                   autoCapitalize="words"
                   autoCorrect={false}
                   onFocus={() => setFocusedField('fullName')}
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {errors.fullName && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.fullName}</Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -307,12 +187,7 @@ export default function SignupScreen() {
                   placeholder="Enter your email"
                   placeholderTextColor="#94A3B8"
                   value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (errors.email) {
-                      setErrors({ ...errors, email: undefined });
-                    }
-                  }}
+                  onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -320,17 +195,6 @@ export default function SignupScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {errors.email && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.email}</Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             {/* Birthday Field */}
@@ -342,8 +206,7 @@ export default function SignupScreen() {
                 style={[
                   styles.inputWrapper,
                   styles.dateInputWrapper,
-                  focusedField === 'birthday' && styles.inputWrapperFocused,
-                  errors.birthday && styles.inputWrapperError
+                  focusedField === 'birthday' && styles.inputWrapperFocused
                 ]}
                 onPress={() => {
                   if (birthday) {
@@ -365,17 +228,6 @@ export default function SignupScreen() {
                 </Text>
                 <Calendar size={20} color="#64748B" style={{ marginRight: 4 }} />
               </TouchableOpacity>
-              {errors.birthday && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.birthday}</Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             {/* Gender Field */}
@@ -387,8 +239,7 @@ export default function SignupScreen() {
                 <TouchableOpacity
                   style={[
                     styles.dropdownButton,
-                    focusedField === 'gender' && styles.inputWrapperFocused,
-                    errors.gender && styles.inputWrapperError
+                    focusedField === 'gender' && styles.inputWrapperFocused
                   ]}
                   onPress={() => {
                     const isOpening = !showGenderDropdown;
@@ -428,9 +279,6 @@ export default function SignupScreen() {
                             setGender(option);
                             setShowGenderDropdown(false);
                             setFocusedField(null);
-                            if (errors.gender) {
-                              setErrors({ ...errors, gender: undefined });
-                            }
                           }}
                           activeOpacity={0.7}
                         >
@@ -444,17 +292,6 @@ export default function SignupScreen() {
                   </>
                 )}
               </View>
-              {errors.gender && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.gender}</Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             {/* Handedness Field */}
@@ -466,8 +303,7 @@ export default function SignupScreen() {
                 <TouchableOpacity
                   style={[
                     styles.dropdownButton,
-                    focusedField === 'handedness' && styles.inputWrapperFocused,
-                    errors.handedness && styles.inputWrapperError
+                    focusedField === 'handedness' && styles.inputWrapperFocused
                   ]}
                   onPress={() => {
                     const isOpening = !showHandednessDropdown;
@@ -507,9 +343,6 @@ export default function SignupScreen() {
                             setHandedness(option);
                             setShowHandednessDropdown(false);
                             setFocusedField(null);
-                            if (errors.handedness) {
-                              setErrors({ ...errors, handedness: undefined });
-                            }
                           }}
                           activeOpacity={0.7}
                         >
@@ -523,17 +356,6 @@ export default function SignupScreen() {
                   </>
                 )}
               </View>
-              {errors.handedness && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.handedness}</Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             {/* Password Field */}
@@ -553,12 +375,7 @@ export default function SignupScreen() {
                   placeholder="Enter your password"
                   placeholderTextColor="#94A3B8"
                   value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors({ ...errors, password: undefined });
-                    }
-                  }}
+                  onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -576,17 +393,6 @@ export default function SignupScreen() {
                   )}
                 </TouchableOpacity>
               </View>
-              {errors.password && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.password}</Text>
-                  </View>
-                </View>
-              )}
             </View>
           </View>
 
@@ -712,9 +518,6 @@ export default function SignupScreen() {
                         setBirthday(formattedDate);
                         setShowDatePicker(false);
                         setFocusedField(null);
-                        if (errors.birthday) {
-                          setErrors({ ...errors, birthday: undefined });
-                        }
                       }}
                     >
                       <Text style={styles.datePickerConfirmText}>Confirm</Text>
@@ -975,10 +778,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  inputWrapperError: {
-    borderColor: '#EF4444',
-    borderWidth: 2,
-  },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1045,58 +844,6 @@ const styles = StyleSheet.create({
   disclaimerLink: {
     color: '#14B8A6',
     textDecorationLine: 'underline',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  errorTooltip: {
-    marginTop: 8,
-    position: 'relative',
-    alignSelf: 'flex-start',
-  },
-  errorTooltipContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    gap: 8,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  errorIconContainer: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    backgroundColor: '#F97316',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorTooltipText: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontWeight: '400',
-  },
-  errorTooltipArrow: {
-    position: 'absolute',
-    top: -5,
-    left: 20,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderBottomWidth: 5,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#F1F5F9',
   },
   modalOverlay: {
     flex: 1,
