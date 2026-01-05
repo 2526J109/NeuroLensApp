@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Globe, ChevronDown, Check, AlertCircle } from 'lucide-react-native';
+import { Eye, EyeOff, Globe, ChevronDown, Check } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,7 +22,6 @@ export default function LoginScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const languages = [
     { code: 'en', label: 'GB English', flag: 'GB' },
@@ -30,42 +29,9 @@ export default function LoginScreen() {
     { code: 'ta', label: 'LK தமிழ்', flag: 'LK' },
   ];
 
-  const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
-
-    // Validate email first
-    if (!email.trim()) {
-      newErrors.email = 'Please fill out this field';
-      setErrors(newErrors);
-      return false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
-      setErrors(newErrors);
-      return false;
-    }
-
-    // Only validate password if email is valid
-    if (!password.trim()) {
-      newErrors.password = 'Please fill out this field';
-      setErrors(newErrors);
-      return false;
-    } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-      setErrors(newErrors);
-      return false;
-    }
-
-    setErrors({});
-    return true;
-  };
-
   const handleSignIn = () => {
-    if (validateForm()) {
-      // TODO: Implement sign in logic
-      console.log('Sign in pressed', { email, password });
-      // After successful login, navigate to home
-      router.replace('/(tabs)');
-    }
+    // Skip validation and redirect directly to tabs
+    router.replace('/(tabs)');
   };
 
   const handleForgotPassword = () => {
@@ -168,12 +134,7 @@ export default function LoginScreen() {
                   placeholder="Enter your email"
                   placeholderTextColor="#94A3B8"
                   value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (errors.email) {
-                      setErrors({ ...errors, email: undefined });
-                    }
-                  }}
+                  onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -181,17 +142,6 @@ export default function LoginScreen() {
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
-              {errors.email && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.email}</Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -210,12 +160,7 @@ export default function LoginScreen() {
                   placeholder="Enter your password"
                   placeholderTextColor="#94A3B8"
                   value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors({ ...errors, password: undefined });
-                    }
-                  }}
+                  onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -233,17 +178,6 @@ export default function LoginScreen() {
                   )}
                 </TouchableOpacity>
               </View>
-              {errors.password && (
-                <View style={styles.errorTooltip}>
-                  <View style={styles.errorTooltipArrow} />
-                  <View style={styles.errorTooltipContent}>
-                    <View style={styles.errorIconContainer}>
-                      <AlertCircle size={16} color="#FFFFFF" />
-                    </View>
-                    <Text style={styles.errorTooltipText}>{errors.password}</Text>
-                  </View>
-                </View>
-              )}
             </View>
           </View>
 
@@ -438,10 +372,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  inputWrapperError: {
-    borderColor: '#EF4444',
-    borderWidth: 2,
-  },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -516,58 +446,6 @@ const styles = StyleSheet.create({
   disclaimerLink: {
     color: '#14B8A6',
     textDecorationLine: 'underline',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  errorTooltip: {
-    marginTop: 8,
-    position: 'relative',
-    alignSelf: 'flex-start',
-  },
-  errorTooltipContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    gap: 8,
-    minWidth: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  errorIconContainer: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    backgroundColor: '#F97316',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorTooltipText: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontWeight: '400',
-  },
-  errorTooltipArrow: {
-    position: 'absolute',
-    top: -5,
-    left: 20,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderBottomWidth: 5,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#F1F5F9',
   },
 });
 
