@@ -24,15 +24,15 @@ export default function SignupScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ 
-    fullName?: string; 
-    email?: string; 
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    email?: string;
     password?: string;
     birthday?: string;
     gender?: string;
     handedness?: string;
   }>({});
-  
+
   // New fields
   const [gender, setGender] = useState<string>('');
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
@@ -41,10 +41,10 @@ export default function SignupScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [handedness, setHandedness] = useState<string>('');
   const [showHandednessDropdown, setShowHandednessDropdown] = useState(false);
-  
+
   // Dynamic z-index for dropdowns
   const [dropdownZIndex, setDropdownZIndex] = useState(100);
-  
+
   const genderOptions = ['Male', 'Female', 'Prefer not to say'];
   const handednessOptions = ['Left', 'Right'];
 
@@ -55,9 +55,9 @@ export default function SignupScreen() {
   ];
 
   const validateForm = () => {
-    const newErrors: { 
-      fullName?: string; 
-      email?: string; 
+    const newErrors: {
+      fullName?: string;
+      email?: string;
       password?: string;
       birthday?: string;
       gender?: string;
@@ -142,13 +142,13 @@ export default function SignupScreen() {
   const handleCreateAccount = () => {
     if (validateForm()) {
       // TODO: Implement signup logic
-      console.log('Create account pressed', { 
-        fullName, 
-        email, 
-        password, 
+      console.log('Create account pressed', {
+        fullName,
+        email,
+        password,
         birthday,
-        gender, 
-        handedness 
+        gender,
+        handedness
       });
       // After successful signup, navigate to login page
       router.replace('/login');
@@ -172,7 +172,7 @@ export default function SignupScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
         >
           {/* Language Selector */}
           <View style={styles.languageContainer}>
@@ -189,7 +189,7 @@ export default function SignupScreen() {
               <Text style={styles.languageText}>{selectedLanguage}</Text>
               <ChevronDown size={16} color="#64748B" />
             </TouchableOpacity>
-            
+
             {showLanguageDropdown && (
               <>
                 <TouchableWithoutFeedback
@@ -408,7 +408,7 @@ export default function SignupScreen() {
                   </Text>
                   <ChevronDown size={20} color="#64748B" />
                 </TouchableOpacity>
-                
+
                 {showGenderDropdown && (
                   <>
                     <TouchableWithoutFeedback
@@ -487,7 +487,7 @@ export default function SignupScreen() {
                   </Text>
                   <ChevronDown size={20} color="#64748B" />
                 </TouchableOpacity>
-                
+
                 {showHandednessDropdown && (
                   <>
                     <TouchableWithoutFeedback
@@ -562,6 +562,8 @@ export default function SignupScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  spellCheck={false}
+                  textContentType="none"
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                 />
@@ -610,7 +612,7 @@ export default function SignupScreen() {
                         <Text style={styles.datePickerCloseText}>Done</Text>
                       </TouchableOpacity>
                     </View>
-                    
+
                     <View style={styles.datePickerContent}>
                       {/* Year Picker */}
                       <View style={styles.datePickerColumn}>
@@ -827,7 +829,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -954,7 +956,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     overflow: 'hidden',

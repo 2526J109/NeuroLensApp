@@ -33,7 +33,6 @@ export default function LoginScreen() {
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
 
-    // Validate email first
     if (!email.trim()) {
       newErrors.email = 'Please fill out this field';
       setErrors(newErrors);
@@ -44,7 +43,6 @@ export default function LoginScreen() {
       return false;
     }
 
-    // Only validate password if email is valid
     if (!password.trim()) {
       newErrors.password = 'Please fill out this field';
       setErrors(newErrors);
@@ -61,9 +59,7 @@ export default function LoginScreen() {
 
   const handleSignIn = () => {
     if (validateForm()) {
-      // TODO: Implement sign in logic
       console.log('Sign in pressed', { email, password });
-      // After successful login, navigate to home
       router.replace('/(tabs)');
     }
   };
@@ -85,9 +81,8 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
         >
-          {/* Language Selector */}
           <View style={styles.languageContainer}>
             <TouchableOpacity
               style={styles.languageButton}
@@ -98,7 +93,7 @@ export default function LoginScreen() {
               <Text style={styles.languageText}>{selectedLanguage}</Text>
               <ChevronDown size={16} color="#64748B" />
             </TouchableOpacity>
-            
+
             {showLanguageDropdown && (
               <>
                 <TouchableWithoutFeedback
@@ -128,12 +123,10 @@ export default function LoginScreen() {
             )}
           </View>
 
-          {/* Logo Section */}
           <View style={styles.logoSection}>
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
                 <View style={styles.waveformContainer}>
-                  {/* Simple waveform representation */}
                   <View style={styles.waveform}>
                     <View style={[styles.waveBar, { height: 20 }]} />
                     <View style={[styles.waveBar, { height: 35 }]} />
@@ -150,7 +143,6 @@ export default function LoginScreen() {
             <Text style={styles.welcomeText}>Welcome Back</Text>
           </View>
 
-          {/* Input Fields */}
           <View style={styles.inputSection}>
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
@@ -198,10 +190,7 @@ export default function LoginScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
-              <View style={[
-                styles.passwordContainer,
-                focusedField === 'password' && styles.inputWrapperFocused
-              ]}>
+              <View style={styles.passwordContainer}>
                 <TextInput
                   style={[
                     styles.passwordInput,
@@ -219,12 +208,19 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
+                  spellCheck={false}
+                  textContentType="none"
+                  onFocus={() => {
+                    setFocusedField('password');
+                  }}
+                  onBlur={() => {
+                    setFocusedField(null);
+                  }}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
+                  activeOpacity={0.7}
                 >
                   {showPassword ? (
                     <EyeOff size={20} color="#64748B" />
@@ -247,7 +243,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Sign In Button */}
           <TouchableOpacity
             style={styles.signInButton}
             onPress={handleSignIn}
@@ -256,7 +251,6 @@ export default function LoginScreen() {
             <Text style={styles.signInButtonText}>Sign In</Text>
           </TouchableOpacity>
 
-          {/* Forgot Password Link */}
           <TouchableOpacity
             onPress={handleForgotPassword}
             style={styles.forgotPasswordContainer}
@@ -264,7 +258,6 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          {/* Create Account Section */}
           <View style={styles.createAccountSection}>
             <Text style={styles.createAccountText}>Don't have an account?</Text>
             <TouchableOpacity onPress={handleCreateAccount}>
@@ -272,7 +265,6 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Legal Disclaimer */}
           <View style={styles.disclaimerSection}>
             <Text style={styles.disclaimerText}>
               By continuing, you agree to our{' '}
@@ -283,7 +275,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeAreaView >
   );
 }
 
@@ -424,7 +416,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     overflow: 'hidden',
@@ -453,7 +445,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -570,4 +562,3 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
 });
-
