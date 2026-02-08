@@ -190,7 +190,7 @@ export default function LoginScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
-              <View style={styles.passwordContainer}>
+              <View style={[styles.passwordContainer, focusedField === 'password' && styles.inputWrapperFocused]}>
                 <TextInput
                   style={[
                     styles.passwordInput,
