@@ -8,16 +8,21 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, AlertCircle } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string }>({});
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors: { email?: string } = {};
@@ -32,12 +37,37 @@ export default function ForgotPasswordScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (validateForm()) {
-      // TODO: Implement password reset logic
-      console.log('Reset password pressed', { email });
-      // After successful reset, navigate back to login
-      // router.replace('/login');
+      setLoading(true);
+      try {
+        await resetPassword(email);
+        
+        // Show success toast
+        Toast.show({
+          type: 'success',
+          text1: 'Email Sent!',
+          text2: 'Password reset link sent to your email.',
+          position: 'top',
+          visibilityTime: 3000,
+          topOffset: 60,
+          onHide: () => {
+            router.replace('/login');
+          }
+        });
+      } catch (error: any) {
+        // Show error toast
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error.message || 'Failed to send reset email. Please try again.',
+          position: 'top',
+          visibilityTime: 4000,
+          topOffset: 60,
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -135,11 +165,16 @@ export default function ForgotPasswordScreen() {
 
           {/* Reset Password Button */}
           <TouchableOpacity
-            style={styles.resetButton}
+            style={[styles.resetButton, loading && styles.resetButtonDisabled]}
             onPress={handleResetPassword}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.resetButtonText}>Send Reset Link</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.resetButtonText}>Send Reset Link</Text>
+            )}
           </TouchableOpacity>
 
           {/* Back to Login Link */}
@@ -278,6 +313,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  resetButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   resetButtonText: {
     fontSize: 16,

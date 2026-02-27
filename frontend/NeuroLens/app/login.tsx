@@ -9,13 +9,17 @@ import {
   Platform,
   ScrollView,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Globe, ChevronDown, Check, AlertCircle } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +27,7 @@ export default function LoginScreen() {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loading, setLoading] = useState(false);
 
   const languages = [
     { code: 'en', label: 'GB English', flag: 'GB' },
@@ -57,10 +62,39 @@ export default function LoginScreen() {
     return true;
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (validateForm()) {
-      console.log('Sign in pressed', { email, password });
-      router.replace('/(tabs)');
+      setLoading(true);
+      try {
+        await signIn(email, password);
+        
+        // Show success toast
+        Toast.show({
+          type: 'success',
+          text1: 'Login Successful!',
+          text2: 'Welcome back to NeuroLens',
+          position: 'top',
+          visibilityTime: 2000,
+          topOffset: 60,
+        });
+        
+        // Redirect to home
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 500);
+      } catch (error: any) {
+        // Show error toast
+        Toast.show({
+          type: 'error',
+          text1: 'Login Failed',
+          text2: error.message || 'Please check your credentials and try again.',
+          position: 'top',
+          visibilityTime: 4000,
+          topOffset: 60,
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -244,11 +278,16 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.signInButton}
+            style={[styles.signInButton, loading && styles.signInButtonDisabled]}
             onPress={handleSignIn}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.signInButtonText}>Sign In</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -466,6 +505,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   signInButtonText: {
     fontSize: 16,

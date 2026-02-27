@@ -10,17 +10,22 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, ArrowLeft, Globe, ChevronDown, Check, AlertCircle, Calendar } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -139,19 +144,38 @@ export default function SignupScreen() {
     return true;
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
     if (validateForm()) {
-      // TODO: Implement signup logic
-      console.log('Create account pressed', {
-        fullName,
-        email,
-        password,
-        birthday,
-        gender,
-        handedness
-      });
-      // After successful signup, navigate to login page
-      router.replace('/login');
+      setLoading(true);
+      try {
+        await signUp(email, password, fullName);
+        
+        Toast.show({
+          type: 'success',
+          text1: 'Registration Successful!',
+          text2: 'Your account has been created.',
+          position: 'top',
+          visibilityTime: 3000,
+          topOffset: 60,
+          onHide: () => {
+            router.replace('/login');
+          }
+        });
+        
+      } catch (error: any) {
+        const errorMessage = error.message || 'An error occurred during registration. Please try again.';
+        
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: errorMessage,
+          position: 'top',
+          visibilityTime: 4000,
+          topOffset: 60,
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -729,11 +753,16 @@ export default function SignupScreen() {
 
           {/* Create Account Button */}
           <TouchableOpacity
-            style={styles.createAccountButton}
+            style={[styles.createAccountButton, loading && styles.createAccountButtonDisabled]}
             onPress={handleCreateAccount}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.createAccountButtonText}>Create Account</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.createAccountButtonText}>Create Account</Text>
+            )}
           </TouchableOpacity>
 
           {/* Sign In Section */}
@@ -1014,6 +1043,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  createAccountButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   createAccountButtonText: {
     fontSize: 16,
