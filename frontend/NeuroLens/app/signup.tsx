@@ -145,40 +145,29 @@ export default function SignupScreen() {
   };
 
   const handleCreateAccount = async () => {
-    console.log('Create Account button clicked');
-    console.log('Form data:', { fullName, email, gender, birthday, handedness });
-    
     if (validateForm()) {
-      console.log('Form validation passed');
       setLoading(true);
       try {
-        console.log('Calling signUp...');
         await signUp(email, password, fullName);
-        console.log('SignUp successful!');
         
-        // Show success toast notification
         Toast.show({
           type: 'success',
-          text1: '✅ Registration Successful!',
-          text2: 'Please check your email to verify your account.',
+          text1: 'Registration Successful!',
+          text2: 'Your account has been created.',
           position: 'top',
-          visibilityTime: 4000,
+          visibilityTime: 3000,
           topOffset: 60,
           onHide: () => {
-            // Redirect to login page after toast disappears
-            console.log('Redirecting to login page');
             router.replace('/login');
           }
         });
         
       } catch (error: any) {
-        console.error('Registration error:', error);
         const errorMessage = error.message || 'An error occurred during registration. Please try again.';
         
-        // Show error toast notification
         Toast.show({
           type: 'error',
-          text1: '❌ Registration Failed',
+          text1: 'Registration Failed',
           text2: errorMessage,
           position: 'top',
           visibilityTime: 4000,
@@ -187,8 +176,6 @@ export default function SignupScreen() {
       } finally {
         setLoading(false);
       }
-    } else {
-      console.log('Form validation failed');
     }
   };
 

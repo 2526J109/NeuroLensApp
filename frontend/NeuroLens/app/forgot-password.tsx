@@ -46,7 +46,7 @@ export default function ForgotPasswordScreen() {
         // Show success toast
         Toast.show({
           type: 'success',
-          text1: '✅ Email Sent!',
+          text1: 'Email Sent!',
           text2: 'Password reset link sent to your email.',
           position: 'top',
           visibilityTime: 3000,
@@ -59,7 +59,7 @@ export default function ForgotPasswordScreen() {
         // Show error toast
         Toast.show({
           type: 'error',
-          text1: '❌ Error',
+          text1: 'Error',
           text2: error.message || 'Failed to send reset email. Please try again.',
           position: 'top',
           visibilityTime: 4000,

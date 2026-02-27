@@ -39,7 +39,6 @@ async def verify_firebase_token(token: str) -> dict:
         HTTPException: If token is invalid
     """
     try:
-        # Verify the token
         decoded_token = auth.verify_id_token(token)
         return decoded_token
     except auth.InvalidIdTokenError:

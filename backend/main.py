@@ -3,14 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import voice_analysis
 from app.routes import auth
 from app.core.firebase import initialize_firebase
-from app.core.database import engine, Base
 from app.core.config import settings
+import uvicorn
 
-# Initialize Firebase Admin SDK
 initialize_firebase()
-
-# Create database tables
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -43,5 +39,4 @@ async def health_check():
 
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

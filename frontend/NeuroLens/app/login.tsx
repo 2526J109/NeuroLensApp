@@ -71,7 +71,7 @@ export default function LoginScreen() {
         // Show success toast
         Toast.show({
           type: 'success',
-          text1: '✅ Login Successful!',
+          text1: 'Login Successful!',
           text2: 'Welcome back to NeuroLens',
           position: 'top',
           visibilityTime: 2000,
@@ -86,7 +86,7 @@ export default function LoginScreen() {
         // Show error toast
         Toast.show({
           type: 'error',
-          text1: '❌ Login Failed',
+          text1: 'Login Failed',
           text2: error.message || 'Please check your credentials and try again.',
           position: 'top',
           visibilityTime: 4000,

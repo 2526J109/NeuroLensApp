@@ -14,33 +14,20 @@ interface UserProfile {
 }
 
 export const authService = {
-  // Register user with backend after Firebase authentication
   register: async (firebaseToken: string, email: string, fullName?: string): Promise<UserProfile> => {
-    console.log('📡 Calling backend register API...');
-    console.log('URL:', api.defaults.baseURL + '/api/auth/register');
-    console.log('Token (first 20 chars):', firebaseToken.substring(0, 20) + '...');
-    
-    try {
-      const response = await api.post<UserProfile>(
-        '/api/auth/register',
-        {
-          email,
-          full_name: fullName,
-        } as RegisterRequest,
-        {
-          headers: {
-            Authorization: `Bearer ${firebaseToken}`,
-          },
-        }
-      );
-      console.log('✅ Backend response:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('❌ Backend registration failed:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      throw error;
-    }
+    const response = await api.post<UserProfile>(
+      '/api/auth/register',
+      {
+        email,
+        full_name: fullName,
+      } as RegisterRequest,
+      {
+        headers: {
+          Authorization: `Bearer ${firebaseToken}`,
+        },
+      }
+    );
+    return response.data;
   },
 
   // Get current user profile

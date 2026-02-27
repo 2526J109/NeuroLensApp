@@ -5,8 +5,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  sendPasswordResetEmail,
-  sendEmailVerification
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { authService } from '../services/authService';
@@ -84,41 +83,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Sign up with email and password
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      console.log('🔵 Step 1: Creating Firebase user...');
-      // Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('✅ Firebase user created:', userCredential.user.uid);
-      
-      console.log('🔵 Step 2: Sending verification email...');
-      // Send verification email
-      await sendEmailVerification(userCredential.user);
-      console.log('✅ Verification email sent');
-      
-      console.log('🔵 Step 3: Getting Firebase ID token...');
-      // Get Firebase ID token
       const token = await userCredential.user.getIdToken();
-      console.log('✅ Token received:', token.substring(0, 20) + '...');
-      
-      console.log('🔵 Step 4: Registering user in backend...');
-      console.log('Backend URL:', 'POST /api/auth/register');
-      console.log('Data:', { email, full_name: fullName });
-      
-      // Register user in backend
-      const backendUser = await authService.register(token, email, fullName);
-      console.log('✅ Backend registration successful:', backendUser);
-      
-      console.log('🔵 Step 5: Fetching user profile...');
-      // Fetch the newly created profile
+      await authService.register(token, email, fullName);
       await fetchUserProfile(userCredential.user);
-      console.log('✅ All registration steps completed successfully!');
     } catch (error: any) {
-      console.error('❌ Registration error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       throw new Error(error.message || 'Failed to sign up');
     }
   };

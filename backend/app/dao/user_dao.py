@@ -1,49 +1,43 @@
-from sqlalchemy.orm import Session
-from typing import Optional
-from ..models.user import User
+from typing import Optional, Dict, Any
+from datetime import datetime
+from ..core.firestore import get_firestore_service
 from ..schemas.user import UserCreate, UserUpdate
 
 
 class UserDAO:
-    """Data Access Object for User operations"""
+    """Data Access Object for User operations using Firestore"""
     
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self):
+        self.db = get_firestore_service()
     
-    def get_by_id(self, user_id: int) -> Optional[User]:
+    def get_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
-        return self.db.query(User).filter(User.id == user_id).first()
+        return self.db.get_user_by_id(user_id)
     
-    def get_by_email(self, email: str) -> Optional[User]:
+    def get_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
-        return self.db.query(User).filter(User.email == email).first()
+        return self.db.get_user_by_email(email)
     
-    def get_by_firebase_uid(self, firebase_uid: str) -> Optional[User]:
+    def get_by_firebase_uid(self, firebase_uid: str) -> Optional[Dict[str, Any]]:
         """Get user by Firebase UID"""
-        return self.db.query(User).filter(User.firebase_uid == firebase_uid).first()
+        return self.db.get_user_by_firebase_uid(firebase_uid)
     
-    def create(self, user_data: UserCreate) -> User:
+    def create(self, user_data: UserCreate) -> Dict[str, Any]:
         """Create a new user"""
-        db_user = User(
-            firebase_uid=user_data.firebase_uid,
-            email=user_data.email,
-            full_name=user_data.full_name
-        )
-        self.db.add(db_user)
-        self.db.commit()
-        self.db.refresh(db_user)
-        return db_user
+        user_dict = {
+            'firebase_uid': user_data.firebase_uid,
+            'email': user_data.email,
+            'full_name': user_data.full_name,
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        return self.db.create_user(user_dict)
     
-    def update(self, user: User, user_data: UserUpdate) -> User:
-        """Update user"""
-        for field, value in user_data.dict(exclude_unset=True).items():
-            setattr(user, field, value)
-        
-        self.db.commit()
-        self.db.refresh(user)
-        return user
+    def update(self, user_id: str, user_data: UserUpdate) -> Dict[str, Any]:
+        update_dict = user_data.dict(exclude_unset=True)
+        update_dict['updated_at'] = datetime.utcnow().isoformat()
+        return self.db.update_user(user_id, update_dict)
     
-    def delete(self, user: User) -> None:
-        """Delete user"""
-        self.db.delete(user)
-        self.db.commit()
+    def delete(self, user_id: str) -> bool:
+        return self.db.delete_user(user_id)
+
