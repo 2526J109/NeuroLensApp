@@ -18,13 +18,26 @@ def get_firestore_db():
 
 class FirestoreService:
     """Firestore database service"""
-    
     _instance = None
     _db = None
-    
+
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FirestoreService, cls).__new__(cls)
+        return cls._instance
+
+    # Drawing prediction operations
+    def save_drawing_prediction(self, user_id: str, prediction_record: Dict[str, Any]) -> Dict[str, Any]:
+        """Save a drawing prediction for a user"""
+        predictions_ref = self.db.collection('drawing_predictions')
+        doc_ref = predictions_ref.document()
+        prediction_record['id'] = doc_ref.id
+        prediction_record['user_id'] = user_id
+        if 'created_at' not in prediction_record:
+            from datetime import datetime
+            prediction_record['created_at'] = datetime.utcnow().isoformat()
+        doc_ref.set(prediction_record)
+        return prediction_record
         return cls._instance
     
     @property
