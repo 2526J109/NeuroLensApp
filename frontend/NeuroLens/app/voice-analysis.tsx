@@ -13,6 +13,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Mic, ArrowLeft, Play, Square, Check, Volume2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
+import * as Speech from 'expo-speech';
 import { API_ENDPOINTS } from '../constants/api';
 
 const PROMPTS = [
@@ -106,6 +107,9 @@ export default function VoiceAnalysisScreen() {
           // Ignore errors during cleanup
         });
       }
+
+      // Stop any ongoing speech when leaving the screen
+      Speech.stop();
     };
   }, [sound, recording]);
 
@@ -113,6 +117,19 @@ export default function VoiceAnalysisScreen() {
     const mins = Math.floor(seconds / 60);
     const secs = (seconds % 60).toFixed(1);
     return `${mins}:${secs.padStart(4, '0')}`;
+  };
+
+  const speakPrompt = (text: string) => {
+    if (!text) return;
+
+    // Stop any previous speech before starting a new one
+    Speech.stop();
+
+    Speech.speak(text, {
+      language: 'en-US',
+      rate: 0.9,
+      pitch: 1.0,
+    });
   };
 
   const startRecording = async () => {
@@ -342,6 +359,40 @@ export default function VoiceAnalysisScreen() {
     }
   };
 
+  const handleCompleteTestWithResults = () => {
+    // Check if all recordings are complete
+    const allRecordingsComplete = PROMPTS.every((_, index) => recordings[index]);
+    
+    if (!allRecordingsComplete) {
+      Alert.alert(
+        'Incomplete Test',
+        'Please complete all recordings before submitting.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Simple client-side summary for now so navigation
+    // always works even if backend is not running.
+    const totalDuration = PROMPTS.reduce((sum, _, index) => {
+      const rec = recordings[index];
+      return sum + (rec?.duration || 0);
+    }, 0);
+
+    // Very rough heuristic: longer total recording time -> slightly higher percentage
+    const basePercentage = Math.min(40, Math.max(5, totalDuration * 2));
+
+    router.push({
+      pathname: '/voice-test-results',
+      params: {
+        percentage: String(Math.round(basePercentage)),
+        status: 'good',
+        description:
+          'This is a preliminary voice assessment based on your recordings. Backend analysis will provide more detailed insights in a future version.',
+      },
+    });
+  };
+
   const currentPrompt = PROMPTS[currentPromptIndex];
   const hasRecording = !!recordings[currentPromptIndex];
   const isLastPrompt = currentPromptIndex === PROMPTS.length - 1;
@@ -422,16 +473,21 @@ export default function VoiceAnalysisScreen() {
           )}
         </View>
 
-        {/* Prompt Card */}
-        <View style={styles.promptCard}>
+        {/* Prompt Card (tap to listen) */}
+        <TouchableOpacity
+          style={styles.promptCard}
+          activeOpacity={0.8}
+          onPress={() => speakPrompt(currentPrompt.text)}
+        >
           <Volume2 size={24} color="#A855F7" style={styles.speakerIcon} />
           <View style={styles.promptContent}>
             <Text style={styles.promptLabel}>
               Prompt {currentPromptIndex + 1} of {PROMPTS.length}
             </Text>
             <Text style={styles.promptText}>{currentPrompt.text}</Text>
+            <Text style={styles.promptHint}>Tap this card to hear the prompt.</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
@@ -458,7 +514,7 @@ export default function VoiceAnalysisScreen() {
           ) : isLastPrompt && hasRecording ? (
             <TouchableOpacity
               style={[styles.completeButton, isAnalyzing && styles.completeButtonDisabled]}
-              onPress={handleCompleteTest}
+              onPress={handleCompleteTestWithResults}
               activeOpacity={0.8}
               disabled={isAnalyzing}
             >
@@ -607,6 +663,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
     lineHeight: 26,
+  },
+  promptHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#94A3B8',
   },
   buttonContainer: {
     width: '100%',
