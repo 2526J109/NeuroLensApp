@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { 
+import {
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = await firebaseUser.getIdToken();
       await AsyncStorage.setItem('authToken', token);
-      
+
       const profile = await authService.getUserProfile();
       setUserProfile(profile);
     } catch (error) {
@@ -66,14 +66,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      
+
       if (firebaseUser) {
         await fetchUserProfile(firebaseUser);
       } else {
         setUserProfile(null);
         await AsyncStorage.removeItem('authToken');
       }
-      
+
       setLoading(false);
     });
 
