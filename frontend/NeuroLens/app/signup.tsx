@@ -149,7 +149,7 @@ export default function SignupScreen() {
       setLoading(true);
       try {
         await signUp(email, password, fullName);
-        
+
         Toast.show({
           type: 'success',
           text1: 'Registration Successful!',
@@ -161,10 +161,10 @@ export default function SignupScreen() {
             router.replace('/login');
           }
         });
-        
+
       } catch (error: any) {
         const errorMessage = error.message || 'An error occurred during registration. Please try again.';
-        
+
         Toast.show({
           type: 'error',
           text1: 'Registration Failed',
@@ -565,32 +565,56 @@ export default function SignupScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
-              <View style={[
-                styles.passwordContainer,
-                focusedField === 'password' && styles.inputWrapperFocused
-              ]}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    Platform.OS === 'web' && { outline: 'none' as any }
-                  ]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#94A3B8"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors({ ...errors, password: undefined });
-                    }
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  spellCheck={false}
-                  textContentType="none"
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
+              {/* Static container — no conditional layout styles */}
+              <View style={styles.passwordContainer}>
+                {/* Absolutely-positioned focus ring — opacity only, no layout pass */}
+                <View style={[
+                  styles.focusRing,
+                  { opacity: focusedField === 'password' ? 1 : 0 }
+                ]} pointerEvents="none" />
+                {showPassword ? (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={false}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                )}
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
@@ -1022,10 +1046,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
+  },
+  // Absolutely-positioned focus ring — toggled via opacity (non-layout)
+  // Prevents iOS layout pass that would blur the focused TextInput
+  focusRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#14B8A6',
+    shadowColor: '#14B8A6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 1,
   },
   passwordInput: {
     flex: 1,
