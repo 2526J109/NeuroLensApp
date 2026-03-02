@@ -3,7 +3,7 @@ const getApiBaseUrl = () => {
     // Development mode - use localhost for web, or your IP for mobile
     return 'http://localhost:8000';
   }
-  return 'https://neurolensapp-903113706545.europe-west1.run.app'; // Production URL
+  return 'https://neurolens-api-903113706545.asia-south1.run.app/'; // Production URL
 };
 
 export const API_BASE_URL = getApiBaseUrl();
