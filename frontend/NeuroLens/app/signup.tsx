@@ -148,7 +148,7 @@ export default function SignupScreen() {
     if (validateForm()) {
       setLoading(true);
       try {
-        await signUp(email, password, fullName);
+        await signUp(email, password, fullName, gender, birthday, handedness);
 
         Toast.show({
           type: 'success',
