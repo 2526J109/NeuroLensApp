@@ -23,7 +23,7 @@ const getApiBaseUrl = () => {
     return 'http://localhost:8000/api';
   }
   // Production URL (include /api prefix to match backend)
-  return 'https://api.neurolens.com/api';
+  return 'https://neurolens-api-903113706545.asia-south1.run.app/api/';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
