@@ -1,0 +1,38 @@
+steps:
+  # Step 1: Build Docker image from backend folder
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'build',
+        '-t',
+        'asia-south1-docker.pkg.dev/$PROJECT_ID/fastapi-repo/neurolens-api',
+        './backend'
+      ]
+
+  # Step 2: Push image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'push',
+        'asia-south1-docker.pkg.dev/$PROJECT_ID/fastapi-repo/neurolens-api'
+      ]
+
+  # Step 3: Deploy Docker image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      [
+        'run',
+        'deploy',
+        'neurolens-api',
+        '--image',
+        'asia-south1-docker.pkg.dev/$PROJECT_ID/fastapi-repo/neurolens-api',
+        '--region',
+        'asia-south1',
+        '--platform',
+        'managed',
+        '--allow-unauthenticated'
+      ]
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -9,19 +9,25 @@ import {
   Platform,
   ScrollView,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Globe, ChevronDown, Check } from 'lucide-react-native';
+import { Eye, EyeOff, Globe, ChevronDown, Check, AlertCircle } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loading, setLoading] = useState(false);
 
   const languages = [
     { code: 'en', label: 'GB English', flag: 'GB' },
@@ -29,9 +35,67 @@ export default function LoginScreen() {
     { code: 'ta', label: 'LK தமிழ்', flag: 'LK' },
   ];
 
-  const handleSignIn = () => {
-    // Skip validation and redirect directly to tabs
-    router.replace('/(tabs)');
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {};
+
+    if (!email.trim()) {
+      newErrors.email = 'Please fill out this field';
+      setErrors(newErrors);
+      return false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Please enter a valid email address';
+      setErrors(newErrors);
+      return false;
+    }
+
+    if (!password.trim()) {
+      newErrors.password = 'Please fill out this field';
+      setErrors(newErrors);
+      return false;
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      setErrors(newErrors);
+      return false;
+    }
+
+    setErrors({});
+    return true;
+  };
+
+  const handleSignIn = async () => {
+    if (validateForm()) {
+      setLoading(true);
+      try {
+        await signIn(email, password);
+
+        // Show success toast
+        Toast.show({
+          type: 'success',
+          text1: 'Login Successful!',
+          text2: 'Welcome back to NeuroLens',
+          position: 'top',
+          visibilityTime: 2000,
+          topOffset: 60,
+        });
+
+        // Redirect to home
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 500);
+      } catch (error: any) {
+        // Show error toast
+        Toast.show({
+          type: 'error',
+          text1: 'Login Failed',
+          text2: error.message || 'Please check your credentials and try again.',
+          position: 'top',
+          visibilityTime: 4000,
+          topOffset: 60,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleForgotPassword = () => {
@@ -51,9 +115,8 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
         >
-          {/* Language Selector */}
           <View style={styles.languageContainer}>
             <TouchableOpacity
               style={styles.languageButton}
@@ -64,7 +127,7 @@ export default function LoginScreen() {
               <Text style={styles.languageText}>{selectedLanguage}</Text>
               <ChevronDown size={16} color="#64748B" />
             </TouchableOpacity>
-            
+
             {showLanguageDropdown && (
               <>
                 <TouchableWithoutFeedback
@@ -94,12 +157,10 @@ export default function LoginScreen() {
             )}
           </View>
 
-          {/* Logo Section */}
           <View style={styles.logoSection}>
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
                 <View style={styles.waveformContainer}>
-                  {/* Simple waveform representation */}
                   <View style={styles.waveform}>
                     <View style={[styles.waveBar, { height: 20 }]} />
                     <View style={[styles.waveBar, { height: 35 }]} />
@@ -116,16 +177,18 @@ export default function LoginScreen() {
             <Text style={styles.welcomeText}>Welcome Back</Text>
           </View>
 
-          {/* Input Fields */}
           <View style={styles.inputSection}>
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Email Address</Text>
               </View>
-              <View style={[
-                styles.inputWrapper,
-                focusedField === 'email' && styles.inputWrapperFocused
-              ]}>
+              {/* Wrapper — position:relative so the focus ring can overlay it */}
+              <View style={styles.inputWrapper}>
+                {/* Absolutely-positioned focus ring — opacity-only change, zero layout impact */}
+                <View style={[
+                  styles.focusRing,
+                  { opacity: focusedField === 'email' ? 1 : 0 }
+                ]} pointerEvents="none" />
                 <TextInput
                   style={[
                     styles.input,
@@ -148,31 +211,67 @@ export default function LoginScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
-              <View style={[
-                styles.passwordContainer,
-                focusedField === 'password' && styles.inputWrapperFocused
-              ]}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    Platform.OS === 'web' && { outline: 'none' as any }
-                  ]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#94A3B8"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="password"
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                  editable={true}
-                />
+              {/* Outer wrapper — static styles only, no conditional layout changes */}
+              <View style={styles.passwordContainer}>
+                {/* Absolutely-positioned focus ring — opacity only, zero layout impact */}
+                <View style={[
+                  styles.focusRing,
+                  { opacity: focusedField === 'password' ? 1 : 0 }
+                ]} pointerEvents="none" />
+                {showPassword ? (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={false}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => {
+                      setFocusedField('password');
+                    }}
+                    onBlur={() => {
+                      setFocusedField(null);
+                    }}
+                  />
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => {
+                      setFocusedField('password');
+                    }}
+                    onBlur={() => {
+                      setFocusedField(null);
+                    }}
+                  />
+                )}
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   activeOpacity={0.7}
                 >
                   {showPassword ? (
@@ -185,16 +284,19 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Sign In Button */}
           <TouchableOpacity
-            style={styles.signInButton}
+            style={[styles.signInButton, loading && styles.signInButtonDisabled]}
             onPress={handleSignIn}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.signInButtonText}>Sign In</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            )}
           </TouchableOpacity>
 
-          {/* Forgot Password Link */}
           <TouchableOpacity
             onPress={handleForgotPassword}
             style={styles.forgotPasswordContainer}
@@ -202,7 +304,6 @@ export default function LoginScreen() {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          {/* Create Account Section */}
           <View style={styles.createAccountSection}>
             <Text style={styles.createAccountText}>Don't have an account?</Text>
             <TouchableOpacity onPress={handleCreateAccount}>
@@ -210,7 +311,6 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Legal Disclaimer */}
           <View style={styles.disclaimerSection}>
             <Text style={styles.disclaimerText}>
               By continuing, you agree to our{' '}
@@ -362,10 +462,27 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
-    overflow: 'hidden',
+  },
+  // Absolutely-positioned border overlay — toggled via opacity (not layout props)
+  // so iOS never triggers a layout pass that blurs the focused TextInput
+  focusRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#14B8A6',
+    shadowColor: '#14B8A6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 1,
   },
   inputWrapperFocused: {
     borderColor: '#14B8A6',
@@ -387,7 +504,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -408,6 +525,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   signInButtonText: {
     fontSize: 16,
@@ -451,5 +571,56 @@ const styles = StyleSheet.create({
     color: '#14B8A6',
     textDecorationLine: 'underline',
   },
+  errorText: {
+    fontSize: 12,
+    color: '#EF4444',
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  errorTooltip: {
+    marginTop: 8,
+    position: 'relative',
+    alignSelf: 'flex-start',
+  },
+  errorTooltipContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    gap: 8,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  errorIconContainer: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    backgroundColor: '#F97316',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorTooltipText: {
+    fontSize: 12,
+    color: '#0F172A',
+    fontWeight: '400',
+  },
+  errorTooltipArrow: {
+    position: 'absolute',
+    top: -5,
+    left: 20,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 5,
+    borderRightWidth: 5,
+    borderBottomWidth: 5,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#F1F5F9',
+  },
 });
-

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { analyzeDrawingPrediction } from '../services/drawingPredictionService';
 import {
     View,
     Text,
@@ -22,6 +24,7 @@ const WAVE_HEIGHT = 220;
 type TestType = 'spiral' | 'wave';
 
 export default function DrawingTestScreen() {
+    const { user, userProfile } = useAuth();
     const router = useRouter();
     const [currentTest, setCurrentTest] = useState<TestType>('spiral');
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
@@ -79,7 +82,7 @@ export default function DrawingTestScreen() {
             setCurrentTest('wave');
             handleClear();
         } else {
-            // Both tests completed - navigate to results page
+            // Both tests completed - send data to backend for prediction
             console.log('All drawing tests completed!')
             console.log('\n=== ALL TEST DATA ===');
             if (spiralDataJSON) {
@@ -89,15 +92,41 @@ export default function DrawingTestScreen() {
                 console.log('Wave Data:', JSON.stringify(jsonData, null, 2));
             }
             console.log('=====================');
-            
-            // Navigate to results screen with data
-            router.push({
-                pathname: '/test-results',
-                params: {
-                    spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
-                    waveData: jsonData ? JSON.stringify(jsonData) : '',
+
+            // Get Firebase token
+            const sendPrediction = async () => {
+                try {
+                    const firebaseToken = user ? await user.getIdToken() : undefined;
+                    const userId = user?.uid || '';
+                    const predictionResponse = await analyzeDrawingPrediction(
+                        userId,
+                        spiralDataJSON!,
+                        jsonData!,
+                        firebaseToken
+                    );
+                    console.log('Prediction response:', predictionResponse);
+                    // Navigate to results screen with prediction
+                    router.push({
+                        pathname: '/test-results',
+                        params: {
+                            spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
+                            waveData: jsonData ? JSON.stringify(jsonData) : '',
+                            prediction: JSON.stringify(predictionResponse)
+                        }
+                    });
+                } catch (err) {
+                    console.error('Error sending drawing prediction:', err);
+                    // Fallback: navigate with just the data
+                    router.push({
+                        pathname: '/test-results',
+                        params: {
+                            spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
+                            waveData: jsonData ? JSON.stringify(jsonData) : '',
+                        }
+                    });
                 }
-            });
+            };
+            sendPrediction();
         }
     };
 

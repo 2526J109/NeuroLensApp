@@ -10,21 +10,34 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, ArrowLeft, Globe, ChevronDown, Check, Calendar } from 'lucide-react-native';
+import { Eye, EyeOff, ArrowLeft, Globe, ChevronDown, Check, AlertCircle, Calendar } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SignupScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  
+  const [errors, setErrors] = useState<{
+    fullName?: string;
+    email?: string;
+    password?: string;
+    birthday?: string;
+    gender?: string;
+    handedness?: string;
+  }>({});
+
   // New fields
   const [gender, setGender] = useState<string>('');
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
@@ -33,10 +46,10 @@ export default function SignupScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [handedness, setHandedness] = useState<string>('');
   const [showHandednessDropdown, setShowHandednessDropdown] = useState(false);
-  
+
   // Dynamic z-index for dropdowns
   const [dropdownZIndex, setDropdownZIndex] = useState(100);
-  
+
   const genderOptions = ['Male', 'Female', 'Prefer not to say'];
   const handednessOptions = ['Left', 'Right'];
 
@@ -46,9 +59,124 @@ export default function SignupScreen() {
     { code: 'ta', label: 'LK தமிழ்', flag: 'LK' },
   ];
 
-  const handleCreateAccount = () => {
-    // Skip validation and redirect directly to tabs
-    router.replace('/(tabs)');
+  const validateForm = () => {
+    const newErrors: {
+      fullName?: string;
+      email?: string;
+      password?: string;
+      birthday?: string;
+      gender?: string;
+      handedness?: string;
+    } = {};
+
+    // Validate full name first
+    if (!fullName.trim()) {
+      newErrors.fullName = 'Please fill out this field';
+      setErrors(newErrors);
+      return false;
+    } else if (fullName.trim().length < 2) {
+      newErrors.fullName = 'Name must be at least 2 characters';
+      setErrors(newErrors);
+      return false;
+    }
+
+    // Only validate email if full name is valid
+    if (!email.trim()) {
+      newErrors.email = 'Please fill out this field';
+      setErrors(newErrors);
+      return false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Please enter a valid email address';
+      setErrors(newErrors);
+      return false;
+    }
+
+    // Only validate password if email is valid
+    if (!password.trim()) {
+      newErrors.password = 'Please fill out this field';
+      setErrors(newErrors);
+      return false;
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+      setErrors(newErrors);
+      return false;
+    }
+
+    // Validate gender
+    if (!gender) {
+      newErrors.gender = 'Please select your gender';
+      setErrors(newErrors);
+      return false;
+    }
+
+    // Validate birthday
+    if (!birthday.trim()) {
+      newErrors.birthday = 'Please enter your birthday';
+      setErrors(newErrors);
+      return false;
+    } else {
+      // Validate date format (YYYY-MM-DD or DD/MM/YYYY)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/;
+      if (!dateRegex.test(birthday)) {
+        newErrors.birthday = 'Please enter a valid date (YYYY-MM-DD)';
+        setErrors(newErrors);
+        return false;
+      }
+      // Validate that date is in the past and reasonable
+      const date = new Date(birthday);
+      const today = new Date();
+      const minDate = new Date('1900-01-01');
+      if (isNaN(date.getTime()) || date > today || date < minDate) {
+        newErrors.birthday = 'Please enter a valid date of birth';
+        setErrors(newErrors);
+        return false;
+      }
+    }
+
+    // Validate handedness
+    if (!handedness) {
+      newErrors.handedness = 'Please select your handedness';
+      setErrors(newErrors);
+      return false;
+    }
+
+    setErrors({});
+    return true;
+  };
+
+  const handleCreateAccount = async () => {
+    if (validateForm()) {
+      setLoading(true);
+      try {
+        await signUp(email, password, fullName, gender, birthday, handedness);
+
+        Toast.show({
+          type: 'success',
+          text1: 'Registration Successful!',
+          text2: 'Your account has been created.',
+          position: 'top',
+          visibilityTime: 3000,
+          topOffset: 60,
+          onHide: () => {
+            router.replace('/login');
+          }
+        });
+
+      } catch (error: any) {
+        const errorMessage = error.message || 'An error occurred during registration. Please try again.';
+
+        Toast.show({
+          type: 'error',
+          text1: 'Registration Failed',
+          text2: errorMessage,
+          position: 'top',
+          visibilityTime: 4000,
+          topOffset: 60,
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleSignIn = () => {
@@ -68,7 +196,7 @@ export default function SignupScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
         >
           {/* Language Selector */}
           <View style={styles.languageContainer}>
@@ -85,7 +213,7 @@ export default function SignupScreen() {
               <Text style={styles.languageText}>{selectedLanguage}</Text>
               <ChevronDown size={16} color="#64748B" />
             </TouchableOpacity>
-            
+
             {showLanguageDropdown && (
               <>
                 <TouchableWithoutFeedback
@@ -259,7 +387,7 @@ export default function SignupScreen() {
                   </Text>
                   <ChevronDown size={20} color="#64748B" />
                 </TouchableOpacity>
-                
+
                 {showGenderDropdown && (
                   <>
                     <TouchableWithoutFeedback
@@ -323,7 +451,7 @@ export default function SignupScreen() {
                   </Text>
                   <ChevronDown size={20} color="#64748B" />
                 </TouchableOpacity>
-                
+
                 {showHandednessDropdown && (
                   <>
                     <TouchableWithoutFeedback
@@ -363,25 +491,56 @@ export default function SignupScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
-              <View style={[
-                styles.passwordContainer,
-                focusedField === 'password' && styles.inputWrapperFocused
-              ]}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    Platform.OS === 'web' && { outline: 'none' as any }
-                  ]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#94A3B8"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                />
+              {/* Static container — no conditional layout styles */}
+              <View style={styles.passwordContainer}>
+                {/* Absolutely-positioned focus ring — opacity only, no layout pass */}
+                <View style={[
+                  styles.focusRing,
+                  { opacity: focusedField === 'password' ? 1 : 0 }
+                ]} pointerEvents="none" />
+                {showPassword ? (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={false}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                )}
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
@@ -416,7 +575,7 @@ export default function SignupScreen() {
                         <Text style={styles.datePickerCloseText}>Done</Text>
                       </TouchableOpacity>
                     </View>
-                    
+
                     <View style={styles.datePickerContent}>
                       {/* Year Picker */}
                       <View style={styles.datePickerColumn}>
@@ -530,11 +689,16 @@ export default function SignupScreen() {
 
           {/* Create Account Button */}
           <TouchableOpacity
-            style={styles.createAccountButton}
+            style={[styles.createAccountButton, loading && styles.createAccountButtonDisabled]}
             onPress={handleCreateAccount}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.createAccountButtonText}>Create Account</Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.createAccountButtonText}>Create Account</Text>
+            )}
           </TouchableOpacity>
 
           {/* Sign In Section */}
@@ -630,7 +794,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -757,7 +921,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     overflow: 'hidden',
@@ -790,10 +954,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
+  },
+  // Absolutely-positioned focus ring — toggled via opacity (non-layout)
+  // Prevents iOS layout pass that would blur the focused TextInput
+  focusRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#14B8A6',
+    shadowColor: '#14B8A6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 1,
   },
   passwordInput: {
     flex: 1,
@@ -811,6 +993,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  createAccountButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   createAccountButtonText: {
     fontSize: 16,

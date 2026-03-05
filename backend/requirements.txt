@@ -1,14 +1,26 @@
+# FastAPI and server
 fastapi
 uvicorn[standard]
 python-multipart
+
+# Firebase Admin SDK
+firebase-admin
+
+# Database
+sqlalchemy
+pydantic[email]
+pydantic-settings
+
+# Data processing
 numpy
-pydantic
-# ML Framework (install the one you used in Colab)
-# Uncomment the framework you used:
-# torch>=2.0.0
-# tensorflow>=2.13.0
-# scikit-learn>=1.3.0
-# joblib>=1.3.0
+
+# ML Framework (
+scikit-learn>=1.3.0
+joblib>=1.3.0
+
 # Audio processing
 librosa>=0.10.0
 soundfile>=0.12.0
+
+# Speech-to-text (Whisper)
+openai-whisper

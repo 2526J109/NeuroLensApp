@@ -1,20 +1,33 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import voice_analysis
+from app.routes import auth
+from app.routes import drawing_prediction
+from app.core.firebase import initialize_firebase
+from app.core.config import settings
+import uvicorn
 
-app = FastAPI(title="NeuroLens API", version="1.0.0")
+initialize_firebase()
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version="1.0.0",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=settings.BACKEND_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include routers
-app.include_router(voice_analysis.router)
+app.include_router(voice_analysis.router, prefix=settings.API_V1_STR)
+app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(drawing_prediction.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
@@ -28,5 +41,6 @@ async def health_check():
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)

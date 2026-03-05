@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    container_name: neuro-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-admin-sdk.json
+    volumes:
+      - ./firebase-admin-sdk.json:/app/firebase-admin-sdk.json
+    restart: unless-stopped

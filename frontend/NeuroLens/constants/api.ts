@@ -6,20 +6,36 @@
 // For mobile testing, replace localhost with your computer's IP address
 // Example: 'http://192.168.1.100:8000'
 const getApiBaseUrl = () => {
+  // If you set EXPO_PUBLIC_API_BASE_URL, it will override everything (best for real device testing).
+  // Example: EXPO_PUBLIC_API_BASE_URL=http://192.168.1.100:8000/api
+  const envBase = process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (envBase) return envBase.replace(/\/+$/, '');
+
   if (typeof __DEV__ !== 'undefined' && __DEV__) {
-    // Development mode - use localhost for web, or your IP for mobile
-    return 'http://localhost:8000';
+    // Development mode - backend runs locally
+    // NOTE: main.py prefixes all routes with /api (API_V1_STR),
+    // so we include /api here to avoid duplicating it everywhere.
+    // Android emulator cannot reach your PC via localhost; use 10.0.2.2.
+    // For physical devices, set EXPO_PUBLIC_API_BASE_URL to your LAN IP.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Platform } = require('react-native');
+    if (Platform.OS === 'android') return 'http://10.0.2.2:8000/api';
+    return 'http://localhost:8000/api';
   }
-  return 'https://api.neurolens.com'; // Production URL
+  // Production URL (include /api prefix to match backend)
+  return 'https://api.neurolens.com/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
 export const API_ENDPOINTS = {
   VOICE_ANALYSIS: {
-    ANALYZE: `${API_BASE_URL}/api/voice-analysis/analyze`,
-    RESULTS: (sessionId: string) => `${API_BASE_URL}/api/voice-analysis/results/${sessionId}`,
-    UPLOAD: `${API_BASE_URL}/api/voice-analysis/upload`,
+    // Multipart endpoint — accepts real audio files
+    PREDICT_VOICE: `${API_BASE_URL}/voice-analysis/predict_voice`,
+    // Legacy JSON-only endpoint (kept for fallback)
+    ANALYZE: `${API_BASE_URL}/voice-analysis/analyze`,
+    RESULTS: (sessionId: string) => `${API_BASE_URL}/voice-analysis/results/${sessionId}`,
+    UPLOAD: `${API_BASE_URL}/voice-analysis/upload`,
   },
 };
 
