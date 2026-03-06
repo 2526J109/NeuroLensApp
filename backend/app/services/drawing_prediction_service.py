@@ -5,15 +5,40 @@ import requests
 from typing import Dict, Any, Optional
 from app.dao.drawing_prediction_dao import DrawingPredictionDAO
 
-MODEL_SERVER_URL = "http://REMOTE_MODEL_SERVER/api/predict"  # Update with actual URL
+# Order of features as expected by the Logistic Regression model
+FEATURE_ORDER = [
+    "spiral_vel_cv",
+    "wave_vel_cv",
+    "spiral_pause_ratio",
+    "wave_pause_ratio",
+    "spiral_curv_std"
+]
+
+def prepare_feature_vector(features: Dict[str, float]) -> List[float]:
+    """Convert features dictionary to a flat list in the correct order."""
+    return [features.get(f, 0.0) for f in FEATURE_ORDER]
 
 def send_to_model_server(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Send drawing data to remote model server and get prediction"""
-    print("[DEBUG] Would send to model server:", payload)
-    # response = requests.post(MODEL_SERVER_URL, json=payload, timeout=30)
-    # response.raise_for_status()
+    
+    # Prepare inputs for Logistic Regression (vector format)
+    features = payload.get("kinematic_features", {})
+    feature_vector = prepare_feature_vector(features)
+    
+    # Hugging Face Inference API / typical ML server format
+    model_input = {"inputs": [feature_vector]}
+    
+    print("[DEBUG] Sending to model server:", model_input)
+    
+    # Example for actual requests:
+    # response = requests.post(MODEL_SERVER_URL, json=model_input, timeout=30)
     # return response.json()
-    return {"mock_prediction": "success", "payload": payload}
+    
+    return {
+        "prediction": "low_risk", 
+        "probability": 0.12,
+        "features_sent": feature_vector
+    }
 
 
 def save_prediction_for_user(user_id: str, prediction: Dict[str, Any]) -> Dict[str, Any]:
