@@ -19,8 +19,8 @@ const getApiBaseUrl = () => {
     // For physical devices, set EXPO_PUBLIC_API_BASE_URL to your LAN IP.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Platform } = require('react-native');
-    if (Platform.OS === 'android') return 'http://10.0.2.2:8000/api';
-    return 'http://localhost:8000/api';
+    if (Platform.OS === 'android') return 'https://neurolens-api-903113706545.asia-south1.run.app/api/';
+    return 'http://localhost:8000/api/';
   }
   // Production URL (include /api prefix to match backend)
   return 'https://neurolens-api-903113706545.asia-south1.run.app/api/';
@@ -36,6 +36,9 @@ export const API_ENDPOINTS = {
     ANALYZE: `${API_BASE_URL}/voice-analysis/analyze`,
     RESULTS: (sessionId: string) => `${API_BASE_URL}/voice-analysis/results/${sessionId}`,
     UPLOAD: `${API_BASE_URL}/voice-analysis/upload`,
+  },
+  DRAWING_ANALYSIS: {
+    ANALYZE: `${API_BASE_URL}/api/drawing-prediction/analyze`,
   },
 };
 

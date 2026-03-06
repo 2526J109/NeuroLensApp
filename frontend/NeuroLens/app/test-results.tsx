@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
     View,
     Text,
@@ -8,46 +8,54 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { analyzeDrawingRisk, RiskAssessment } from '@/utils/riskAnalysis';
-import { DrawingDataJSON } from '@/utils/dataExport';
+import { PenTool, ShieldCheck, AlertTriangle, AlertCircle, ChevronRight } from 'lucide-react-native';
+
+interface ModelPrediction {
+    risk_percentage: number;
+    risk_level: 'Low' | 'Moderate' | 'High';
+    label: string;
+    confidence: number;
+    message?: string;
+}
+
+interface PredictionParam {
+    prediction?: ModelPrediction;
+    save_result?: unknown;
+}
+
+const RISK = {
+    Low:      { color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0', Icon: ShieldCheck },
+    Moderate: { color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A', Icon: AlertTriangle },
+    High:     { color: '#EF4444', bg: '#FEF2F2', border: '#FECACA', Icon: AlertCircle },
+} as const;
+
+const TIPS: Record<string, string[]> = {
+    Low:      ['Continue regular health monitoring', 'Maintain an active and balanced lifestyle', 'Schedule annual neurological check-ups'],
+    Moderate: ['Consider scheduling a neurologist visit', 'Track any new or worsening symptoms', 'Repeat this assessment in 4–6 weeks'],
+    High:     ['Consult a neurologist as soon as possible', 'Bring a detailed symptom history', 'Do not rely on this AI assessment alone'],
+};
 
 export default function TestResultsScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
-    
-    // Parse JSON data from params
-    const spiralData: DrawingDataJSON | null = params.spiralData 
-        ? JSON.parse(params.spiralData as string) 
-        : null;
-    const waveData: DrawingDataJSON | null = params.waveData 
-        ? JSON.parse(params.waveData as string) 
-        : null;
-    
-    // Calculate risk assessment
-    const assessment: RiskAssessment = analyzeDrawingRisk(spiralData, waveData);
-    
-    // Determine color based on risk level
-    const getRiskColor = () => {
-        switch (assessment.riskLevel) {
-            case 'Low':
-                return '#10B981'; // Green
-            case 'Moderate':
-                return '#F59E0B'; // Orange
-            case 'High':
-                return '#EF4444'; // Red
+
+    let prediction: ModelPrediction | null = null;
+    if (params.prediction) {
+        try {
+            const parsed: PredictionParam = JSON.parse(params.prediction as string);
+            prediction = parsed?.prediction ?? (parsed as unknown as ModelPrediction);
+        } catch {
+            prediction = null;
         }
-    };
-    
-    const getBackgroundColor = () => {
-        switch (assessment.riskLevel) {
-            case 'Low':
-                return '#D1FAE5'; // Light green
-            case 'Moderate':
-                return '#FEF3C7'; // Light orange
-            case 'High':
-                return '#FEE2E2'; // Light red
-        }
-    };
+    }
+
+    const riskLevel  = (prediction?.risk_level  ?? 'Low') as keyof typeof RISK;
+    const riskPct    = prediction?.risk_percentage ?? 0;
+    const confidence = prediction?.confidence ?? 0;
+    const label      = prediction?.label ?? 'No prediction available';
+
+    const { color, bg, border, Icon } = RISK[riskLevel];
+    const tips = TIPS[riskLevel];
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -55,72 +63,77 @@ export default function TestResultsScreen() {
                 options={{
                     headerTitle: 'Test Results',
                     headerShadowVisible: false,
-                    headerStyle: { backgroundColor: '#FFFFFF' },
-                    headerTitleStyle: {
-                        fontSize: 20,
-                        fontWeight: 'bold',
-                        color: '#0F172A',
-                    },
+                    headerStyle: { backgroundColor: '#F8FAFC' },
+                    headerTitleStyle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
                     headerTintColor: '#0F172A',
                 }}
             />
 
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Risk Score Card */}
-                <View style={[styles.scoreCard, { backgroundColor: getBackgroundColor() }]}>
-                    <Text style={styles.scoreLabel}>Risk Assessment</Text>
-                    <Text style={[styles.scorePercentage, { color: getRiskColor() }]}>
-                        {assessment.riskPercentage}%
-                    </Text>
-                    <View style={[styles.riskBadge, { backgroundColor: getRiskColor() }]}>
-                        <Text style={styles.riskBadgeText}>{assessment.riskLevel} Risk</Text>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+                {/* Result hero card */}
+                <View style={styles.heroCard}>
+                    <View style={[styles.iconWrap, { backgroundColor: '#F97316' }]}>
+                        <PenTool color="#FFFFFF" size={24} />
+                    </View>
+                    <Text style={styles.heroTitle}>Drawing Analysis</Text>
+                    <Text style={[styles.heroScore, { color }]}>{riskPct.toFixed(1)}%</Text>
+                    <View style={[styles.badge, { backgroundColor: bg, borderColor: border }]}>
+                        <Icon color={color} size={14} />
+                        <Text style={[styles.badgeText, { color }]}>{riskLevel} Risk — {label}</Text>
                     </View>
                 </View>
 
+                {/* Scores */}
+                {prediction && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Score Details</Text>
+
+                        <View style={styles.scoreRow}>
+                            <Text style={styles.scoreRowLabel}>Risk Score</Text>
+                            <View style={styles.barTrack}>
+                                <View style={[styles.barFill, { width: `${Math.min(riskPct, 100)}%` as any, backgroundColor: color }]} />
+                            </View>
+                            <Text style={[styles.scoreRowValue, { color }]}>{riskPct.toFixed(1)}%</Text>
+                        </View>
+
+                        <View style={styles.scoreRow}>
+                            <Text style={styles.scoreRowLabel}>Confidence</Text>
+                            <View style={styles.barTrack}>
+                                <View style={[styles.barFill, { width: `${Math.min(confidence, 100)}%` as any, backgroundColor: '#14B8A6' }]} />
+                            </View>
+                            <Text style={[styles.scoreRowValue, { color: '#14B8A6' }]}>{confidence.toFixed(1)}%</Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* Recommendations */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Recommendations</Text>
+                    {tips.map((tip, i) => (
+                        <View key={i} style={styles.tipRow}>
+                            <View style={[styles.tipDot, { backgroundColor: color }]} />
+                            <Text style={styles.tipText}>{tip}</Text>
+                        </View>
+                    ))}
+                </View>
+
                 {/* Disclaimer */}
-                <View style={styles.disclaimerCard}>
+                <View style={styles.disclaimer}>
                     <Text style={styles.disclaimerTitle}>Important Notice</Text>
                     <Text style={styles.disclaimerText}>
-                        This is a preliminary assessment based on drawing analysis. 
-                        It is NOT a medical diagnosis. Please consult a healthcare 
-                        professional for proper evaluation.
+                        This AI assessment is <Text style={styles.bold}>NOT a medical diagnosis</Text>. Always consult a qualified healthcare professional for proper evaluation.
                     </Text>
                 </View>
 
-
-                {/* Recommendations */}
-                <View style={styles.recommendationsCard}>
-                    <Text style={styles.recommendationsTitle}>Recommendations</Text>
-                    {assessment.riskLevel === 'Low' && (
-                        <Text style={styles.recommendationText}>
-                            Your drawing patterns appear normal. Continue monitoring your health 
-                            and consult a doctor if you notice any changes.
-                        </Text>
-                    )}
-                    {assessment.riskLevel === 'Moderate' && (
-                        <Text style={styles.recommendationText}>
-                            Some indicators suggest you may benefit from a professional evaluation. 
-                            Consider scheduling an appointment with a neurologist.
-                        </Text>
-                    )}
-                    {assessment.riskLevel === 'High' && (
-                        <Text style={styles.recommendationText}>
-                            Your drawing patterns show several indicators that warrant professional 
-                            attention. We strongly recommend consulting a neurologist for comprehensive evaluation.
-                        </Text>
-                    )}
-                </View>
-
-                {/* Action Buttons */}
+                {/* CTA */}
                 <TouchableOpacity
-                    style={styles.homeButton}
+                    style={styles.homeBtn}
                     onPress={() => router.replace('/(tabs)')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.homeButtonText}>Back to Home</Text>
+                    <Text style={styles.homeBtnText}>Back to Home</Text>
+                    <ChevronRight color="#14B8A6" size={18} />
                 </TouchableOpacity>
 
                 <View style={{ height: 24 }} />
@@ -132,125 +145,170 @@ export default function TestResultsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F8FAFC',
     },
     scrollContent: {
+        padding: 20,
+    },
+
+    // Hero
+    heroCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
         padding: 24,
-    },
-    scoreCard: {
-        borderRadius: 24,
-        padding: 32,
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3,
     },
-    scoreLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#64748B',
+    iconWrap: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
         marginBottom: 12,
     },
-    scorePercentage: {
-        fontSize: 72,
-        fontWeight: 'bold',
-        marginBottom: 16,
+    heroTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#64748B',
+        marginBottom: 8,
     },
-    riskBadge: {
-        paddingHorizontal: 20,
-        paddingVertical: 8,
+    heroScore: {
+        fontSize: 64,
+        fontWeight: '700',
+        lineHeight: 72,
+        marginBottom: 12,
+    },
+    badge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
         borderRadius: 20,
+        borderWidth: 1,
     },
-    riskBadgeText: {
-        color: '#FFFFFF',
-        fontSize: 16,
+    badgeText: {
+        fontSize: 13,
         fontWeight: '600',
     },
-    disclaimerCard: {
+
+    // Cards
+    card: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#0F172A',
+        marginBottom: 16,
+    },
+
+    // Score rows
+    scoreRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 10,
+    },
+    scoreRowLabel: {
+        fontSize: 13,
+        color: '#64748B',
+        fontWeight: '500',
+        width: 72,
+    },
+    barTrack: {
+        flex: 1,
+        height: 8,
+        backgroundColor: '#F1F5F9',
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    barFill: {
+        height: '100%',
+        borderRadius: 4,
+    },
+    scoreRowValue: {
+        fontSize: 13,
+        fontWeight: '700',
+        width: 46,
+        textAlign: 'right',
+    },
+
+    // Tips
+    tipRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        marginBottom: 10,
+    },
+    tipDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginTop: 8,
+        flexShrink: 0,
+    },
+    tipText: {
+        fontSize: 14,
+        color: '#475569',
+        lineHeight: 22,
+        flex: 1,
+    },
+
+    // Disclaimer
+    disclaimer: {
         backgroundColor: '#FEF3C7',
         borderLeftWidth: 4,
         borderLeftColor: '#F59E0B',
         borderRadius: 12,
         padding: 16,
-        marginBottom: 20,
+        marginBottom: 16,
     },
     disclaimerTitle: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: '700',
         color: '#92400E',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     disclaimerText: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#92400E',
         lineHeight: 20,
     },
-    metricsCard: {
-        backgroundColor: '#F8FAFC',
+    bold: { fontWeight: '700' },
+
+    // Button
+    homeBtn: {
+        backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-    },
-    metricsTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#0F172A',
-        marginBottom: 20,
-    },
-    metricRow: {
+        paddingVertical: 16,
+        paddingHorizontal: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        justifyContent: 'space-between',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
-    metricLabel: {
-        fontSize: 14,
+    homeBtnText: {
+        fontSize: 15,
         fontWeight: '600',
-        color: '#475569',
-        width: 90,
-    },
-    metricBar: {
-        flex: 1,
-        height: 8,
-        backgroundColor: '#E2E8F0',
-        borderRadius: 4,
-        marginHorizontal: 12,
-        overflow: 'hidden',
-    },
-    metricFill: {
-        height: '100%',
-        borderRadius: 4,
-    },
-    metricValue: {
-        fontSize: 14,
-        fontWeight: '700',
         color: '#0F172A',
-        width: 45,
-        textAlign: 'right',
-    },
-    recommendationsCard: {
-        backgroundColor: '#F8FAFC',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-    },
-    recommendationsTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#0F172A',
-        marginBottom: 12,
-    },
-    recommendationText: {
-        fontSize: 14,
-        color: '#475569',
-        lineHeight: 22,
-    },
-    homeButton: {
-        backgroundColor: '#99F6E4',
-        borderRadius: 12,
-        paddingVertical: 16,
-        alignItems: 'center',
-    },
-    homeButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#0F766E',
     },
 });
