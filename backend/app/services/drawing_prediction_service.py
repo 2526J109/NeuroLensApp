@@ -2,8 +2,9 @@
 Service for handling drawing prediction workflow with remote model server
 """
 import requests
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from app.dao.drawing_prediction_dao import DrawingPredictionDAO
+from app.core.config import settings
 
 # Order of features as expected by the Logistic Regression model
 FEATURE_ORDER = [
@@ -19,25 +20,34 @@ def prepare_feature_vector(features: Dict[str, float]) -> List[float]:
     return [features.get(f, 0.0) for f in FEATURE_ORDER]
 
 def send_to_model_server(payload: Dict[str, Any]) -> Dict[str, Any]:
-    """Send drawing data to remote model server and get prediction"""
-    
+    """Send drawing data to remote model server (Hugging Face Space) and get prediction"""
+
     # Prepare inputs for Logistic Regression (vector format)
     features = payload.get("kinematic_features", {})
     feature_vector = prepare_feature_vector(features)
-    
-    # Hugging Face Inference API / typical ML server format
+
     model_input = {"inputs": [feature_vector]}
-    
     print("[DEBUG] Sending to model server:", model_input)
-    
-    # Example for actual requests:
-    # response = requests.post(MODEL_SERVER_URL, json=model_input, timeout=30)
-    # return response.json()
-    
+
+    url = f"{settings.MODEL_SERVER_URL.rstrip('/')}/predict"
+    try:
+        response = requests.post(url, json=model_input, timeout=15)
+        response.raise_for_status()
+        result = response.json()
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError(
+            f"Could not reach model server at {url}. "
+            "Check MODEL_SERVER_URL in your .env file."
+        )
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Model server request timed out.")
+    except requests.exceptions.HTTPError as exc:
+        raise RuntimeError(f"Model server returned error: {exc.response.status_code} – {exc.response.text}")
+
+    # Return prediction AND the exact input sent for verification/logging
     return {
-        "prediction": "low_risk", 
-        "probability": 0.12,
-        "features_sent": feature_vector
+        **result,
+        "debug_model_input": model_input,
     }
 
 
@@ -62,9 +72,15 @@ def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, An
     if spiral_points or wave_points:
         kinematic_features = extract_kinematic_features(spiral_points, wave_points)
         drawing_data["kinematic_features"] = kinematic_features
-        print(f"[DEBUG] Extracted kinematic features: {kinematic_features}")
 
     payload = {"user_id": user_id, **drawing_data}
+    
+    # Get prediction from model server (includes debug info)
     prediction = send_to_model_server(payload)
-    save_result = save_prediction_for_user(user_id, prediction)
+    
+    # Save only core fields to Firestore — exclude debug_model_input because
+    # Firestore does not support nested arrays (list of lists).
+    prediction_to_save = {k: v for k, v in prediction.items() if k != "debug_model_input"}
+    save_result = save_prediction_for_user(user_id, prediction_to_save)
+    
     return {"prediction": prediction, "save_result": save_result}
