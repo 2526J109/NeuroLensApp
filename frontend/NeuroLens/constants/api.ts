@@ -19,11 +19,11 @@ const getApiBaseUrl = () => {
     // For physical devices, set EXPO_PUBLIC_API_BASE_URL to your LAN IP.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Platform } = require('react-native');
-    if (Platform.OS === 'android') return 'http://10.0.2.2:8000/api';
-    return 'http://localhost:8000/api';
+    if (Platform.OS === 'android') return 'https://neurolens-api-903113706545.asia-south1.run.app/';
+    return 'http://localhost:8000/';
   }
   // Production URL (include /api prefix to match backend)
-  return 'https://api.neurolens.com/api';
+  return 'https://neurolens-api-903113706545.asia-south1.run.app/';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -31,11 +31,15 @@ export const API_BASE_URL = getApiBaseUrl();
 export const API_ENDPOINTS = {
   VOICE_ANALYSIS: {
     // Multipart endpoint — accepts real audio files
-    PREDICT_VOICE: `${API_BASE_URL}/voice-analysis/predict_voice`,
+    PREDICT_VOICE: `${API_BASE_URL}/api/voice-analysis/predict_voice`,
     // Legacy JSON-only endpoint (kept for fallback)
-    ANALYZE: `${API_BASE_URL}/voice-analysis/analyze`,
-    RESULTS: (sessionId: string) => `${API_BASE_URL}/voice-analysis/results/${sessionId}`,
-    UPLOAD: `${API_BASE_URL}/voice-analysis/upload`,
+    ANALYZE: `${API_BASE_URL}/api/voice-analysis/analyze`,
+    RESULTS: (sessionId: string) => `${API_BASE_URL}/api/voice-analysis/results/${sessionId}`,
+    UPLOAD: `${API_BASE_URL}/api/voice-analysis/upload`,
+  },
+  
+  DRAWING_ANALYSIS: {
+    ANALYZE: `${API_BASE_URL}/api/drawing-prediction/analyze`,
   },
 };
 

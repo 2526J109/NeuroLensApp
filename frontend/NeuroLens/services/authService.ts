@@ -3,6 +3,9 @@ import api from './api';
 interface RegisterRequest {
   email: string;
   full_name?: string;
+  gender?: string;
+  birthday?: string;
+  handedness?: string;
 }
 
 interface UserProfile {
@@ -14,12 +17,22 @@ interface UserProfile {
 }
 
 export const authService = {
-  register: async (firebaseToken: string, email: string, fullName?: string): Promise<UserProfile> => {
+  register: async (
+    firebaseToken: string,
+    email: string,
+    fullName?: string,
+    gender?: string,
+    birthday?: string,
+    handedness?: string
+  ): Promise<UserProfile> => {
     const response = await api.post<UserProfile>(
       '/api/auth/register',
       {
         email,
         full_name: fullName,
+        gender,
+        birthday,
+        handedness,
       } as RegisterRequest,
       {
         headers: {

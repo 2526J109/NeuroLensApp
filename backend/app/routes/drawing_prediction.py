@@ -1,6 +1,7 @@
 """
 API route for drawing prediction workflow with remote model server
 """
+import traceback
 from fastapi import APIRouter, HTTPException, status, Request
 from app.services.drawing_prediction_service import analyze_and_save
 from app.schemas.drawing_analysis import DrawingAnalysisRequest # type: ignore
