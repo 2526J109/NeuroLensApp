@@ -27,7 +27,7 @@ const PROMPTS = [
   },
   {
     id: 3,
-    text: "Please sustain the vowel 'Ahhh' for 5 seconds",
+    text: "Please sustain the vowel 'Aaaaaa' for 5 seconds",
   },
 ];
 
@@ -136,7 +136,7 @@ export default function VoiceAnalysisScreen() {
     try {
       // Reset unloading flag when starting new recording
       isUnloadingRef.current = false;
-      
+
       const { recording: newRecording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
@@ -179,7 +179,7 @@ export default function VoiceAnalysisScreen() {
         setIsRecording(false);
         setRecording(null);
         setRecordingTime(0);
-        
+
         // Still try to save if we have a URI
         if (uri) {
           setRecordings((prev) => ({
@@ -187,17 +187,17 @@ export default function VoiceAnalysisScreen() {
             [currentIndex]: { uri: uri!, duration: currentTime },
           }));
         }
-        
+
         isUnloadingRef.current = false;
         return;
       }
-      
+
       if (!status.isRecording) {
         // Recording already stopped, but try to save if we have URI
         setIsRecording(false);
         setRecording(null);
         setRecordingTime(0);
-        
+
         // Still try to save if we have a URI
         if (uri) {
           setRecordings((prev) => ({
@@ -205,14 +205,14 @@ export default function VoiceAnalysisScreen() {
             [currentIndex]: { uri: uri!, duration: currentTime },
           }));
         }
-        
+
         isUnloadingRef.current = false;
         return;
       }
 
       // Stop and unload the recording
       await currentRecording.stopAndUnloadAsync();
-      
+
       // Get the URI after stopping (should still be available)
       if (!uri) {
         try {
@@ -221,21 +221,21 @@ export default function VoiceAnalysisScreen() {
           console.log('Could not get URI after stopping');
         }
       }
-      
+
       // Update state after successful stop
       setIsRecording(false);
-      
+
       // Always save the recording to state (even if URI is null, we mark it as recorded)
       // This ensures the "Next Prompt" button appears
       setRecordings((prev) => ({
         ...prev,
-        [currentIndex]: { 
-          uri: uri || `recording_${currentIndex}_${Date.now()}`, 
-          duration: currentTime 
+        [currentIndex]: {
+          uri: uri || `recording_${currentIndex}_${Date.now()}`,
+          duration: currentTime
         },
       }));
-      
-      
+
+
       setRecording(null);
       setRecordingTime(0);
     } catch (err: any) {
@@ -244,7 +244,7 @@ export default function VoiceAnalysisScreen() {
       setIsRecording(false);
       setRecording(null);
       setRecordingTime(0);
-      
+
       // Try to get URI and save recording, even if there was an error
       let errorUri: string | null = null;
       try {
@@ -252,13 +252,13 @@ export default function VoiceAnalysisScreen() {
       } catch (e) {
         // Ignore errors when trying to get URI
       }
-      
+
       // Always save to state to allow progression, even if URI is null
       setRecordings((prev) => ({
         ...prev,
-        [currentIndex]: { 
-          uri: errorUri || `recording_${currentIndex}_${Date.now()}`, 
-          duration: currentTime 
+        [currentIndex]: {
+          uri: errorUri || `recording_${currentIndex}_${Date.now()}`,
+          duration: currentTime
         },
       }));
     } finally {
@@ -282,7 +282,7 @@ export default function VoiceAnalysisScreen() {
         { shouldPlay: true }
       );
       setSound(newSound);
-      
+
       await newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded && status.didJustFinish) {
           newSound.unloadAsync();
@@ -304,7 +304,7 @@ export default function VoiceAnalysisScreen() {
   const handleCompleteTest = async () => {
     // Check if all recordings are complete
     const allRecordingsComplete = PROMPTS.every((_, index) => recordings[index]);
-    
+
     if (!allRecordingsComplete) {
       Alert.alert(
         'Incomplete Test',
@@ -315,7 +315,7 @@ export default function VoiceAnalysisScreen() {
     }
 
     setIsAnalyzing(true);
-    
+
     try {
       // Prepare recordings data for API
       const recordingsData = PROMPTS.map((prompt, index) => {
@@ -343,10 +343,10 @@ export default function VoiceAnalysisScreen() {
       // }
 
       // const result = await response.json();
-      
+
       // Navigate to home page after completion
       router.replace('/(tabs)');
-      
+
     } catch (error) {
       console.error('Error analyzing voice recordings:', error);
       Alert.alert(
@@ -359,10 +359,10 @@ export default function VoiceAnalysisScreen() {
     }
   };
 
-  const handleCompleteTestWithResults = () => {
+  const handleCompleteTestWithResults = async () => {
     // Check if all recordings are complete
     const allRecordingsComplete = PROMPTS.every((_, index) => recordings[index]);
-    
+
     if (!allRecordingsComplete) {
       Alert.alert(
         'Incomplete Test',
@@ -372,26 +372,100 @@ export default function VoiceAnalysisScreen() {
       return;
     }
 
-    // Simple client-side summary for now so navigation
-    // always works even if backend is not running.
-    const totalDuration = PROMPTS.reduce((sum, _, index) => {
-      const rec = recordings[index];
-      return sum + (rec?.duration || 0);
-    }, 0);
+    setIsAnalyzing(true);
 
-    // Very rough heuristic: longer total recording time -> slightly higher percentage
-    const basePercentage = Math.min(40, Math.max(5, totalDuration * 2));
+    const sessionId = `mobile-${Date.now()}`;
 
-    router.push({
-      pathname: '/voice-test-results',
-      params: {
-        percentage: String(Math.round(basePercentage)),
-        status: 'good',
-        description:
-          'This is a preliminary voice assessment based on your recordings. Backend analysis will provide more detailed insights in a future version.',
-      },
-    });
+    const navigateToResults = (percentage: number, status: string, description: string) => {
+      router.push({
+        pathname: '/voice-test-results',
+        params: {
+          percentage: String(Math.round(percentage)),
+          status,
+          description,
+        },
+      });
+    };
+
+    try {
+      let result: any;
+
+      const { Platform } = require('react-native');
+
+      if (Platform.OS === 'web') {
+        // ── Web (Expo Web / browser) ──────────────────────────────────────────
+        // Browsers cannot send React Native { uri, name, type } blobs in FormData.
+        // Use the JSON-based /analyze endpoint which accepts recording metadata only.
+        const recordingsData = PROMPTS.map((prompt, index) => ({
+          prompt_id: prompt.id,
+          duration: recordings[index]?.duration ?? 0,
+          uri: recordings[index]?.uri ?? '',
+        }));
+
+        const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId, recordings: recordingsData }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error ${response.status}: ${errorText}`);
+        }
+
+        result = await response.json();
+      } else {
+        // ── Native (iOS / Android) ────────────────────────────────────────────
+        // Real audio files can be attached as multipart blobs.
+        const formData = new FormData();
+        formData.append('session_id', sessionId);
+
+        const fieldNames = ['recording_1', 'recording_2', 'recording_3'] as const;
+
+        for (let i = 0; i < PROMPTS.length; i++) {
+          const rec = recordings[i];
+          const uri = rec?.uri || '';
+          const fieldName = fieldNames[i];
+
+          if (uri && !uri.startsWith('recording_')) {
+            formData.append(fieldName, { uri, name: `recording_${i + 1}.m4a`, type: 'audio/m4a' } as any);
+          } else {
+            formData.append(fieldName, { uri: '', name: `recording_${i + 1}.m4a`, type: 'audio/m4a' } as any);
+          }
+        }
+
+        const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.PREDICT_VOICE, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error ${response.status}: ${errorText}`);
+        }
+
+        result = await response.json();
+      }
+
+      const percentage = result?.result?.percentage ?? 0;
+      const status = result?.result?.status ?? 'warning';
+      const description =
+        result?.result?.description ??
+        'Voice analysis completed. Please consult a healthcare provider for a detailed evaluation.';
+
+      navigateToResults(percentage, status, description);
+    } catch (error: any) {
+      console.error('Error analyzing voice recordings:', error);
+      Alert.alert(
+        'Analysis Failed',
+        `Could not complete voice analysis. Please make sure the backend server is running and try again.\n\nDetails: ${error?.message ?? 'Unknown error'}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
+
 
   const currentPrompt = PROMPTS[currentPromptIndex];
   const hasRecording = !!recordings[currentPromptIndex];

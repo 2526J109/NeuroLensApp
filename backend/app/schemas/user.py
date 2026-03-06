@@ -7,6 +7,9 @@ class UserBase(BaseModel):
     """Base user schema"""
     email: EmailStr
     full_name: Optional[str] = None
+    gender: Optional[str] = None
+    birthday: Optional[str] = None
+    handedness: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -17,6 +20,9 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """Schema for updating a user"""
     full_name: Optional[str] = None
+    gender: Optional[str] = None
+    birthday: Optional[str] = None
+    handedness: Optional[str] = None
 
 
 class UserResponse(UserBase):

@@ -28,6 +28,9 @@ class UserDAO:
             'firebase_uid': user_data.firebase_uid,
             'email': user_data.email,
             'full_name': user_data.full_name,
+            'gender': user_data.gender,
+            'birthday': user_data.birthday,
+            'handedness': user_data.handedness,
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat()
         }

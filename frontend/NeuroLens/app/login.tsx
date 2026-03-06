@@ -67,7 +67,7 @@ export default function LoginScreen() {
       setLoading(true);
       try {
         await signIn(email, password);
-        
+
         // Show success toast
         Toast.show({
           type: 'success',
@@ -77,7 +77,7 @@ export default function LoginScreen() {
           visibilityTime: 2000,
           topOffset: 60,
         });
-        
+
         // Redirect to home
         setTimeout(() => {
           router.replace('/(tabs)');
@@ -182,10 +182,13 @@ export default function LoginScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Email Address</Text>
               </View>
-              <View style={[
-                styles.inputWrapper,
-                focusedField === 'email' && styles.inputWrapperFocused
-              ]}>
+              {/* Wrapper — position:relative so the focus ring can overlay it */}
+              <View style={styles.inputWrapper}>
+                {/* Absolutely-positioned focus ring — opacity-only change, zero layout impact */}
+                <View style={[
+                  styles.focusRing,
+                  { opacity: focusedField === 'email' ? 1 : 0 }
+                ]} pointerEvents="none" />
                 <TextInput
                   style={[
                     styles.input,
@@ -224,33 +227,64 @@ export default function LoginScreen() {
               <View style={styles.labelContainer}>
                 <Text style={styles.inputLabel}>Password</Text>
               </View>
-              <View style={[styles.passwordContainer, focusedField === 'password' && styles.inputWrapperFocused]}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    Platform.OS === 'web' && { outline: 'none' as any }
-                  ]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#94A3B8"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors({ ...errors, password: undefined });
-                    }
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  spellCheck={false}
-                  textContentType="none"
-                  onFocus={() => {
-                    setFocusedField('password');
-                  }}
-                  onBlur={() => {
-                    setFocusedField(null);
-                  }}
-                />
+              {/* Outer wrapper — static styles only, no conditional layout changes */}
+              <View style={styles.passwordContainer}>
+                {/* Absolutely-positioned focus ring — opacity only, zero layout impact */}
+                <View style={[
+                  styles.focusRing,
+                  { opacity: focusedField === 'password' ? 1 : 0 }
+                ]} pointerEvents="none" />
+                {showPassword ? (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={false}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => {
+                      setFocusedField('password');
+                    }}
+                    onBlur={() => {
+                      setFocusedField(null);
+                    }}
+                  />
+                ) : (
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      Platform.OS === 'web' && { outline: 'none' as any }
+                    ]}
+                    placeholder="Enter your password"
+                    placeholderTextColor="#94A3B8"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: undefined });
+                    }}
+                    secureTextEntry={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    textContentType="password"
+                    onFocus={() => {
+                      setFocusedField('password');
+                    }}
+                    onBlur={() => {
+                      setFocusedField(null);
+                    }}
+                  />
+                )}
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={styles.eyeIcon}
@@ -458,7 +492,24 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 12,
-    overflow: 'hidden',
+  },
+  // Absolutely-positioned border overlay — toggled via opacity (not layout props)
+  // so iOS never triggers a layout pass that blurs the focused TextInput
+  focusRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#14B8A6',
+    shadowColor: '#14B8A6',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 1,
   },
   inputWrapperFocused: {
     borderColor: '#14B8A6',

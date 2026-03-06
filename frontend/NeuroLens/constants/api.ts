@@ -31,12 +31,13 @@ export const API_BASE_URL = getApiBaseUrl();
 export const API_ENDPOINTS = {
   VOICE_ANALYSIS: {
     // Multipart endpoint — accepts real audio files
-    PREDICT_VOICE: `${API_BASE_URL}/voice-analysis/predict_voice`,
+    PREDICT_VOICE: `${API_BASE_URL}/api/voice-analysis/predict_voice`,
     // Legacy JSON-only endpoint (kept for fallback)
-    ANALYZE: `${API_BASE_URL}/voice-analysis/analyze`,
-    RESULTS: (sessionId: string) => `${API_BASE_URL}/voice-analysis/results/${sessionId}`,
-    UPLOAD: `${API_BASE_URL}/voice-analysis/upload`,
+    ANALYZE: `${API_BASE_URL}/api/voice-analysis/analyze`,
+    RESULTS: (sessionId: string) => `${API_BASE_URL}/api/voice-analysis/results/${sessionId}`,
+    UPLOAD: `${API_BASE_URL}/api/voice-analysis/upload`,
   },
+  
   DRAWING_ANALYSIS: {
     ANALYZE: `${API_BASE_URL}/api/drawing-prediction/analyze`,
   },

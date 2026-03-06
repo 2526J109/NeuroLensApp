@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { 
+import {
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -16,14 +16,23 @@ interface UserProfile {
   firebase_uid: string;
   email: string;
   full_name?: string;
-  created_at: string;
+  gender?: string;
+  birthday?: string;
+  handedness?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName?: string,
+    gender?: string,
+    birthday?: string,
+    handedness?: string
+  ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -54,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const token = await firebaseUser.getIdToken();
       await AsyncStorage.setItem('authToken', token);
-      
+      console.log('Token: ', token);
       const profile = await authService.getUserProfile();
       setUserProfile(profile);
     } catch (error) {
@@ -62,18 +71,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+
+
   // Monitor Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
-      
+
       if (firebaseUser) {
         await fetchUserProfile(firebaseUser);
       } else {
         setUserProfile(null);
         await AsyncStorage.removeItem('authToken');
       }
-      
+
       setLoading(false);
     });
 
@@ -81,11 +92,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string, fullName?: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName?: string,
+    gender?: string,
+    birthday?: string,
+    handedness?: string
+  ) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
-      await authService.register(token, email, fullName);
+      await authService.register(token, email, fullName, gender, birthday, handedness);
       await fetchUserProfile(userCredential.user);
     } catch (error: any) {
       throw new Error(error.message || 'Failed to sign up');

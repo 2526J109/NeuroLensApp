@@ -6,6 +6,9 @@ class RegisterRequest(BaseModel):
     """Schema for user registration request"""
     email: EmailStr
     full_name: Optional[str] = None
+    gender: Optional[str] = None
+    birthday: Optional[str] = None
+    handedness: Optional[str] = None
 
 
 class LoginResponse(BaseModel):

@@ -12,7 +12,12 @@ print("=" * 60)
 print("DATABASE TABLES:")
 print("=" * 60)
 for table in tables:
-    print(f"  ✓ {table[0]}")
+    table_name = table[0]
+    print(f"\n  ✓ {table_name}")
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = cursor.fetchall()
+    for col in columns:
+        print(f"    - {col[1]} ({col[2]})")
 
 # Check users table
 print("\n" + "=" * 60)

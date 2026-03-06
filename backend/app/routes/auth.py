@@ -19,6 +19,9 @@ async def register_user(
     token = credentials.credentials
     firebase_user = await verify_firebase_token(token)
     
+    print(f"DEBUG: Registering user {request.email}")
+    print(f"DEBUG: Request data: {request.dict()}")
+    
     user_dao = UserDAO()
     
     existing_user = user_dao.get_by_firebase_uid(firebase_user['uid'])
@@ -35,7 +38,10 @@ async def register_user(
     user_data = UserCreate(
         firebase_uid=firebase_user['uid'],
         email=request.email,
-        full_name=request.full_name
+        full_name=request.full_name,
+        gender=request.gender,
+        birthday=request.birthday,
+        handedness=request.handedness
     )
     
     user = user_dao.create(user_data)
