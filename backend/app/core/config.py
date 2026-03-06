@@ -15,7 +15,10 @@ class Settings(BaseSettings):
     
     # Firebase
     FIREBASE_ADMIN_SDK_PATH: str = "firebase-admin-sdk.json"
-    
+
+    # Remote model server (Hugging Face Space)
+    MODEL_SERVER_URL: str = "https://haran29-neurolenseapp.hf.space/"
+
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
     
