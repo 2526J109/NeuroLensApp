@@ -22,8 +22,23 @@ def save_prediction_for_user(user_id: str, prediction: Dict[str, Any]) -> Dict[s
     return dao.save_prediction(user_id, prediction)
 
 
+from app.utils.kinematic_features import extract_kinematic_features
+
 def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, Any]:
     """Send drawing data to model server, save prediction, and return result"""
+    
+    # Extract kinematic features from input data
+    spiral_data = drawing_data.get("spiral_data")
+    wave_data = drawing_data.get("wave_data")
+    
+    spiral_points = spiral_data.get("points") if spiral_data else []
+    wave_points = wave_data.get("points") if wave_data else []
+    
+    if spiral_points or wave_points:
+        kinematic_features = extract_kinematic_features(spiral_points, wave_points)
+        drawing_data["kinematic_features"] = kinematic_features
+        print(f"[DEBUG] Extracted kinematic features: {kinematic_features}")
+
     payload = {"user_id": user_id, **drawing_data}
     prediction = send_to_model_server(payload)
     save_result = save_prediction_for_user(user_id, prediction)
