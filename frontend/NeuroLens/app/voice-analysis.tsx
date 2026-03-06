@@ -19,15 +19,11 @@ import { API_ENDPOINTS } from '../constants/api';
 const PROMPTS = [
   {
     id: 1,
-    text: "Please say: 'The quick brown fox jumps over the lazy dog'",
-  },
-  {
-    id: 2,
     text: "Please say: 'She sells seashells by the seashore'",
   },
   {
-    id: 3,
-    text: "Please sustain the vowel 'Aaaaaa' for 5 seconds",
+    id: 2,
+    text: "Please sustain the vowel 'Ahhhh' for 5 seconds",
   },
 ];
 
@@ -327,22 +323,22 @@ export default function VoiceAnalysisScreen() {
         };
       });
 
-      // Send to backend for analysis
-      // const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     recordings: recordingsData,
-      //   }),
-      // });
+      const sessionId = `mobile-${Date.now()}`;
 
-      // if (!response.ok) {
-      //   throw new Error(`HTTP error! status: ${response.status}`);
-      // }
+      // Sanitize the ANALYZE endpoint URL before making the fetch call to prevent double slashes and avoid 404 errors
+      const sanitizedUrl = API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE.replace(/([^:\/]\/)(\/+)/g, "$1");
+      const response = await fetch(sanitizedUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId, recordings: recordingsData }),
+      });
 
-      // const result = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
 
       // Navigate to home page after completion
       router.replace('/(tabs)');
@@ -377,14 +373,9 @@ export default function VoiceAnalysisScreen() {
     const sessionId = `mobile-${Date.now()}`;
 
     const navigateToResults = (percentage: number, status: string, description: string) => {
-      router.push({
-        pathname: '/voice-test-results',
-        params: {
-          percentage: String(Math.round(percentage)),
-          status,
-          description,
-        },
-      });
+      router.push(
+        `/voice-test-results?percentage=${Math.round(percentage)}&status=${status}&description=${encodeURIComponent(description)}`
+      );
     };
 
     try {
@@ -402,7 +393,8 @@ export default function VoiceAnalysisScreen() {
           uri: recordings[index]?.uri ?? '',
         }));
 
-        const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE, {
+        const sanitizedUrl = API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE.replace(/([^:\/]\/)(\/+)/g, "$1");
+        const response = await fetch(sanitizedUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId, recordings: recordingsData }),
@@ -420,7 +412,7 @@ export default function VoiceAnalysisScreen() {
         const formData = new FormData();
         formData.append('session_id', sessionId);
 
-        const fieldNames = ['recording_1', 'recording_2', 'recording_3'] as const;
+        const fieldNames = ['recording_1', 'recording_2'] as const;
 
         for (let i = 0; i < PROMPTS.length; i++) {
           const rec = recordings[i];
