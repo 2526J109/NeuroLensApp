@@ -41,5 +41,9 @@ export const API_ENDPOINTS = {
   DRAWING_ANALYSIS: {
     ANALYZE: `${API_BASE_URL}/api/drawing-prediction/analyze`,
   },
+  
+  COGNITIVE_ANALYSIS: {
+    PREDICT: `${API_BASE_URL}/api/cognitive-analysis/predict`,
+  },
 };
 
