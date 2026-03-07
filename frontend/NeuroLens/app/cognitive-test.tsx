@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 import { Brain, CheckCircle2, ChevronRight, Clock } from "lucide-react-native";
+import api from '../services/api';
 
 /* ─────────────────────────────────────────────
    SCREEN DIMENSIONS
@@ -318,12 +319,29 @@ export default function CognitiveAssessment() {
     lastTrialT.current=Date.now();
   },[paused,symQueue,trialIdx,sdmtPhase,pracDone]);
 
-  const submit = useCallback(()=>{
-    console.log("Cognitive payload:",{
-      ...tmtFeatures(realTaps.current),
-      ...sdmtFeatures(realTrials.current),
-    });
-  },[]);
+  const submit = useCallback(async () => {
+    const tmt  = tmtFeatures(realTaps.current);
+    const sdmt = sdmtFeatures(realTrials.current);
+    try {
+        const response = await api.post('/api/cognitive-analysis/predict', {
+            user_id:      'test_user_123',
+            sdmtotal:     Math.round(sdmt.sdmtTotal * 1.5), // 60s → 90s
+            tmt_a:        tmt.tmtA ? tmt.tmtA / 1000 : null,
+            dvs_lns:      null,
+            age_at_visit: 65,
+            SEX:          1,
+            fampd:        0,
+            rem:          0,
+        });
+        const result = response.data;
+        router.replace(
+            `/cognitive-test-results?percentile_rank=${result.percentile_rank}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
+        );
+    } catch (error) {
+        console.error('Cognitive submit failed:', error);
+        router.replace('/cognitive-test-results?percentile_rank=50&contributing_factors=%5B%5D');
+    }
+  }, [router]);
 
   /* ─────────────────────────────────────────────
      DOT CANVAS
@@ -674,7 +692,7 @@ export default function CognitiveAssessment() {
             <View style={styles.iconCircle}><CheckCircle2 size={34} color={C.green}/></View>
             <Text style={styles.title}>All Done!</Text>
             <Text style={styles.sub}>Your brain health check is complete. Results have been recorded.</Text>
-            <TouchableOpacity style={styles.btn} onPress={()=>{ submit(); router.back(); }}>
+            <TouchableOpacity style={styles.btn} onPress={submit}>
               <Text style={styles.btnTxt}>Return Home</Text>
             </TouchableOpacity>
           </InfoScreen>
