@@ -1,11 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const Header = () => {
+    const { t } = useLanguage();
+
     return (
         <View style={styles.container}>
-            <Text style={styles.welcomeText}>Welcome back</Text>
-            <Text style={styles.titleText}>Health Assessment</Text>
+            <Text style={styles.welcomeText}>{t('home.welcomeBack')}</Text>
+            <Text style={styles.titleText}>{t('home.healthAssessment')}</Text>
         </View>
     );
 };

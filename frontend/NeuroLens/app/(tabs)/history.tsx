@@ -19,6 +19,7 @@ import {
   ArrowLeft,
 } from 'lucide-react-native';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AssessmentEntry {
   id: string;
@@ -129,11 +130,11 @@ const ASSESSMENT_HISTORY: AssessmentEntry[] = ASSESSMENT_HISTORY_BASE.map((entry
   if (index === 0) {
     return { ...entry, trend: 'stable' as const };
   }
-  
+
   const prevRisk = ASSESSMENT_HISTORY_BASE[index - 1].overallScore;
   const currentRisk = entry.overallScore;
   const diff = currentRisk - prevRisk;
-  
+
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (Math.abs(diff) <= 1) {
     trend = 'stable';
@@ -142,7 +143,7 @@ const ASSESSMENT_HISTORY: AssessmentEntry[] = ASSESSMENT_HISTORY_BASE.map((entry
   } else {
     trend = 'up'; // Risk increased = bad (red)
   }
-  
+
   return { ...entry, trend };
 });
 
@@ -194,11 +195,11 @@ const MONTHLY_DATA: AssessmentEntry[] = MONTHLY_DATA_BASE.map((entry, index) => 
   if (index === 0) {
     return { ...entry, trend: 'stable' as const };
   }
-  
+
   const prevRisk = MONTHLY_DATA_BASE[index - 1].overallScore;
   const currentRisk = entry.overallScore;
   const diff = currentRisk - prevRisk;
-  
+
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (Math.abs(diff) <= 1) {
     trend = 'stable';
@@ -207,7 +208,7 @@ const MONTHLY_DATA: AssessmentEntry[] = MONTHLY_DATA_BASE.map((entry, index) => 
   } else {
     trend = 'up';
   }
-  
+
   return { ...entry, trend };
 });
 
@@ -225,11 +226,11 @@ const WEEKLY_DATA: AssessmentEntry[] = WEEKLY_DATA_BASE.map((entry, index) => {
   if (index === 0) {
     return { ...entry, trend: 'stable' as const };
   }
-  
+
   const prevRisk = WEEKLY_DATA_BASE[index - 1].overallScore;
   const currentRisk = entry.overallScore;
   const diff = currentRisk - prevRisk;
-  
+
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (Math.abs(diff) <= 1) {
     trend = 'stable';
@@ -238,7 +239,7 @@ const WEEKLY_DATA: AssessmentEntry[] = WEEKLY_DATA_BASE.map((entry, index) => {
   } else {
     trend = 'up';
   }
-  
+
   return { ...entry, trend };
 });
 
@@ -256,11 +257,11 @@ const DAILY_DATA: AssessmentEntry[] = DAILY_DATA_BASE.map((entry, index) => {
   if (index === 0) {
     return { ...entry, trend: 'stable' as const };
   }
-  
+
   const prevRisk = DAILY_DATA_BASE[index - 1].overallScore;
   const currentRisk = entry.overallScore;
   const diff = currentRisk - prevRisk;
-  
+
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (Math.abs(diff) <= 1) {
     trend = 'stable';
@@ -269,7 +270,7 @@ const DAILY_DATA: AssessmentEntry[] = DAILY_DATA_BASE.map((entry, index) => {
   } else {
     trend = 'up';
   }
-  
+
   return { ...entry, trend };
 });
 
@@ -338,9 +339,9 @@ const LineGraph = ({ data, title }: { data: AssessmentEntry[]; title: string }) 
     <View style={styles.graphContainer}>
       <Text style={styles.graphTitle}>{title}</Text>
       <View style={[styles.graphWrapper, { height: graphHeight }]}>
-        <Svg 
-          width={graphWidth} 
-          height={graphHeight} 
+        <Svg
+          width={graphWidth}
+          height={graphHeight}
           viewBox={`0 0 ${graphWidth} ${graphHeight}`}
         >
           {/* Horizontal grid lines */}
@@ -463,6 +464,8 @@ const LineGraph = ({ data, title }: { data: AssessmentEntry[]; title: string }) 
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
+
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -482,7 +485,7 @@ export default function HistoryScreen() {
         >
           <ArrowLeft size={24} color="#0F172A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>History</Text>
+        <Text style={styles.headerTitle}>{t('history.title')}</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
@@ -503,17 +506,17 @@ export default function HistoryScreen() {
           >
             {/* Daily Progress Card */}
             <View style={styles.progressCard}>
-              <LineGraph data={DAILY_DATA} title="Daily Risk Score Progress" />
+              <LineGraph data={DAILY_DATA} title={t('history.graphs.daily')} />
             </View>
 
             {/* Weekly Progress Card */}
             <View style={styles.progressCard}>
-              <LineGraph data={WEEKLY_DATA} title="Weekly Risk Score Progress" />
+              <LineGraph data={WEEKLY_DATA} title={t('history.graphs.weekly')} />
             </View>
 
             {/* Monthly Progress Card */}
             <View style={styles.progressCard}>
-              <LineGraph data={MONTHLY_DATA} title="Monthly Risk Score Progress" />
+              <LineGraph data={MONTHLY_DATA} title={t('history.graphs.monthly')} />
             </View>
           </ScrollView>
 
@@ -528,12 +531,12 @@ export default function HistoryScreen() {
         {/* Summary Card */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Total Assessments</Text>
+            <Text style={styles.summaryLabel}>{t('history.summary.totalAssessments')}</Text>
             <Text style={styles.summaryValue}>{TOTAL_ASSESSMENTS}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Average Risk</Text>
+            <Text style={styles.summaryLabel}>{t('history.summary.averageRisk')}</Text>
             <Text style={[styles.summaryValue, { color: getRiskColor(getRiskLevel(AVERAGE_SCORE)) }]}>
               {AVERAGE_SCORE}%
             </Text>
@@ -560,25 +563,25 @@ export default function HistoryScreen() {
             {/* Category Scores */}
             <View style={styles.categoriesContainer}>
               <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>Wearable</Text>
+                <Text style={styles.categoryLabel}>{t('history.categories.wearable')}</Text>
                 <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.wearable)) }]}>
                   {entry.categories.wearable}%
                 </Text>
               </View>
               <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>Voice</Text>
+                <Text style={styles.categoryLabel}>{t('history.categories.voice')}</Text>
                 <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.voice)) }]}>
                   {entry.categories.voice}%
                 </Text>
               </View>
               <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>Drawing</Text>
+                <Text style={styles.categoryLabel}>{t('history.categories.drawing')}</Text>
                 <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.drawing)) }]}>
                   {entry.categories.drawing}%
                 </Text>
               </View>
               <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>Brain</Text>
+                <Text style={styles.categoryLabel}>{t('history.categories.brain')}</Text>
                 <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.brain)) }]}>
                   {entry.categories.brain}%
                 </Text>

@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Language {
   code: string;
@@ -25,11 +26,9 @@ const languages: Language[] = [
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
+  const { locale, changeLanguage, t } = useLanguage();
 
   const handleContinue = () => {
-    // TODO: Save selected language preference
-    console.log('Selected language:', selectedLanguage);
     // Navigate to login screen
     router.replace('/login');
   };
@@ -57,17 +56,17 @@ export default function OnboardingScreen() {
               </View>
             </View>
           </View>
-          <Text style={styles.welcomeTitle}>Welcome to NeuroLens</Text>
-          <Text style={styles.welcomeSubtitle}>Your Health Companion</Text>
+          <Text style={styles.welcomeTitle}>{t('onboarding.welcomeTitle')}</Text>
+          <Text style={styles.welcomeSubtitle}>{t('onboarding.welcomeSubtitle')}</Text>
         </View>
 
         {/* Language Selection Section */}
         <View style={styles.languageSection}>
-          <Text style={styles.languageTitle}>Select Your Preferred Language</Text>
-          
+          <Text style={styles.languageTitle}>{t('onboarding.selectLanguage')}</Text>
+
           <View style={styles.languageGrid}>
             {languages.map((lang) => {
-              const isSelected = selectedLanguage === lang.code;
+              const isSelected = locale === lang.code;
               return (
                 <TouchableOpacity
                   key={lang.code}
@@ -75,7 +74,7 @@ export default function OnboardingScreen() {
                     styles.languageCard,
                     isSelected && styles.languageCardSelected
                   ]}
-                  onPress={() => setSelectedLanguage(lang.code)}
+                  onPress={() => changeLanguage(lang.code)}
                   activeOpacity={0.7}
                 >
                   {isSelected && (
@@ -100,16 +99,16 @@ export default function OnboardingScreen() {
           onPress={handleContinue}
           activeOpacity={0.8}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>{t('onboarding.continue')}</Text>
         </TouchableOpacity>
 
         {/* Legal Disclaimer */}
         <View style={styles.disclaimerSection}>
           <Text style={styles.disclaimerText}>
-            By continuing, you agree to our{' '}
-            <Text style={styles.disclaimerLink}>Terms of Service</Text>
-            {' '}and{' '}
-            <Text style={styles.disclaimerLink}>Privacy Policy</Text>
+            {t('auth.byContinuing')}{' '}
+            <Text style={styles.disclaimerLink}>{t('auth.termsOfService')}</Text>
+            {' '}{t('auth.and')}{' '}
+            <Text style={styles.disclaimerLink}>{t('auth.privacyPolicy')}</Text>
           </Text>
         </View>
       </ScrollView>

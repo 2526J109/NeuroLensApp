@@ -1,15 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 375;
 const isTablet = SCREEN_WIDTH >= 768;
 
 export const ProgressCard = () => {
+    const { t } = useLanguage();
     // 25% progress
     const percentage = 25;
-    
+
     // Responsive sizing
     const chartSize = isSmallScreen ? 80 : isTablet ? 120 : 100;
     const radius = isSmallScreen ? 28 : isTablet ? 42 : 35;
@@ -32,14 +34,14 @@ export const ProgressCard = () => {
         <View style={styles.card}>
             <View style={styles.contentContainer}>
                 <View style={styles.textContainer}>
-                    <Text style={styles.cardTitle}>Your Progress</Text>
-                    <Text style={styles.subtitle}>1 of 4 tests completed</Text>
+                    <Text style={styles.cardTitle}>{t('home.progress.title')}</Text>
+                    <Text style={styles.subtitle}>{t('home.progress.subtitle')}</Text>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.button}
                         onPress={handleViewResults}
                     >
-                        <Text style={styles.buttonText}>View Results</Text>
+                        <Text style={styles.buttonText}>{t('home.progress.viewResults')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -70,7 +72,7 @@ export const ProgressCard = () => {
                     </Svg>
                     <View style={styles.percentageContainer}>
                         <Text style={styles.percentageText}>{percentage}%</Text>
-                        <Text style={styles.completeText}>Complete</Text>
+                        <Text style={styles.completeText}>{t('home.progress.complete')}</Text>
                     </View>
                 </View>
             </View>

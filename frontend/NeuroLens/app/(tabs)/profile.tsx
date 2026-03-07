@@ -11,22 +11,32 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import {
   Mail,
-  Phone,
+  User as UserIcon,
   Calendar,
   Bell,
   Shield,
   LogOut,
   ArrowLeft,
+  Globe,
 } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user, userProfile, logout } = useAuth();
+  const { locale, changeLanguage, t } = useLanguage();
   const [pushNotifications, setPushNotifications] = useState(true);
   const [dataPrivacyMode, setDataPrivacyMode] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
-  const handleSignOut = () => {
-    // Navigate to login page on signout
-    router.replace('/login');
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const handlePrivacySecurity = () => {
@@ -44,7 +54,7 @@ export default function ProfileScreen() {
         >
           <ArrowLeft size={24} color="#0F172A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
       </View>
 
       <ScrollView
@@ -56,35 +66,39 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <View style={styles.avatarCircle}>
               <View style={styles.avatarInner}>
-                <Text style={styles.avatarText}>JD</Text>
+                <Text style={styles.avatarText}>
+                  {userProfile?.full_name
+                    ? userProfile.full_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
+                    : user?.email?.substring(0, 2).toUpperCase() || t('profile.na')[0]}
+                </Text>
               </View>
             </View>
           </View>
-          <Text style={styles.userName}>John Doe</Text>
-          <Text style={styles.patientId}>Patient ID: PD-2024-001</Text>
+          <Text style={styles.userName}>{userProfile?.full_name || t('home.welcomeBack')}</Text>
+          <Text style={styles.patientId}>{t('profile.patientId')}: {userProfile?.id || t('profile.na')}</Text>
         </View>
 
         {/* Personal Information Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Personal Information</Text>
-          
+          <Text style={styles.cardTitle}>{t('profile.personalInfo')}</Text>
+
           <View style={styles.infoRow}>
             <View style={styles.iconCircle}>
               <Mail size={20} color="#14B8A6" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>john.doe@email.com</Text>
+              <Text style={styles.infoLabel}>{t('profile.email')}</Text>
+              <Text style={styles.infoValue}>{user?.email || userProfile?.email || t('profile.na')}</Text>
             </View>
           </View>
 
           <View style={styles.infoRow}>
             <View style={styles.iconCircle}>
-              <Phone size={20} color="#14B8A6" />
+              <UserIcon size={20} color="#14B8A6" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>+1 (555) 123-4567</Text>
+              <Text style={styles.infoLabel}>{t('profile.gender')}</Text>
+              <Text style={styles.infoValue}>{userProfile?.gender ? t(`auth.genderOptions.${userProfile.gender}`) : t('profile.na')}</Text>
             </View>
           </View>
 
@@ -93,20 +107,20 @@ export default function ProfileScreen() {
               <Calendar size={20} color="#14B8A6" />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Date of Birth</Text>
-              <Text style={styles.infoValue}>March 15, 1958</Text>
+              <Text style={styles.infoLabel}>{t('profile.dob')}</Text>
+              <Text style={styles.infoValue}>{userProfile?.birthday || t('profile.na')}</Text>
             </View>
           </View>
         </View>
 
         {/* Settings Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Settings</Text>
-          
+          <Text style={styles.cardTitle}>{t('profile.settings')}</Text>
+
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
               <Bell size={20} color="#64748B" style={styles.settingIcon} />
-              <Text style={styles.settingLabel}>Push Notifications</Text>
+              <Text style={styles.settingLabel}>{t('profile.pushNotifications')}</Text>
             </View>
             <Switch
               value={pushNotifications}
@@ -120,7 +134,7 @@ export default function ProfileScreen() {
           <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
               <Shield size={20} color="#64748B" style={styles.settingIcon} />
-              <Text style={styles.settingLabel}>Data Privacy Mode</Text>
+              <Text style={styles.settingLabel}>{t('profile.dataPrivacyMode')}</Text>
             </View>
             <Switch
               value={dataPrivacyMode}
@@ -130,6 +144,47 @@ export default function ProfileScreen() {
               ios_backgroundColor="#E2E8F0"
             />
           </View>
+
+          {/* Language Switcher */}
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => setShowLanguagePicker(!showLanguagePicker)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <Globe size={20} color="#64748B" style={styles.settingIcon} />
+              <Text style={styles.settingLabel}>{t('profile.language')}</Text>
+            </View>
+            <Text style={styles.currentLanguageValue}>
+              {t(`profile.languages.${locale}`)}
+            </Text>
+          </TouchableOpacity>
+
+          {showLanguagePicker && (
+            <View style={styles.languageOptionsContainer}>
+              {['en', 'si', 'ta'].map((langCode) => (
+                <TouchableOpacity
+                  key={langCode}
+                  style={[
+                    styles.languageOption,
+                    locale === langCode && styles.languageOptionActive
+                  ]}
+                  onPress={() => {
+                    changeLanguage(langCode);
+                    setShowLanguagePicker(false);
+                  }}
+                >
+                  <Text style={[
+                    styles.languageOptionText,
+                    locale === langCode && styles.languageOptionTextActive
+                  ]}>
+                    {t(`profile.languages.${langCode}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
         </View>
 
         {/* Privacy & Security Button */}
@@ -139,7 +194,7 @@ export default function ProfileScreen() {
           activeOpacity={0.8}
         >
           <Shield size={20} color="#14B8A6" />
-          <Text style={styles.privacyButtonText}>Privacy & Security</Text>
+          <Text style={styles.privacyButtonText}>{t('profile.privacyAndSecurity')}</Text>
         </TouchableOpacity>
 
         {/* Sign Out Button */}
@@ -149,7 +204,7 @@ export default function ProfileScreen() {
           activeOpacity={0.8}
         >
           <LogOut size={20} color="#FFFFFF" />
-          <Text style={styles.signOutButtonText}>Sign Out</Text>
+          <Text style={styles.signOutButtonText}>{t('profile.signOut')}</Text>
         </TouchableOpacity>
 
         {/* Bottom padding for tab bar */}
@@ -291,6 +346,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#0F172A',
     fontWeight: '500',
+  },
+  currentLanguageValue: {
+    fontSize: 14,
+    color: '#14B8A6',
+    fontWeight: '600',
+  },
+  languageOptionsContainer: {
+    marginTop: -10,
+    marginBottom: 20,
+    paddingLeft: 32,
+    gap: 12,
+  },
+  languageOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  languageOptionActive: {
+    backgroundColor: '#F0FDFA',
+    borderColor: '#14B8A6',
+  },
+  languageOptionText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  languageOptionTextActive: {
+    color: '#14B8A6',
+    fontWeight: '600',
   },
   privacyButton: {
     flexDirection: 'row',

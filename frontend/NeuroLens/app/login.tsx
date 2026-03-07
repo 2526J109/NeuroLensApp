@@ -16,14 +16,15 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Globe, ChevronDown, Check, AlertCircle } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
+  const { locale, changeLanguage, t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -39,21 +40,21 @@ export default function LoginScreen() {
     const newErrors: { email?: string; password?: string } = {};
 
     if (!email.trim()) {
-      newErrors.email = 'Please fill out this field';
+      newErrors.email = t('auth.validation.fillField');
       setErrors(newErrors);
       return false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('auth.validation.validEmail');
       setErrors(newErrors);
       return false;
     }
 
     if (!password.trim()) {
-      newErrors.password = 'Please fill out this field';
+      newErrors.password = t('auth.validation.fillField');
       setErrors(newErrors);
       return false;
     } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('auth.validation.passwordLength');
       setErrors(newErrors);
       return false;
     }
@@ -71,8 +72,8 @@ export default function LoginScreen() {
         // Show success toast
         Toast.show({
           type: 'success',
-          text1: 'Login Successful!',
-          text2: 'Welcome back to NeuroLens',
+          text1: t('auth.loginSuccessful'),
+          text2: t('auth.welcomeToNeuroLens'),
           position: 'top',
           visibilityTime: 2000,
           topOffset: 60,
@@ -86,8 +87,8 @@ export default function LoginScreen() {
         // Show error toast
         Toast.show({
           type: 'error',
-          text1: 'Login Failed',
-          text2: error.message || 'Please check your credentials and try again.',
+          text1: t('auth.loginFailed'),
+          text2: error.message || t('auth.checkCredentials'),
           position: 'top',
           visibilityTime: 4000,
           topOffset: 60,
@@ -124,7 +125,7 @@ export default function LoginScreen() {
               activeOpacity={0.7}
             >
               <Globe size={16} color="#64748B" />
-              <Text style={styles.languageText}>{selectedLanguage}</Text>
+              <Text style={styles.languageText}>{languages.find(l => l.code === locale)?.label || 'GB English'}</Text>
               <ChevronDown size={16} color="#64748B" />
             </TouchableOpacity>
 
@@ -141,13 +142,13 @@ export default function LoginScreen() {
                       key={lang.code}
                       style={styles.languageOption}
                       onPress={() => {
-                        setSelectedLanguage(lang.label);
+                        changeLanguage(lang.code);
                         setShowLanguageDropdown(false);
                       }}
                       activeOpacity={0.7}
                     >
                       <Text style={styles.languageOptionText}>{lang.label}</Text>
-                      {selectedLanguage === lang.label && (
+                      {locale === lang.code && (
                         <Check size={16} color="#14B8A6" />
                       )}
                     </TouchableOpacity>
@@ -174,13 +175,13 @@ export default function LoginScreen() {
               </View>
             </View>
             <Text style={styles.appName}>NeuroLens</Text>
-            <Text style={styles.welcomeText}>Welcome Back</Text>
+            <Text style={styles.welcomeText}>{t('auth.welcomeBack')}</Text>
           </View>
 
           <View style={styles.inputSection}>
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+                <Text style={styles.inputLabel}>{t('auth.emailAddress')}</Text>
               </View>
               {/* Wrapper — position:relative so the focus ring can overlay it */}
               <View style={styles.inputWrapper}>
@@ -194,7 +195,7 @@ export default function LoginScreen() {
                     styles.input,
                     Platform.OS === 'web' && { outline: 'none' as any }
                   ]}
-                  placeholder="Enter your email"
+                  placeholder={t('auth.enterEmail')}
                   placeholderTextColor="#94A3B8"
                   value={email}
                   onChangeText={(text) => {
@@ -225,7 +226,7 @@ export default function LoginScreen() {
 
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Password</Text>
+                <Text style={styles.inputLabel}>{t('auth.password')}</Text>
               </View>
               {/* Outer wrapper — static styles only, no conditional layout changes */}
               <View style={styles.passwordContainer}>
@@ -240,7 +241,7 @@ export default function LoginScreen() {
                       styles.passwordInput,
                       Platform.OS === 'web' && { outline: 'none' as any }
                     ]}
-                    placeholder="Enter your password"
+                    placeholder={t('auth.enterPassword')}
                     placeholderTextColor="#94A3B8"
                     value={password}
                     onChangeText={(text) => {
@@ -252,6 +253,7 @@ export default function LoginScreen() {
                     autoCorrect={false}
                     spellCheck={false}
                     textContentType="password"
+                    keyboardType="ascii-capable"
                     onFocus={() => {
                       setFocusedField('password');
                     }}
@@ -265,7 +267,7 @@ export default function LoginScreen() {
                       styles.passwordInput,
                       Platform.OS === 'web' && { outline: 'none' as any }
                     ]}
-                    placeholder="Enter your password"
+                    placeholder={t('auth.enterPassword')}
                     placeholderTextColor="#94A3B8"
                     value={password}
                     onChangeText={(text) => {
@@ -277,6 +279,7 @@ export default function LoginScreen() {
                     autoCorrect={false}
                     spellCheck={false}
                     textContentType="password"
+                    keyboardType="ascii-capable"
                     onFocus={() => {
                       setFocusedField('password');
                     }}
@@ -320,7 +323,7 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.signInButtonText}>Sign In</Text>
+              <Text style={styles.signInButtonText}>{t('auth.signIn')}</Text>
             )}
           </TouchableOpacity>
 
@@ -328,22 +331,20 @@ export default function LoginScreen() {
             onPress={handleForgotPassword}
             style={styles.forgotPasswordContainer}
           >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
           <View style={styles.createAccountSection}>
-            <Text style={styles.createAccountText}>Don't have an account?</Text>
+            <Text style={styles.createAccountText}>{t('auth.dontHaveAccount')}</Text>
             <TouchableOpacity onPress={handleCreateAccount}>
-              <Text style={styles.createAccountLink}>Create Account</Text>
+              <Text style={styles.createAccountLink}>{t('auth.createAccount')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.disclaimerSection}>
             <Text style={styles.disclaimerText}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.disclaimerLink}>Terms of Service</Text>
-              {'\n'}and{' '}
-              <Text style={styles.disclaimerLink}>Privacy Policy</Text>
+              {t('auth.byContinuing')} <Text style={styles.disclaimerLink}>{t('auth.termsOfService')}</Text>
+              {'\n'}{t('auth.and')} <Text style={styles.disclaimerLink}>{t('auth.privacyPolicy')}</Text>
             </Text>
           </View>
         </ScrollView>

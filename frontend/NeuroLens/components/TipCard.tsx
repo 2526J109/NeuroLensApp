@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const TipCard = () => {
+    const { t } = useLanguage();
+
     return (
         <View style={styles.container}>
             <Text style={styles.text}>
-                <Text style={styles.boldText}>Tip: </Text>
-                Complete all four tests for the most accurate assessment results.
+                <Text style={styles.boldText}>{t('home.tip.title')}</Text>
+                {t('home.tip.description')}
             </Text>
         </View>
     );
