@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import voice_analysis
 from app.routes import auth
 from app.routes import drawing_prediction
+from app.routes import voice_multimodal
 from app.routes import cognitive_analysis    
 from app.core.firebase import initialize_firebase
 from app.core.config import settings
@@ -26,9 +27,13 @@ app.add_middleware(
 )
 
 # Include routers
+
+# Include routers
 app.include_router(voice_analysis.router, prefix=settings.API_V1_STR)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(drawing_prediction.router, prefix=settings.API_V1_STR)
+app.include_router(voice_multimodal.router, prefix=settings.API_V1_STR)
+
 app.include_router(cognitive_analysis.router, prefix=settings.API_V1_STR) 
 
 @app.get("/")

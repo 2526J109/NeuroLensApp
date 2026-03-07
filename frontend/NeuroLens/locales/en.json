@@ -1,7 +1,7 @@
 {
     "prompts": {
-        "1": "Please say 'Aah' for as long as possible.",
-        "2": "Please count from one to ten slowly."
+        "1": "Please say Hi , How are you?. ",
+        "2": "Please sustain the vowel 'Aaaaa' for 5 seconds."
     },
     "permissions": {
         "microphoneRequired": "Permission to access microphone is required!"

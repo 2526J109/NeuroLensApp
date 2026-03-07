@@ -297,10 +297,10 @@ export default function VoiceAnalysisScreen() {
     }
   };
 
-  const handleCompleteTest = async () => {
+  // --- Multimodal prediction integration ---
+  const handleCompleteTestWithResults = async () => {
     // Check if all recordings are complete
     const allRecordingsComplete = PROMPTS.every((_, index) => recordings[index]);
-
     if (!allRecordingsComplete) {
       Alert.alert(
         t('errors.incompleteTestTitle'),
@@ -309,28 +309,63 @@ export default function VoiceAnalysisScreen() {
       );
       return;
     }
-
     setIsAnalyzing(true);
 
     try {
-      // Prepare recordings data for API
-      const recordingsData = PROMPTS.map((prompt, index) => {
-        const recording = recordings[index];
-        return {
-          prompt_id: prompt.id,
-          duration: recording.duration || 0,
-          uri: recording.uri || '',
+      // Build multipart form with the actual audio recordings
+      const formData = new FormData();
+
+      PROMPTS.forEach((_prompt, index) => {
+        const rec = recordings[index];
+        if (!rec?.uri) return;
+
+        const uri: string = rec.uri;
+
+        // Only upload if this is a real filesystem path.
+        // Expo produces file:// URIs on iOS/Android. Fallback URIs like
+        // "recording_0_1234567890" are not real files and must be skipped.
+        const isRealFile =
+          uri.startsWith('file://') ||
+          uri.startsWith('/') ||
+          uri.startsWith('content://');
+
+        if (!isRealFile) {
+          console.warn(`Skipping non-file URI for prompt ${index}:`, uri);
+          return;
+        }
+
+        const fieldName = index === 0 ? 'audio_0' : 'audio_1';
+
+        // Derive filename and MIME type from the URI
+        const cleanUri = uri.split('?')[0]; // strip query params
+        const uriParts = cleanUri.split('.');
+        const ext = uriParts[uriParts.length - 1]?.toLowerCase() || 'm4a';
+        const mimeMap: Record<string, string> = {
+          m4a: 'audio/m4a',
+          mp4: 'audio/mp4',
+          aac: 'audio/aac',
+          wav: 'audio/wav',
+          caf: 'audio/x-caf',
         };
+        const mimeType = mimeMap[ext] || 'audio/m4a';
+
+        console.log(`Appending ${fieldName}:`, { uri, name: `recording_${index}.${ext}`, type: mimeType });
+        (formData as any).append(fieldName, {
+          uri,
+          name: `recording_${index}.${ext}`,
+          type: mimeType,
+        } as any);
       });
 
-      const sessionId = `mobile-${Date.now()}`;
+      // Log the form data entries for debugging
+      console.log('FormData prepared, submitting to:', API_ENDPOINTS.VOICE_ANALYSIS.PREDICT_MULTIMODAL_AUDIO);
 
-      // Sanitize the ANALYZE endpoint URL before making the fetch call to prevent double slashes and avoid 404 errors
-      const sanitizedUrl = API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE.replace(/([^:\/]\/)(\/+)/g, "$1");
-      const response = await fetch(sanitizedUrl, {
+
+      // Do NOT set Content-Type — fetch sets the multipart boundary automatically
+      const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.PREDICT_MULTIMODAL_AUDIO, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, recordings: recordingsData }),
+        headers: { Accept: 'application/json' },
+        body: formData,
       });
 
       if (!response.ok) {
@@ -339,113 +374,12 @@ export default function VoiceAnalysisScreen() {
       }
 
       const result = await response.json();
-
-      // Navigate to home page after completion
-      router.replace('/(tabs)');
-
-    } catch (error) {
-      console.error('Error analyzing voice recordings:', error);
-      Alert.alert(
-        t('errors.analysisErrorTitle'),
-        t('errors.analysisErrorMessage'),
-        [{ text: t('errors.ok') }]
-      );
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleCompleteTestWithResults = async () => {
-    // Check if all recordings are complete
-    const allRecordingsComplete = PROMPTS.every((_, index) => recordings[index]);
-
-    if (!allRecordingsComplete) {
-      Alert.alert(
-        t('errors.incompleteTestTitle'),
-        t('errors.incompleteTestMessage'),
-        [{ text: t('errors.ok') }]
-      );
-      return;
-    }
-
-    setIsAnalyzing(true);
-
-    const sessionId = `mobile-${Date.now()}`;
-
-    const navigateToResults = (percentage: number, status: string, description: string) => {
+      const percentage = parseFloat(result?.risk_percentage) || 0;
+      const status = result?.risk_category || 'Unknown';
+      const description = `Voice analysis completed. Risk: ${result?.risk_percentage} (${status})`;
       router.push(
         `/voice-test-results?percentage=${Math.round(percentage)}&status=${status}&description=${encodeURIComponent(description)}`
       );
-    };
-
-    try {
-      let result: any;
-
-      const { Platform } = require('react-native');
-
-      if (Platform.OS === 'web') {
-        // ── Web (Expo Web / browser) ──────────────────────────────────────────
-        // Browsers cannot send React Native { uri, name, type } blobs in FormData.
-        // Use the JSON-based /analyze endpoint which accepts recording metadata only.
-        const recordingsData = PROMPTS.map((prompt, index) => ({
-          prompt_id: prompt.id,
-          duration: recordings[index]?.duration ?? 0,
-          uri: recordings[index]?.uri ?? '',
-        }));
-
-        const sanitizedUrl = API_ENDPOINTS.VOICE_ANALYSIS.ANALYZE.replace(/([^:\/]\/)(\/+)/g, "$1");
-        const response = await fetch(sanitizedUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId, recordings: recordingsData }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error ${response.status}: ${errorText}`);
-        }
-
-        result = await response.json();
-      } else {
-        // ── Native (iOS / Android) ────────────────────────────────────────────
-        // Real audio files can be attached as multipart blobs.
-        const formData = new FormData();
-        formData.append('session_id', sessionId);
-
-        const fieldNames = ['recording_1', 'recording_2'] as const;
-
-        for (let i = 0; i < PROMPTS.length; i++) {
-          const rec = recordings[i];
-          const uri = rec?.uri || '';
-          const fieldName = fieldNames[i];
-
-          if (uri && !uri.startsWith('recording_')) {
-            formData.append(fieldName, { uri, name: `recording_${i + 1}.m4a`, type: 'audio/m4a' } as any);
-          } else {
-            formData.append(fieldName, { uri: '', name: `recording_${i + 1}.m4a`, type: 'audio/m4a' } as any);
-          }
-        }
-
-        const response = await fetch(API_ENDPOINTS.VOICE_ANALYSIS.PREDICT_VOICE, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error ${response.status}: ${errorText}`);
-        }
-
-        result = await response.json();
-      }
-
-      const percentage = result?.result?.percentage ?? 0;
-      const status = result?.result?.status ?? 'warning';
-      const description =
-        result?.result?.description ??
-        'Voice analysis completed. Please consult a healthcare provider for a detailed evaluation.';
-
-      navigateToResults(percentage, status, description);
     } catch (error: any) {
       console.error('Error analyzing voice recordings:', error);
       Alert.alert(
@@ -457,6 +391,8 @@ export default function VoiceAnalysisScreen() {
       setIsAnalyzing(false);
     }
   };
+
+
 
 
   const currentPrompt = PROMPTS[currentPromptIndex];
