@@ -1,2 +1,3 @@
-# Routes package
+
+from . import voice_multimodal
 
