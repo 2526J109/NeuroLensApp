@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
   ArrowLeft,
 } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useLanguage } from '@/contexts/LanguageContext';
 // No API import needed - results passed directly via route params
 
 interface TestResult {
@@ -80,7 +81,7 @@ const createTestResult = (
   const riskScore = getRiskScore(percentage);
   const riskLevel = getRiskLevel(riskScore);
   const colors = getRiskColor(riskLevel);
-  
+
   return {
     id,
     title,
@@ -94,25 +95,25 @@ const createTestResult = (
 };
 
 // Default test results (fallback) - percentages are model outputs, will be converted to risk scores
-const DEFAULT_TEST_RESULTS: TestResult[] = [
-  createTestResult('movement', 'Movement Analysis', 75, Watch), // 15% risk (all green)
-  createTestResult('voice', 'Voice Analysis', 60, Mic), // 40% risk (green 0-30% + orange 30-40%)
-  createTestResult('motor', 'Motor Control', 78, PenTool), // 22% risk (all green)
-  createTestResult('cognitive', 'Cognitive Function', 85, Brain), // 8% risk (all green)
+const getInitialTestResults = (t: (key: string) => string): TestResult[] => [
+  createTestResult('movement', t('resultsTab.tests.movement'), 75, Watch),
+  createTestResult('voice', t('resultsTab.tests.voice'), 60, Mic),
+  createTestResult('motor', t('resultsTab.tests.motor'), 78, PenTool),
+  createTestResult('cognitive', t('resultsTab.tests.cognitive'), 85, Brain),
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 375;
 const isTablet = SCREEN_WIDTH >= 768;
 
-const CircularProgress = ({ riskScore, size }: { riskScore: number; size?: number }) => {
+const CircularProgress = ({ riskScore, size, t }: { riskScore: number; size?: number; t: (key: string) => string }) => {
   const defaultSize = isSmallScreen ? 90 : isTablet ? 140 : 120;
   const progressSize = size || defaultSize;
   const strokeWidth = isSmallScreen ? 6 : isTablet ? 10 : 8;
   const radius = (progressSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (riskScore / 100) * circumference;
-  
+
   // Get color based on risk level
   const riskLevel = getRiskLevel(riskScore);
   const colors = getRiskColor(riskLevel);
@@ -146,7 +147,7 @@ const CircularProgress = ({ riskScore, size }: { riskScore: number; size?: numbe
       </Svg>
       <View style={[styles.progressContent, { width: progressSize, height: progressSize }]}>
         <Text style={styles.progressPercentage}>{riskScore}%</Text>
-        <Text style={styles.progressLabel}>Risk</Text>
+        <Text style={styles.progressLabel}>{t('results.riskScore').split(' ')[0]}</Text>
       </View>
     </View>
   );
@@ -157,11 +158,11 @@ const ProgressBar = ({ riskScore }: { riskScore: number }) => {
   const riskLevel = getRiskLevel(riskScore);
   const colors = getRiskColor(riskLevel);
   const barColor = colors.icon;
-  
+
   return (
     <View style={styles.progressBarContainer}>
-      <View style={[styles.progressBarFill, { 
-        width: `${riskScore}%`, 
+      <View style={[styles.progressBarFill, {
+        width: `${riskScore}%`,
         backgroundColor: barColor,
       }]} />
     </View>
@@ -171,13 +172,23 @@ const ProgressBar = ({ riskScore }: { riskScore: number }) => {
 export default function ResultsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [testResults, setTestResults] = useState<TestResult[]>(DEFAULT_TEST_RESULTS);
+  const { t } = useLanguage();
+
+  const defaultResults = useMemo(() => getInitialTestResults(t), [t]);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
   // Calculate initial overall risk score from default results
-  const initialRiskScore = Math.round(
-    DEFAULT_TEST_RESULTS.reduce((sum, r) => sum + getRiskScore(r.percentage), 0) / DEFAULT_TEST_RESULTS.length
-  );
-  const [overallScore, setOverallScore] = useState(initialRiskScore);
+  const [overallScore, setOverallScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (testResults.length === 0) {
+      setTestResults(defaultResults);
+      const initialScore = Math.round(
+        defaultResults.reduce((sum, r) => sum + getRiskScore(r.percentage), 0) / defaultResults.length
+      );
+      setOverallScore(initialScore);
+    }
+  }, [defaultResults]);
 
   useEffect(() => {
     // Get voice analysis result from route params (passed directly, no database)
@@ -185,29 +196,30 @@ export default function ResultsScreen() {
     if (voiceAnalysisResultParam) {
       try {
         const voiceResult = JSON.parse(voiceAnalysisResultParam);
-        
+
         // Update voice analysis result
-        const updatedResults = [...DEFAULT_TEST_RESULTS];
+        const baseResults = testResults.length > 0 ? testResults : defaultResults;
+        const updatedResults = [...baseResults];
         const voiceIndex = updatedResults.findIndex(r => r.id === 'voice');
-        
+
         if (voiceIndex !== -1) {
           const modelPercentage = voiceResult.percentage || 0;
           const riskScore = getRiskScore(modelPercentage);
           const riskLevel = getRiskLevel(riskScore);
           const colors = getRiskColor(riskLevel);
-          
+
           updatedResults[voiceIndex] = {
             ...updatedResults[voiceIndex],
             percentage: modelPercentage, // Store original model output
             status: riskLevel,
-            description: getRiskDescription('Voice Analysis', riskScore, riskLevel),
+            description: t(`resultsTab.descriptions.${riskLevel}`).replace('%{title}', t('resultsTab.tests.voice')),
             iconColor: colors.icon,
             backgroundColor: colors.background,
           };
         }
-        
+
         setTestResults(updatedResults);
-        
+
         // Recalculate overall risk score (average of all test risk scores)
         const avgRiskScore = updatedResults.reduce((sum, r) => {
           const risk = getRiskScore(r.percentage);
@@ -231,7 +243,7 @@ export default function ResultsScreen() {
         >
           <ArrowLeft size={24} color="#0F172A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Assessment Results</Text>
+        <Text style={styles.headerTitle}>{t('resultsTab.combinedAssessment')}</Text>
       </View>
 
       <ScrollView
@@ -240,38 +252,37 @@ export default function ResultsScreen() {
       >
         {/* Overall Risk Score Card */}
         <View style={styles.overallScoreCard}>
-          <Text style={styles.overallScoreCardLabel}>Overall Risk Score</Text>
+          <Text style={styles.overallScoreCardLabel}>{t('resultsTab.overallRiskScore')}</Text>
           <View style={styles.overallScoreHeader}>
             <View style={styles.overallScoreLeft}>
-              <Text style={styles.overallScoreTitle}>Combined Risk Assessment</Text>
-              <View style={[styles.statusBadge, { 
+              <Text style={styles.overallScoreTitle}>{t('resultsTab.combinedAssessment')}</Text>
+              <View style={[styles.statusBadge, {
                 backgroundColor: getRiskColor(getRiskLevel(overallScore)).background,
-                borderColor: getRiskColor(getRiskLevel(overallScore)).icon 
+                borderColor: getRiskColor(getRiskLevel(overallScore)).icon
               }]}>
                 {getRiskLevel(overallScore) === 'low' ? (
                   <Check size={12} color={getRiskColor(getRiskLevel(overallScore)).icon} />
                 ) : (
                   <AlertCircle size={12} color={getRiskColor(getRiskLevel(overallScore)).icon} />
                 )}
-                <Text style={[styles.statusBadgeText, { 
-                  color: getRiskColor(getRiskLevel(overallScore)).icon 
+                <Text style={[styles.statusBadgeText, {
+                  color: getRiskColor(getRiskLevel(overallScore)).icon
                 }]}>
-                  {getRiskLevel(overallScore) === 'low' ? 'Low Risk' : 
-                   getRiskLevel(overallScore) === 'medium' ? 'Medium Risk' : 'High Risk'}
+                  {t(`resultsTab.riskLevel.${getRiskLevel(overallScore)}`)}
                 </Text>
               </View>
             </View>
-            <CircularProgress riskScore={overallScore} />
+            <CircularProgress riskScore={overallScore} t={t} />
           </View>
         </View>
 
         {/* Test Results Section */}
-        <Text style={styles.sectionTitle}>Test Results</Text>
+        <Text style={styles.sectionTitle}>{t('resultsTab.testResults')}</Text>
 
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#14B8A6" />
-            <Text style={styles.loadingText}>Loading voice analysis results...</Text>
+            <Text style={styles.loadingText}>{t('resultsTab.loadingVoice')}</Text>
           </View>
         )}
 
@@ -280,7 +291,7 @@ export default function ResultsScreen() {
           const riskScore = getRiskScore(result.percentage);
           const riskLevel = result.status;
           const colors = getRiskColor(riskLevel);
-          
+
           return (
             <View key={result.id} style={styles.testResultCard}>
               <View style={styles.testResultHeader}>
@@ -321,34 +332,21 @@ export default function ResultsScreen() {
             <View style={styles.infoIconContainer}>
               <Info size={20} color="#FFFFFF" />
             </View>
-            <Text style={styles.recommendationsTitle}>Recommendations</Text>
+            <Text style={styles.recommendationsTitle}>{t('resultsTab.recommendations.title')}</Text>
           </View>
           <View style={styles.recommendationsList}>
-            <View style={styles.recommendationItem}>
-              <Text style={styles.bullet}>•</Text>
-              <Text style={styles.recommendationText}>
-                Continue regular assessments every 2 weeks
-              </Text>
-            </View>
-            <View style={styles.recommendationItem}>
-              <Text style={styles.bullet}>•</Text>
-              <Text style={styles.recommendationText}>
-                Voice exercises may help improve speech clarity
-              </Text>
-            </View>
-            <View style={styles.recommendationItem}>
-              <Text style={styles.bullet}>•</Text>
-              <Text style={styles.recommendationText}>
-                Share these results with your healthcare provider
-              </Text>
-            </View>
+            {(t('resultsTab.recommendations.items') as unknown as string[]).map((item, index) => (
+              <View key={index} style={styles.recommendationItem}>
+                <Text style={styles.bullet}>•</Text>
+                <Text style={styles.recommendationText}>{item}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
         {/* Disclaimer */}
         <Text style={styles.disclaimer}>
-          This assessment is for monitoring purposes only and does not constitute a medical
-          diagnosis. Always consult with a qualified healthcare professional.
+          {t('resultsTab.disclaimerFull')}
         </Text>
 
         {/* Bottom padding for tab bar */}

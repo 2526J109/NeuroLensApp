@@ -10,12 +10,14 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RotateCcw } from 'lucide-react-native';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { DrawingCanvas, DrawingPoint } from '@/components/DrawingCanvas';
 import { SpiralGuide } from '@/components/SpiralGuide';
 
 const CANVAS_SIZE = Math.min(Dimensions.get('window').width - 80, 350);
 
 export default function SpiralTestScreen() {
+    const { t } = useLanguage();
     const router = useRouter();
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
     const [patternsCompleted, setPatternsCompleted] = useState(0);
@@ -60,7 +62,7 @@ export default function SpiralTestScreen() {
         <SafeAreaView style={styles.container} edges={['bottom']}>
             <Stack.Screen
                 options={{
-                    headerTitle: 'Drawing Test',
+                    headerTitle: t('drawing.title'),
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: '#FFFFFF' },
                     headerTitleStyle: {
@@ -81,8 +83,8 @@ export default function SpiralTestScreen() {
                     <View style={styles.iconBadge}>
                         <View style={styles.iconBar} />
                     </View>
-                    <Text style={styles.title}>Spiral</Text>
-                    <Text style={styles.subtitle}>Draw a spiral starting from the center</Text>
+                    <Text style={styles.title}>{t('drawing.spiral.title')}</Text>
+                    <Text style={styles.subtitle}>{t('drawing.spiral.description')}</Text>
                 </View>
 
                 {/* Drawing Area */}
@@ -90,7 +92,7 @@ export default function SpiralTestScreen() {
                     <View style={styles.canvasWrapper}>
                         {/* Spiral Guide - positioned absolutely */}
                         <SpiralGuide size={CANVAS_SIZE} rounds={2} />
-                        
+
                         {/* Drawing Canvas - positioned absolutely on top */}
                         <DrawingCanvas
                             key={canvasKey}
@@ -111,7 +113,7 @@ export default function SpiralTestScreen() {
                         activeOpacity={0.7}
                     >
                         <RotateCcw size={20} color="#64748B" />
-                        <Text style={styles.clearButtonText}>Clear</Text>
+                        <Text style={styles.clearButtonText}>{t('drawing.clear')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -119,38 +121,38 @@ export default function SpiralTestScreen() {
                         onPress={handleSave}
                         activeOpacity={0.8}
                     >
-                        <Text style={styles.saveButtonText}>Save Drawing</Text>
+                        <Text style={styles.saveButtonText}>{t('drawing.saveDrawing')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Progress */}
                 <Text style={styles.progressText}>
-                    Patterns completed
+                    {t('drawing.patternsCompleted')}
                     <Text style={styles.progressCount}> {patternsCompleted}/3</Text>
                 </Text>
 
                 {/* Data Information Card */}
                 {drawingData.length > 0 && (
                     <View style={styles.infoCard}>
-                        <Text style={styles.infoTitle}>Drawing Data</Text>
+                        <Text style={styles.infoTitle}>{t('drawing.data.title')}</Text>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Points captured:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.points')}</Text>
                             <Text style={styles.infoValue}>{drawingData.length}</Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Duration:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.duration')}</Text>
                             <Text style={styles.infoValue}>
                                 {((drawingData[drawingData.length - 1]?.timestamp || 0) / 1000).toFixed(2)}s
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Latest X:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.latestX')}</Text>
                             <Text style={styles.infoValue}>
                                 {drawingData[drawingData.length - 1]?.x.toFixed(1)}
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Latest Y:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.latestY')}</Text>
                             <Text style={styles.infoValue}>
                                 {drawingData[drawingData.length - 1]?.y.toFixed(1)}
                             </Text>

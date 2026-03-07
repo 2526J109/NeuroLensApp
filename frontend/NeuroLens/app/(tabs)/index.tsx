@@ -14,9 +14,11 @@ import { AssessmentTestItem } from '@/components/AssessmentTestItem';
 import { TipCard } from '@/components/TipCard';
 
 import { useRouter } from 'expo-router';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -27,11 +29,11 @@ export default function HomeScreen() {
 
         <ProgressCard />
 
-        <Text style={styles.sectionTitle}>Assessment Tests</Text>
+        <Text style={styles.sectionTitle}>{t('home.assessmentTests')}</Text>
 
         <AssessmentTestItem
-          title="Wearable Device"
-          description="Connect & collect movement data"
+          title={t('home.tests.wearable.title')}
+          description={t('home.tests.wearable.description')}
           icon={Watch}
           color="#14B8A6" // Teal
           isCompleted={true}
@@ -39,8 +41,8 @@ export default function HomeScreen() {
         />
 
         <AssessmentTestItem
-          title="Voice Analysis"
-          description="Record voice samples"
+          title={t('home.tests.voice.title')}
+          description={t('home.tests.voice.description')}
           icon={Mic}
           color="#A855F7" // Purple
           isCompleted={false}
@@ -48,8 +50,8 @@ export default function HomeScreen() {
         />
 
         <AssessmentTestItem
-          title="Drawing Test"
-          description="Trace patterns & shapes"
+          title={t('home.tests.drawing.title')}
+          description={t('home.tests.drawing.description')}
           icon={PenTool}
           color="#F97316" // Orange
           isCompleted={false}
@@ -57,8 +59,8 @@ export default function HomeScreen() {
         />
 
         <AssessmentTestItem
-          title="Brain Games"
-          description="Cognitive activity tests"
+          title={t('home.tests.cognitive.title')}
+          description={t('home.tests.cognitive.description')}
           icon={Brain}
           color="#10B981" // Green
           isCompleted={false}

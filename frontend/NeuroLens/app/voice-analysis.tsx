@@ -15,19 +15,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import { API_ENDPOINTS } from '../constants/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const PROMPTS = [
   {
     id: 1,
-    text: "Please say: 'She sells seashells by the seashore'",
   },
   {
     id: 2,
-    text: "Please sustain the vowel 'Ahhhh' for 5 seconds",
   },
 ];
 
 export default function VoiceAnalysisScreen() {
+  const { t } = useLanguage();
   const router = useRouter();
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -45,7 +45,7 @@ export default function VoiceAnalysisScreen() {
     (async () => {
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
-        alert('Permission to access microphone is required!');
+        alert(t('permissions.microphoneRequired'));
       }
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -141,7 +141,7 @@ export default function VoiceAnalysisScreen() {
       setRecordingTime(0);
     } catch (err) {
       console.error('Failed to start recording', err);
-      alert('Failed to start recording');
+      alert(t('errors.failedStart'));
     }
   };
 
@@ -303,9 +303,9 @@ export default function VoiceAnalysisScreen() {
 
     if (!allRecordingsComplete) {
       Alert.alert(
-        'Incomplete Test',
-        'Please complete all recordings before submitting.',
-        [{ text: 'OK' }]
+        t('errors.incompleteTestTitle'),
+        t('errors.incompleteTestMessage'),
+        [{ text: t('errors.ok') }]
       );
       return;
     }
@@ -346,9 +346,9 @@ export default function VoiceAnalysisScreen() {
     } catch (error) {
       console.error('Error analyzing voice recordings:', error);
       Alert.alert(
-        'Analysis Error',
-        'Failed to analyze voice recordings. Please try again.',
-        [{ text: 'OK' }]
+        t('errors.analysisErrorTitle'),
+        t('errors.analysisErrorMessage'),
+        [{ text: t('errors.ok') }]
       );
     } finally {
       setIsAnalyzing(false);
@@ -361,9 +361,9 @@ export default function VoiceAnalysisScreen() {
 
     if (!allRecordingsComplete) {
       Alert.alert(
-        'Incomplete Test',
-        'Please complete all recordings before submitting.',
-        [{ text: 'OK' }]
+        t('errors.incompleteTestTitle'),
+        t('errors.incompleteTestMessage'),
+        [{ text: t('errors.ok') }]
       );
       return;
     }
@@ -449,9 +449,9 @@ export default function VoiceAnalysisScreen() {
     } catch (error: any) {
       console.error('Error analyzing voice recordings:', error);
       Alert.alert(
-        'Analysis Failed',
-        `Could not complete voice analysis. Please make sure the backend server is running and try again.\n\nDetails: ${error?.message ?? 'Unknown error'}`,
-        [{ text: 'OK' }]
+        t('errors.analysisFailedTitle'),
+        t('errors.analysisFailedMessage', { details: error?.message ?? t('errors.unknownError') }),
+        [{ text: t('errors.ok') }]
       );
     } finally {
       setIsAnalyzing(false);
@@ -470,7 +470,7 @@ export default function VoiceAnalysisScreen() {
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <Stack.Screen
         options={{
-          headerTitle: 'Voice Analysis',
+          headerTitle: t('voiceAnalysis.headerTitle'),
           headerShadowVisible: false,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerTitleStyle: {
@@ -543,15 +543,15 @@ export default function VoiceAnalysisScreen() {
         <TouchableOpacity
           style={styles.promptCard}
           activeOpacity={0.8}
-          onPress={() => speakPrompt(currentPrompt.text)}
+          onPress={() => speakPrompt(t(`prompts.${currentPrompt.id}`))}
         >
           <Volume2 size={24} color="#A855F7" style={styles.speakerIcon} />
           <View style={styles.promptContent}>
             <Text style={styles.promptLabel}>
-              Prompt {currentPromptIndex + 1} of {PROMPTS.length}
+              {t('voiceAnalysis.promptCount', { current: currentPromptIndex + 1, total: PROMPTS.length })}
             </Text>
-            <Text style={styles.promptText}>{currentPrompt.text}</Text>
-            <Text style={styles.promptHint}>Tap this card to hear the prompt.</Text>
+            <Text style={styles.promptText}>{t(`prompts.${currentPrompt.id}`)}</Text>
+            <Text style={styles.promptHint}>{t('voiceAnalysis.tapToHear')}</Text>
           </View>
         </TouchableOpacity>
 
@@ -564,7 +564,7 @@ export default function VoiceAnalysisScreen() {
               activeOpacity={0.8}
             >
               <Play size={20} color="#64748B" fill="#64748B" />
-              <Text style={styles.playButtonText}>Play Recording</Text>
+              <Text style={styles.playButtonText}>{t('voiceAnalysis.playRecording')}</Text>
             </TouchableOpacity>
           )}
 
@@ -575,7 +575,7 @@ export default function VoiceAnalysisScreen() {
               activeOpacity={0.8}
             >
               <Square size={20} color="#FFFFFF" fill="#FFFFFF" />
-              <Text style={styles.stopButtonText}>Stop Recording</Text>
+              <Text style={styles.stopButtonText}>{t('voiceAnalysis.stopRecording')}</Text>
             </TouchableOpacity>
           ) : isLastPrompt && hasRecording ? (
             <TouchableOpacity
@@ -587,12 +587,12 @@ export default function VoiceAnalysisScreen() {
               {isAnalyzing ? (
                 <>
                   <ActivityIndicator size="small" color="#FFFFFF" />
-                  <Text style={styles.completeButtonText}>Analyzing...</Text>
+                  <Text style={styles.completeButtonText}>{t('voiceAnalysis.analyzing')}</Text>
                 </>
               ) : (
                 <>
                   <Check size={20} color="#FFFFFF" />
-                  <Text style={styles.completeButtonText}>Complete Test</Text>
+                  <Text style={styles.completeButtonText}>{t('voiceAnalysis.completeTest')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -602,7 +602,7 @@ export default function VoiceAnalysisScreen() {
               onPress={handleNextPrompt}
               activeOpacity={0.8}
             >
-              <Text style={styles.nextButtonText}>Next Prompt</Text>
+              <Text style={styles.nextButtonText}>{t('voiceAnalysis.nextPrompt')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
@@ -610,14 +610,14 @@ export default function VoiceAnalysisScreen() {
               onPress={startRecording}
               activeOpacity={0.8}
             >
-              <Text style={styles.nextButtonText}>Start Recording</Text>
+              <Text style={styles.nextButtonText}>{t('voiceAnalysis.startRecording')}</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* Recordings Completed Section */}
         <View style={styles.completedSection}>
-          <Text style={styles.completedText}>Recordings completed</Text>
+          <Text style={styles.completedText}>{t('voiceAnalysis.recordingsCompleted')}</Text>
           <Text style={styles.completedCount}>
             {completedRecordings}/{PROMPTS.length}
           </Text>

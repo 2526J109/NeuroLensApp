@@ -17,16 +17,17 @@ import { useRouter } from 'expo-router';
 import { Eye, EyeOff, ArrowLeft, Globe, ChevronDown, Check, AlertCircle, Calendar } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function SignupScreen() {
   const router = useRouter();
   const { signUp } = useAuth();
+  const { locale, changeLanguage, t } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('GB English');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{
@@ -71,54 +72,54 @@ export default function SignupScreen() {
 
     // Validate full name first
     if (!fullName.trim()) {
-      newErrors.fullName = 'Please fill out this field';
+      newErrors.fullName = t('auth.validation.fillField');
       setErrors(newErrors);
       return false;
     } else if (fullName.trim().length < 2) {
-      newErrors.fullName = 'Name must be at least 2 characters';
+      newErrors.fullName = t('auth.validation.nameLength');
       setErrors(newErrors);
       return false;
     }
 
     // Only validate email if full name is valid
     if (!email.trim()) {
-      newErrors.email = 'Please fill out this field';
+      newErrors.email = t('auth.validation.fillField');
       setErrors(newErrors);
       return false;
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('auth.validation.validEmail');
       setErrors(newErrors);
       return false;
     }
 
     // Only validate password if email is valid
     if (!password.trim()) {
-      newErrors.password = 'Please fill out this field';
+      newErrors.password = t('auth.validation.fillField');
       setErrors(newErrors);
       return false;
     } else if (password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('auth.validation.passwordLength');
       setErrors(newErrors);
       return false;
     }
 
     // Validate gender
     if (!gender) {
-      newErrors.gender = 'Please select your gender';
+      newErrors.gender = t('auth.validation.selectGender');
       setErrors(newErrors);
       return false;
     }
 
     // Validate birthday
     if (!birthday.trim()) {
-      newErrors.birthday = 'Please enter your birthday';
+      newErrors.birthday = t('auth.validation.enterBirthday');
       setErrors(newErrors);
       return false;
     } else {
       // Validate date format (YYYY-MM-DD or DD/MM/YYYY)
       const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$/;
       if (!dateRegex.test(birthday)) {
-        newErrors.birthday = 'Please enter a valid date (YYYY-MM-DD)';
+        newErrors.birthday = t('auth.validation.formatDate');
         setErrors(newErrors);
         return false;
       }
@@ -127,7 +128,7 @@ export default function SignupScreen() {
       const today = new Date();
       const minDate = new Date('1900-01-01');
       if (isNaN(date.getTime()) || date > today || date < minDate) {
-        newErrors.birthday = 'Please enter a valid date of birth';
+        newErrors.birthday = t('auth.validation.validDate');
         setErrors(newErrors);
         return false;
       }
@@ -135,7 +136,7 @@ export default function SignupScreen() {
 
     // Validate handedness
     if (!handedness) {
-      newErrors.handedness = 'Please select your handedness';
+      newErrors.handedness = t('auth.validation.selectHandedness');
       setErrors(newErrors);
       return false;
     }
@@ -152,8 +153,8 @@ export default function SignupScreen() {
 
         Toast.show({
           type: 'success',
-          text1: 'Registration Successful!',
-          text2: 'Your account has been created.',
+          text1: t('auth.registrationSuccessful'),
+          text2: t('auth.accountCreated'),
           position: 'top',
           visibilityTime: 3000,
           topOffset: 60,
@@ -167,7 +168,7 @@ export default function SignupScreen() {
 
         Toast.show({
           type: 'error',
-          text1: 'Registration Failed',
+          text1: t('auth.registrationFailed'),
           text2: errorMessage,
           position: 'top',
           visibilityTime: 4000,
@@ -210,7 +211,7 @@ export default function SignupScreen() {
               activeOpacity={0.7}
             >
               <Globe size={16} color="#64748B" />
-              <Text style={styles.languageText}>{selectedLanguage}</Text>
+              <Text style={styles.languageText}>{languages.find(l => l.code === locale)?.label || 'GB English'}</Text>
               <ChevronDown size={16} color="#64748B" />
             </TouchableOpacity>
 
@@ -227,13 +228,13 @@ export default function SignupScreen() {
                       key={lang.code}
                       style={styles.languageOption}
                       onPress={() => {
-                        setSelectedLanguage(lang.label);
+                        changeLanguage(lang.code);
                         setShowLanguageDropdown(false);
                       }}
                       activeOpacity={0.7}
                     >
                       <Text style={styles.languageOptionText}>{lang.label}</Text>
-                      {selectedLanguage === lang.label && (
+                      {locale === lang.code && (
                         <Check size={16} color="#14B8A6" />
                       )}
                     </TouchableOpacity>
@@ -269,14 +270,14 @@ export default function SignupScreen() {
               </View>
             </View>
             <Text style={styles.appName}>NeuroLens</Text>
-            <Text style={styles.welcomeText}>Create Your Account</Text>
+            <Text style={styles.welcomeText}>{t('auth.createYourAccount')}</Text>
           </View>
 
           {/* Input Fields */}
           <View style={styles.inputSection}>
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Full Name</Text>
+                <Text style={styles.inputLabel}>{t('auth.fullName')}</Text>
               </View>
               <View style={[
                 styles.inputWrapper,
@@ -287,7 +288,7 @@ export default function SignupScreen() {
                     styles.input,
                     Platform.OS === 'web' && { outline: 'none' as any }
                   ]}
-                  placeholder="Enter your full name"
+                  placeholder={t('auth.enterFullName')}
                   placeholderTextColor="#94A3B8"
                   value={fullName}
                   onChangeText={(text) => {
@@ -317,7 +318,7 @@ export default function SignupScreen() {
 
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+                <Text style={styles.inputLabel}>{t('auth.emailAddress')}</Text>
               </View>
               <View style={[
                 styles.inputWrapper,
@@ -328,7 +329,7 @@ export default function SignupScreen() {
                     styles.input,
                     Platform.OS === 'web' && { outline: 'none' as any }
                   ]}
-                  placeholder="Enter your email"
+                  placeholder={t('auth.enterEmail')}
                   placeholderTextColor="#94A3B8"
                   value={email}
                   onChangeText={(text) => {
@@ -360,7 +361,7 @@ export default function SignupScreen() {
             {/* Birthday Field */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Birthday</Text>
+                <Text style={styles.inputLabel}>{t('auth.birthday')}</Text>
               </View>
               <TouchableOpacity
                 style={[
@@ -385,7 +386,7 @@ export default function SignupScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={[styles.dateInputText, !birthday && styles.dropdownPlaceholder]}>
-                  {birthday || 'Select your birthday'}
+                  {birthday || t('auth.selectBirthday')}
                 </Text>
                 <Calendar size={20} color="#64748B" style={{ marginRight: 4 }} />
               </TouchableOpacity>
@@ -405,7 +406,7 @@ export default function SignupScreen() {
             {/* Gender Field */}
             <View style={[styles.inputGroup, showGenderDropdown && { zIndex: 1000 }]}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Gender</Text>
+                <Text style={styles.inputLabel}>{t('auth.gender')}</Text>
               </View>
               <View style={[styles.dropdownContainer, showGenderDropdown && { zIndex: 1000 }]}>
                 <TouchableOpacity
@@ -428,7 +429,7 @@ export default function SignupScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.dropdownButtonText, !gender && styles.dropdownPlaceholder]}>
-                    {gender || 'Select your gender'}
+                    {gender ? t(`auth.genderOptions.${gender}`) : t('auth.selectGender')}
                   </Text>
                   <ChevronDown size={20} color="#64748B" />
                 </TouchableOpacity>
@@ -458,7 +459,7 @@ export default function SignupScreen() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.dropdownOptionText}>{option}</Text>
+                          <Text style={styles.dropdownOptionText}>{t(`auth.genderOptions.${option}`)}</Text>
                           {gender === option && (
                             <Check size={16} color="#14B8A6" />
                           )}
@@ -484,7 +485,7 @@ export default function SignupScreen() {
             {/* Handedness Field */}
             <View style={[styles.inputGroup, showHandednessDropdown && { zIndex: 1001 }]}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Handedness</Text>
+                <Text style={styles.inputLabel}>{t('auth.handedness')}</Text>
               </View>
               <View style={[styles.dropdownContainer, showHandednessDropdown && { zIndex: 1001 }]}>
                 <TouchableOpacity
@@ -507,7 +508,7 @@ export default function SignupScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.dropdownButtonText, !handedness && styles.dropdownPlaceholder]}>
-                    {handedness || 'Select left or right hand'}
+                    {handedness ? t(`auth.handednessOptions.${handedness} Hand`) : t('auth.selectHandedness')}
                   </Text>
                   <ChevronDown size={20} color="#64748B" />
                 </TouchableOpacity>
@@ -537,7 +538,7 @@ export default function SignupScreen() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.dropdownOptionText}>{option} Hand</Text>
+                          <Text style={styles.dropdownOptionText}>{t(`auth.handednessOptions.${option} Hand`)}</Text>
                           {handedness === option && (
                             <Check size={16} color="#14B8A6" />
                           )}
@@ -563,7 +564,7 @@ export default function SignupScreen() {
             {/* Password Field */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Password</Text>
+                <Text style={styles.inputLabel}>{t('auth.password')}</Text>
               </View>
               {/* Static container — no conditional layout styles */}
               <View style={styles.passwordContainer}>
@@ -578,7 +579,7 @@ export default function SignupScreen() {
                       styles.passwordInput,
                       Platform.OS === 'web' && { outline: 'none' as any }
                     ]}
-                    placeholder="Enter your password"
+                    placeholder={t('auth.enterPassword')}
                     placeholderTextColor="#94A3B8"
                     value={password}
                     onChangeText={(text) => {
@@ -590,6 +591,7 @@ export default function SignupScreen() {
                     autoCorrect={false}
                     spellCheck={false}
                     textContentType="password"
+                    keyboardType="ascii-capable"
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -599,7 +601,7 @@ export default function SignupScreen() {
                       styles.passwordInput,
                       Platform.OS === 'web' && { outline: 'none' as any }
                     ]}
-                    placeholder="Enter your password"
+                    placeholder={t('auth.enterPassword')}
                     placeholderTextColor="#94A3B8"
                     value={password}
                     onChangeText={(text) => {
@@ -611,6 +613,7 @@ export default function SignupScreen() {
                     autoCorrect={false}
                     spellCheck={false}
                     textContentType="password"
+                    keyboardType="ascii-capable"
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                   />
@@ -652,19 +655,19 @@ export default function SignupScreen() {
                 <TouchableWithoutFeedback>
                   <View style={styles.datePickerModal}>
                     <View style={styles.datePickerHeader}>
-                      <Text style={styles.datePickerTitle}>Select Birthday</Text>
+                      <Text style={styles.datePickerTitle}>{t('auth.datePicker.selectBirthday')}</Text>
                       <TouchableOpacity
                         onPress={() => setShowDatePicker(false)}
                         style={styles.datePickerCloseButton}
                       >
-                        <Text style={styles.datePickerCloseText}>Done</Text>
+                        <Text style={styles.datePickerCloseText}>{t('auth.datePicker.done')}</Text>
                       </TouchableOpacity>
                     </View>
 
                     <View style={styles.datePickerContent}>
                       {/* Year Picker */}
                       <View style={styles.datePickerColumn}>
-                        <Text style={styles.datePickerLabel}>Year</Text>
+                        <Text style={styles.datePickerLabel}>{t('auth.datePicker.year')}</Text>
                         <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
                           {Array.from({ length: 100 }, (_, i) => {
                             const year = new Date().getFullYear() - i;
@@ -695,7 +698,7 @@ export default function SignupScreen() {
 
                       {/* Month Picker */}
                       <View style={styles.datePickerColumn}>
-                        <Text style={styles.datePickerLabel}>Month</Text>
+                        <Text style={styles.datePickerLabel}>{t('auth.datePicker.month')}</Text>
                         <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
                           {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((month, index) => (
                             <TouchableOpacity
@@ -723,7 +726,7 @@ export default function SignupScreen() {
 
                       {/* Day Picker */}
                       <View style={styles.datePickerColumn}>
-                        <Text style={styles.datePickerLabel}>Day</Text>
+                        <Text style={styles.datePickerLabel}>{t('auth.datePicker.day')}</Text>
                         <ScrollView style={styles.datePickerScroll} showsVerticalScrollIndicator={false}>
                           {Array.from({ length: 31 }, (_, i) => {
                             const day = i + 1;
@@ -767,7 +770,7 @@ export default function SignupScreen() {
                         }
                       }}
                     >
-                      <Text style={styles.datePickerConfirmText}>Confirm</Text>
+                      <Text style={styles.datePickerConfirmText}>{t('auth.datePicker.confirm')}</Text>
                     </TouchableOpacity>
                   </View>
                 </TouchableWithoutFeedback>
@@ -785,25 +788,24 @@ export default function SignupScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.createAccountButtonText}>Create Account</Text>
+              <Text style={styles.createAccountButtonText}>{t('auth.createAccount')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Sign In Section */}
           <View style={styles.signInSection}>
-            <Text style={styles.signInText}>Already have an account?</Text>
+            <Text style={styles.signInText}>{t('auth.alreadyHaveAccount')}</Text>
             <TouchableOpacity onPress={handleSignIn}>
-              <Text style={styles.signInLink}>Sign In</Text>
+              <Text style={styles.signInLink}>{t('auth.signIn')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Legal Disclaimer */}
           <View style={styles.disclaimerSection}>
             <Text style={styles.disclaimerText}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.disclaimerLink}>Terms of Service</Text>
-              {' '}and{' '}
-              <Text style={styles.disclaimerLink}>Privacy Policy</Text>
+              {t('auth.byContinuing')} <Text style={styles.disclaimerLink}>{t('auth.termsOfService')}</Text>
+              {' '}{t('auth.and')}{' '}
+              <Text style={styles.disclaimerLink}>{t('auth.privacyPolicy')}</Text>
             </Text>
           </View>
         </ScrollView>
