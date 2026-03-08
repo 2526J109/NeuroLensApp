@@ -1,8 +1,18 @@
+import os
 import shutil
 import logging
 import warnings
+import tempfile
+import pandas as pd
+from typing import Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from ..dao.voice_analysis_dao import VoiceAnalysisDAO
+from ..models.parkinsons_multimodal_predictor import ParkinsonsMultimodalPredictor
+from ..services.voice_feature_extractor import (
+    extract_acoustic_features,
+    extract_linguistic_features,
+)
 
 logger = logging.getLogger(__name__)
 
