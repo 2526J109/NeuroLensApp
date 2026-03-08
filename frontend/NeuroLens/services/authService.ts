@@ -6,6 +6,8 @@ interface RegisterRequest {
   gender?: string;
   birthday?: string;
   handedness?: string;
+  family_history?: number;
+  rem_sleep?: number;
 }
 
 interface UserProfile {
@@ -23,7 +25,9 @@ export const authService = {
     fullName?: string,
     gender?: string,
     birthday?: string,
-    handedness?: string
+    handedness?: string,
+    familyHistory?: number,
+    remSleep?: number
   ): Promise<UserProfile> => {
     const response = await api.post<UserProfile>(
       '/api/auth/register',
@@ -33,6 +37,8 @@ export const authService = {
         gender,
         birthday,
         handedness,
+        family_history: familyHistory,
+        rem_sleep: remSleep,
       } as RegisterRequest,
       {
         headers: {

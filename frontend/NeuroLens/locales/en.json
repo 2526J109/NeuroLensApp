@@ -152,6 +152,20 @@
             "Left": "Left",
             "Right": "Right"
         },
+        "familyHistory": "Family History of Parkinson's",
+        "familyHistoryQuestion": "Does a close relative have Parkinson's disease?",
+        "familyHistoryOptions": {
+            "No": "No",
+            "Yes": "Yes",
+            "Not Sure": "Not Sure"
+        },
+        "remSleep": "REM Sleep Behaviour",
+        "remSleepQuestion": "Have you or has anyone noticed that you physically act out your dreams (e.g., punching, thrashing, or kicking while deeply asleep)?",
+        "remSleepOptions": {
+            "No": "No",
+            "Yes": "Yes"
+        },
+        "selectOption": "Select an option",
         "datePicker": {
             "selectBirthday": "Select Birthday",
             "done": "Done",
