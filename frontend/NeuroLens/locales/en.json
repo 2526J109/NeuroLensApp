@@ -294,38 +294,6 @@
             "ok": "OK"
         }
     },
-    "cognitive": {
-        "title": "Assessment",
-        "intro": {
-            "title": "Cognitive Health",
-            "description": "We will check your mental processing speed and working memory.",
-            "task1": "Task 1: Pattern Matching",
-            "task2": "Task 2: Logical Sequencing"
-        },
-        "step": "Step %{step}",
-        "quickMatch": {
-            "title": "Quick Match",
-            "description": "Look at the key at the top. Match the center symbol to its number as fast as you can.",
-            "start": "Start Activity"
-        },
-        "sequenceMemory": {
-            "title": "Sequence Memory",
-            "description": "A sequence will flash. Remember the numbers, then pick the option that shows them",
-            "sortedSuffix": "Sorted (Smallest to Largest)",
-            "start": "Start Activity",
-            "memorize": "MEMORIZE NOW",
-            "recall": "RECALL ORDER",
-            "memorizeHint": "Keep the numbers in mind...",
-            "recallHint": "Select the correct sorted order:",
-            "roundOf": "Round %{round} of %{total}"
-        },
-        "progress": "Progress: %{current} / %{total}",
-        "success": {
-            "title": "Success",
-            "description": "Your cognitive assessment is complete. Results have been recorded.",
-            "returnHome": "Return Home"
-        }
-    },
     "drawing": {
         "title": "Drawing Test",
         "spiral": {
@@ -404,5 +372,90 @@
             "medium": "%{title} shows moderate risk. Some abnormalities detected. Monitor regularly.",
             "high": "%{title} shows elevated risk. Significant abnormalities detected. Consult healthcare provider."
         }
+    },
+    "cognitive": {
+        "title": "Brain Health Check",
+        "subtitle": "Two short activities to check your thinking speed and attention.",
+        "activity1Title": "Connect the Dots",
+        "activity1Time": "~2 minutes",
+        "activity2Title": "Quick Match",
+        "activity2Time": "~1 minute",
+        "introNote": "A short practice round comes before each activity.",
+        "letsBegin": "Let's Begin",
+        
+        "tmtInstrTag": "Activity 1 of 2",
+        "tmtInstrSub": "Tap the dots in order — 1, then 2, then 3 — as quickly as you can.",
+        "tmtInstrLabel": "The dot you tap next glows green",
+        "tmtInstrNote": "You'll practice with 5 dots first.",
+        "startPractice": "Start Practice",
+        
+        "practiceTag": "PRACTICE",
+        "tapNext": "Tap",
+        "glowHint": "The glowing dot is where to tap next",
+        
+        "tmtRestTitle": "Good job!",
+        "tmtRestSub": "Now the real activity — 25 dots. Tap them in order as quickly as you can.",
+        "tmtRestNote": "Take a breath whenever you're ready.",
+        "imReady": "I'm Ready",
+        
+        "tmtRealTag": "CONNECT THE DOTS",
+        
+        "breakTitle": "Activity 1 Done!",
+        "breakSub": "Well done. Take a moment to rest before the next activity.",
+        "upNext": "UP NEXT",
+        "continueBtn": "Continue When Ready",
+        
+        "sdmtInstrTagAct2": "Activity 2 of 2",
+        "sdmtInstrTagNow": "Activity 2 — Starting Now",
+        "sdmtKey": "KEY — match symbol to number",
+        "sdmtInstrSub": "A symbol will appear. Tap the matching number from the key above.",
+        "sdmtInstrNotePrac": "5 practice rounds first — you'll see if you're right.",
+        "sdmtInstrNoteReal": "60 seconds. Go as fast as you can. Mistakes are okay.",
+        "startActivity": "Start Activity",
+        
+        "sdmtPracLeft": "left",
+        "correct": "✓  Correct",
+        "wrong": "Not quite",
+        
+        "takeBreath": "Take a breath",
+        "continuing": "Continuing shortly…",
+        "quickMatch": "QUICK MATCH",
+        "success": {
+            "title": "All Done!",
+            "description": "Your brain health check is complete. Results have been recorded.",
+            "returnHome": "View Results"
+        }
+    },
+    "cognitiveResults": {
+        "title": "Cognitive Results",
+        "populationComparison": "Population Comparison",
+        "percentileSuffix": "th",
+        "percentileWord": "percentile",
+        "low": "Low",
+        "high": "High",
+        "whatThisMeansTitle": "What This Means",
+        "whatThisMeansBody1": "Your cognitive score places you at the ",
+        "whatThisMeansBody2": "th percentile",
+        "whatThisMeansBody3": " compared to ",
+        "whatThisMeansBody4": "4,267 individuals",
+        "whatThisMeansBody5": " in our clinical reference dataset. A lower percentile indicates patterns more consistent with healthy individuals.",
+        "keyFactorsTitle": "Key Factors",
+        "keyFactorsSubtitle": "What influenced your score most",
+        "typicalRange": "Within typical range",
+        "worthMonitoring": "Worth monitoring",
+        "recommendationTitle": "Recommendation",
+        "importantNotice": "⚠ Important Notice",
+        "disclaimerText1": "This screening tool detects patterns associated with neurological risk. It does ",
+        "disclaimerTextBold": "not",
+        "disclaimerText2": " diagnose any medical condition. Always consult a qualified healthcare professional for medical advice.",
+        "backToHome": "Back to Home",
+        "rec1": "Your cognitive patterns are consistent with healthy individuals in our reference group. Continue monitoring your health regularly.",
+        "rec2": "Your results are within the typical range. Consider regular checkups and staying mentally active with puzzles and reading.",
+        "rec3": "Some cognitive patterns are worth discussing with your doctor at your next visit. This is not a diagnosis.",
+        "rec4": "Your results show patterns that may benefit from a professional evaluation. We recommend speaking with your healthcare provider.",
+        "label1": "Lower than most",
+        "label2": "Around average",
+        "label3": "Above average",
+        "label4": "Significantly above average"
     }
 }

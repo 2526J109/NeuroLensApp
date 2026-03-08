@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type ContributingFactor = {
@@ -18,11 +19,11 @@ type ContributingFactor = {
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const getPercentileLabel = (rank: number): string => {
-    if (rank <= 25) return 'Lower than most';
-    if (rank <= 50) return 'Around average';
-    if (rank <= 75) return 'Above average';
-    return 'Significantly above average';
+const getPercentileLabel = (rank: number, t: (key: string) => string): string => {
+    if (rank <= 25) return t('cognitiveResults.label1');
+    if (rank <= 50) return t('cognitiveResults.label2');
+    if (rank <= 75) return t('cognitiveResults.label3');
+    return t('cognitiveResults.label4');
 };
 
 const getPercentileColor = (rank: number): string => {
@@ -32,20 +33,18 @@ const getPercentileColor = (rank: number): string => {
     return '#EF4444';                 // red — high
 };
 
-const getRecommendation = (rank: number): string => {
-    if (rank <= 25)
-        return 'Your cognitive patterns are consistent with healthy individuals in our reference group. Continue monitoring your health regularly.';
-    if (rank <= 50)
-        return 'Your results are within the typical range. Consider regular checkups and staying mentally active with puzzles and reading.';
-    if (rank <= 75)
-        return 'Some cognitive patterns are worth discussing with your doctor at your next visit. This is not a diagnosis.';
-    return 'Your results show patterns that may benefit from a professional evaluation. We recommend speaking with your healthcare provider.';
+const getRecommendation = (rank: number, t: (key: string) => string): string => {
+    if (rank <= 25) return t('cognitiveResults.rec1');
+    if (rank <= 50) return t('cognitiveResults.rec2');
+    if (rank <= 75) return t('cognitiveResults.rec3');
+    return t('cognitiveResults.rec4');
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function CognitiveTestResultsScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { t } = useLanguage();
 
     // Parse params passed from cognitive-test.tsx
     const percentileRank = params.percentile_rank
@@ -85,7 +84,7 @@ export default function CognitiveTestResultsScreen() {
         <SafeAreaView style={styles.container} edges={['bottom']}>
             <Stack.Screen
                 options={{
-                    headerTitle: 'Cognitive Results',
+                    headerTitle: t('cognitiveResults.title'),
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: '#FFFFFF' },
                     headerTitleStyle: {
@@ -108,12 +107,12 @@ export default function CognitiveTestResultsScreen() {
                         { backgroundColor: lightBg, opacity: fadeAnim },
                     ]}
                 >
-                    <Text style={styles.scoreLabel}>Population Comparison</Text>
+                    <Text style={styles.scoreLabel}>{t('cognitiveResults.populationComparison')}</Text>
                     <Text style={[styles.percentileNumber, { color: accentColor }]}>
                         {percentileRank}
-                        <Text style={styles.percentileSuffix}>th</Text>
+                        <Text style={styles.percentileSuffix}>{t('cognitiveResults.percentileSuffix')}</Text>
                     </Text>
-                    <Text style={styles.percentileWord}>percentile</Text>
+                    <Text style={styles.percentileWord}>{t('cognitiveResults.percentileWord')}</Text>
 
                     {/* Animated bar */}
                     <View style={styles.barTrack}>
@@ -131,14 +130,14 @@ export default function CognitiveTestResultsScreen() {
                         />
                         {/* Marker labels */}
                         <View style={styles.barLabels}>
-                            <Text style={styles.barLabelText}>Low</Text>
-                            <Text style={styles.barLabelText}>High</Text>
+                            <Text style={styles.barLabelText}>{t('cognitiveResults.low')}</Text>
+                            <Text style={styles.barLabelText}>{t('cognitiveResults.high')}</Text>
                         </View>
                     </View>
 
                     <View style={[styles.badge, { backgroundColor: accentColor }]}>
                         <Text style={styles.badgeText}>
-                            {getPercentileLabel(percentileRank)}
+                            {getPercentileLabel(percentileRank, t)}
                         </Text>
                     </View>
                 </Animated.View>
@@ -153,16 +152,15 @@ export default function CognitiveTestResultsScreen() {
                         },
                     ]}
                 >
-                    <Text style={styles.cardTitle}>What This Means</Text>
+                    <Text style={styles.cardTitle}>{t('cognitiveResults.whatThisMeansTitle')}</Text>
                     <Text style={styles.cardBody}>
-                        Your cognitive score places you at the{' '}
+                        {t('cognitiveResults.whatThisMeansBody1')}
                         <Text style={{ fontWeight: '700', color: accentColor }}>
-                            {percentileRank}th percentile
-                        </Text>{' '}
-                        compared to {' '}
-                        <Text style={{ fontWeight: '600' }}>4,267 individuals</Text>{' '}
-                        in our clinical reference dataset. A lower percentile indicates
-                        patterns more consistent with healthy individuals.
+                            {percentileRank}{t('cognitiveResults.whatThisMeansBody2')}
+                        </Text>
+                        {t('cognitiveResults.whatThisMeansBody3')}
+                        <Text style={{ fontWeight: '600' }}>{t('cognitiveResults.whatThisMeansBody4')}</Text>
+                        {t('cognitiveResults.whatThisMeansBody5')}
                     </Text>
                 </Animated.View>
 
@@ -177,9 +175,9 @@ export default function CognitiveTestResultsScreen() {
                             },
                         ]}
                     >
-                        <Text style={styles.cardTitle}>Key Factors</Text>
+                        <Text style={styles.cardTitle}>{t('cognitiveResults.keyFactorsTitle')}</Text>
                         <Text style={styles.cardSubtitle}>
-                            What influenced your score most
+                            {t('cognitiveResults.keyFactorsSubtitle')}
                         </Text>
                         {factorsParam.map((factor, index) => (
                             <View key={index} style={styles.factorRow}>
@@ -210,8 +208,8 @@ export default function CognitiveTestResultsScreen() {
                                         ]}
                                     >
                                         {factor.direction === 'typical'
-                                            ? 'Within typical range'
-                                            : 'Worth monitoring'}
+                                            ? t('cognitiveResults.typicalRange')
+                                            : t('cognitiveResults.worthMonitoring')}
                                     </Text>
                                 </View>
                             </View>
@@ -229,21 +227,19 @@ export default function CognitiveTestResultsScreen() {
                         },
                     ]}
                 >
-                    <Text style={styles.cardTitle}>Recommendation</Text>
+                    <Text style={styles.cardTitle}>{t('cognitiveResults.recommendationTitle')}</Text>
                     <Text style={styles.cardBody}>
-                        {getRecommendation(percentileRank)}
+                        {getRecommendation(percentileRank, t)}
                     </Text>
                 </Animated.View>
 
                 {/* ── Disclaimer ── */}
                 <View style={styles.disclaimerCard}>
-                    <Text style={styles.disclaimerTitle}>⚠ Important Notice</Text>
+                    <Text style={styles.disclaimerTitle}>{t('cognitiveResults.importantNotice')}</Text>
                     <Text style={styles.disclaimerText}>
-                        This screening tool detects patterns associated with
-                        neurological risk. It does{' '}
-                        <Text style={{ fontWeight: '700' }}>not</Text> diagnose
-                        any medical condition. Always consult a qualified
-                        healthcare professional for medical advice.
+                        {t('cognitiveResults.disclaimerText1')}
+                        <Text style={{ fontWeight: '700' }}>{t('cognitiveResults.disclaimerTextBold')}</Text>
+                        {t('cognitiveResults.disclaimerText2')}
                     </Text>
                 </View>
 
@@ -253,7 +249,7 @@ export default function CognitiveTestResultsScreen() {
                     onPress={() => router.replace('/(tabs)')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.homeButtonText}>Back to Home</Text>
+                    <Text style={styles.homeButtonText}>{t('cognitiveResults.backToHome')}</Text>
                 </TouchableOpacity>
 
                 <View style={{ height: 24 }} />
