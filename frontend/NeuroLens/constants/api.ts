@@ -40,5 +40,9 @@ export const API_ENDPOINTS = {
     ANALYZE: `${API_BASE_URL}/api/drawing-prediction/analyze`,
     ANALYZE_LOCAL: `${API_BASE_URL}/api/drawing-prediction/analyze-local`,
   },
+
+  WEARABLE_ANALYSIS: {
+    ANALYZE: `${API_BASE_URL}/api/wearable-prediction/analyze`,
+  },
 };
 

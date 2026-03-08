@@ -7,10 +7,11 @@ import { BleManager, Device } from 'react-native-ble-plx';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { API_ENDPOINTS } from '../constants/api';
 
 export default function WearableScreen() {
     const router = useRouter();
-    const { userProfile } = useAuth();
+    const { userProfile, user } = useAuth();
     const { t } = useLanguage();
     const manager = useMemo(() => new BleManager(), []);
     const [isScanning, setIsScanning] = useState(false);
@@ -41,6 +42,48 @@ export default function WearableScreen() {
             manager.destroy();
         };
     }, [manager]);
+
+    // Save prediction to DB when the assessment finishes
+    useEffect(() => {
+        const submitToBackend = async () => {
+            if (assessmentStep === 4 && user && userProfile) {
+                try {
+                    const token = await user.getIdToken();
+
+                    const payload = {
+                        user_id: userProfile.firebase_uid,
+                        global_verdict: Object.values(stepResults).some(r => r.result === 'PARKINSONS') ? 'PARKINSONS' : 'HEALTHY',
+                        probability_score: Math.round(
+                            (Object.values(stepResults).reduce((sum, r) => sum + parseFloat(r.ratio), 0) /
+                                Math.max(1, Object.values(stepResults).length)) * 100
+                        ),
+                        step_results: stepResults
+                    };
+
+                    console.log('Fetching URL:', API_ENDPOINTS.WEARABLE_ANALYSIS.ANALYZE);
+
+                    const response = await fetch(API_ENDPOINTS.WEARABLE_ANALYSIS.ANALYZE, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        console.error('Failed to save wearable prediction', await response.text());
+                    } else {
+                        console.log('Wearable prediction saved successfully');
+                    }
+                } catch (error) {
+                    console.error('Error saving wearable prediction:', error);
+                }
+            }
+        };
+
+        submitToBackend();
+    }, [assessmentStep]);
 
     const requestPermissions = async () => {
         if (Platform.OS === 'android') {
@@ -412,7 +455,12 @@ export default function WearableScreen() {
                                                 : t('wearable.healthyObserved')}
                                         </Text>
                                         <Text style={styles.probabilityScore}>
-                                            {t('wearable.probabilityScore', { score: Math.round(Math.max(...Object.values(stepResults).map(r => parseFloat(r.ratio))) * 100) })}
+                                            {t('wearable.probabilityScore', {
+                                                score: Math.round(
+                                                    (Object.values(stepResults).reduce((sum, r) => sum + parseFloat(r.ratio), 0) /
+                                                        Math.max(1, Object.values(stepResults).length)) * 100
+                                                )
+                                            })}
                                         </Text>
                                         <Text style={styles.globalVerdictSubtext}>
                                             {t('wearable.verdictSubtext')}

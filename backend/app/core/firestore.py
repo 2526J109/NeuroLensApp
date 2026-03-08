@@ -145,7 +145,27 @@ class FirestoreService:
             data['id'] = doc.id
             analyses.append(data)
         return analyses
-
+        
+    # Wearable prediction operations
+    def create_wearable_prediction(self, prediction_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new wearable prediction document"""
+        prediction_ref = self.db.collection('wearable_predictions').document()
+        prediction_data['id'] = prediction_ref.id
+        prediction_ref.set(prediction_data)
+        return prediction_data
+    
+    def get_user_wearable_predictions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all wearable predictions for a user"""
+        predictions_ref = self.db.collection('wearable_predictions')
+        query = predictions_ref.where('user_id', '==', user_id).order_by('created_at', direction=firestore.Query.DESCENDING)
+        docs = query.get()
+        
+        predictions = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            predictions.append(data)
+        return predictions
 
 # Get Firestore service instance (lazy singleton)
 def get_firestore_service() -> FirestoreService:

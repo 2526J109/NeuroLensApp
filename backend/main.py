@@ -6,6 +6,7 @@ from app.routes import auth
 from app.routes import drawing_prediction
 from app.routes import voice_multimodal
 from app.routes import cognitive_analysis    
+from app.routes import wearable_prediction
 from app.core.firebase import initialize_firebase
 from app.core.config import settings
 import logging
@@ -68,6 +69,7 @@ app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(drawing_prediction.router, prefix=settings.API_V1_STR)
 app.include_router(voice_multimodal.router, prefix=settings.API_V1_STR)
 app.include_router(cognitive_analysis.router, prefix=settings.API_V1_STR) 
+app.include_router(wearable_prediction.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
