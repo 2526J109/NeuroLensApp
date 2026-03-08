@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 import { Brain, CheckCircle2, ChevronRight, Clock } from "lucide-react-native";
 import api from "../services/api";
+import { useAuth } from '../contexts/AuthContext'; // added
 
 /* ─────────────────────────────────────────────
    SCREEN DIMENSIONS
@@ -205,6 +206,7 @@ function tmtFeatures(taps: TmtTap[]) {
 ───────────────────────────────────────────── */
 export default function CognitiveAssessment() {
   const router = useRouter();
+  const { user, userProfile } = useAuth(); // added
   const [stage, setStage] = useState<Stage>("intro");
 
   // TMT
@@ -396,31 +398,43 @@ export default function CognitiveAssessment() {
   );
 
   const submit = useCallback(async () => {
-    const tmt = tmtFeatures(realTaps.current);
+    const tmt  = tmtFeatures(realTaps.current);
     const sdmt = sdmtFeatures(realTrials.current);
+
+    // Calculate age from birthday
+    let userAge = 65;
+    if (userProfile?.birthday) {
+      const birthYear = new Date(userProfile.birthday).getFullYear();
+      userAge = new Date().getFullYear() - birthYear;
+    }
+
+    // Map gender to model encoding (PPMI: 1=Male, 0=Female)
+    let mappedSex = 1;
+    if (userProfile?.gender === 'Male') mappedSex = 1;
+    else if (userProfile?.gender === 'Female') mappedSex = 0;
+    else mappedSex = 1;
+
     try {
-      const response = await api.post("/api/cognitive-analysis/predict", {
-        user_id: "test_user_123",
-        sdmtotal: Math.round(sdmt.sdmtTotal * 1.5), // 60s → 90s
-        tmt_a: tmt.tmtA ? tmt.tmtA / 1000 : null,
-        dvs_lns: null,
-        age_at_visit: 65,
-        SEX: 1,
-        fampd: 0,
-        rem: 0,
+      const response = await api.post('/api/cognitive-analysis/predict', {
+        user_id:      user?.uid || 'test_user_123',
+        sdmtotal:     Math.round(sdmt.sdmtTotal * 1.5),
+        tmt_a:        tmt.tmtA ? tmt.tmtA / 1000 : null,
+        dvs_lns:      null,
+        age_at_visit: userAge,
+        SEX:          mappedSex,
+        fampd:        0,
+        rem:          0,
       });
       const result = response.data;
-      console.log("SUCCESS:", result);
+      console.log('SUCCESS:', result);
       router.replace(
-        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`,
+        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
       );
     } catch (error) {
-      console.error("Cognitive submit failed:", error);
-      router.replace(
-        "/cognitive-test-results?percentile_rank=50&contributing_factors=%5B%5D",
-      );
+      console.error('Cognitive submit failed:', error);
+      router.replace('/cognitive-test-results?percentile_rank=50&contributing_factors=%5B%5D');
     }
-  }, [router]);
+  }, [router, user, userProfile]);
 
   /* ─────────────────────────────────────────────
      DOT CANVAS
