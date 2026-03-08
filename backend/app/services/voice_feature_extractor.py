@@ -18,7 +18,10 @@ Why Parselmouth?
 from __future__ import annotations
 
 import logging
+import os
 import re
+import subprocess
+import tempfile
 import warnings
 from pathlib import Path
 
@@ -45,20 +48,86 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# ffmpeg-based audio conversion  (m4a → wav)
+# ---------------------------------------------------------------------------
+
+def _get_ffmpeg_exe() -> str | None:
+    """Return path to ffmpeg binary: imageio_ffmpeg's bundled copy, or system ffmpeg."""
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
+    # fall back to system ffmpeg if on PATH
+    import shutil
+    return shutil.which("ffmpeg")
+
+
+_FFMPEG_EXE: str | None = _get_ffmpeg_exe()
+if _FFMPEG_EXE:
+    logger.info("ffmpeg found: %s", _FFMPEG_EXE)
+else:
+    logger.warning("ffmpeg not found — .m4a / .aac files cannot be decoded")
+
+
+def _convert_to_wav(src_path: str) -> str:
+    """
+    Convert any audio file to a 16-bit 22050 Hz mono WAV using ffmpeg.
+    Returns the path to the new WAV file (in a temp dir).
+    Raises RuntimeError if ffmpeg is unavailable or conversion fails.
+    """
+    if _FFMPEG_EXE is None:
+        raise RuntimeError("ffmpeg not available — cannot decode audio format")
+
+    suffix = Path(src_path).suffix.lower()
+    if suffix in (".wav",):
+        return src_path  # already WAV, no conversion needed
+
+    tmp_wav = tempfile.mktemp(suffix=".wav")
+    cmd = [
+        _FFMPEG_EXE,
+        "-y",           # overwrite
+        "-i", src_path,
+        "-ar", "22050", # sample rate
+        "-ac", "1",     # mono
+        "-sample_fmt", "s16",
+        tmp_wav,
+    ]
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, timeout=60
+        )
+        if result.returncode != 0:
+            raise RuntimeError(result.stderr.decode(errors="replace"))
+        logger.info("Converted %s → %s", src_path, tmp_wav)
+        return tmp_wav
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("ffmpeg conversion timed out")
+
+
+# ---------------------------------------------------------------------------
 # Audio loading helper
 # ---------------------------------------------------------------------------
 
 def _load_audio(path: str, sr: int = 22050):
-    """Load audio, returning (y, sr). Tries soundfile first, falls back to librosa."""
+    """Load audio, converting to WAV first if needed. Tries soundfile then librosa."""
+    wav_path = _convert_to_wav(path)   # no-op if already WAV
     try:
-        y, file_sr = sf.read(path, always_2d=False)
+        y, file_sr = sf.read(wav_path, always_2d=False)
         if y.ndim > 1:
             y = y.mean(axis=1)
         y = y.astype(np.float32)
         if file_sr != sr:
             y = librosa.resample(y, orig_sr=file_sr, target_sr=sr)
     except Exception:
-        y, _ = librosa.load(path, sr=sr, mono=True)
+        y, _ = librosa.load(wav_path, sr=sr, mono=True)
+    finally:
+        # clean up temp WAV if we created one
+        if wav_path != path and os.path.exists(wav_path):
+            try:
+                os.remove(wav_path)
+            except OSError:
+                pass
     return y, sr
 
 
@@ -165,94 +234,103 @@ def _extract_praat_features(audio_path: str) -> dict:
         instability_ratio, signal_quality, freq_range,
         complexity_score, voice_health_score
     """
-    sound = parselmouth.Sound(audio_path)
+    wav_path = _convert_to_wav(audio_path)   # Praat only reads WAV/AIFF
+    _wav_is_temp = wav_path != audio_path
+    try:
+        sound = parselmouth.Sound(wav_path)
 
-    # ── Pitch ────────────────────────────────────────────────────────────────
-    pitch = praat_call(sound, "To Pitch", 0.0, 75.0, 600.0)
-    fo_mean = praat_call(pitch, "Get mean", 0, 0, "Hertz")
-    fo_max  = praat_call(pitch, "Get maximum", 0, 0, "Hertz", "Parabolic")
-    fo_min  = praat_call(pitch, "Get minimum", 0, 0, "Hertz", "Parabolic")
+        # ── Pitch ────────────────────────────────────────────────────────────────
+        pitch = praat_call(sound, "To Pitch", 0.0, 75.0, 600.0)
+        fo_mean = praat_call(pitch, "Get mean", 0, 0, "Hertz")
+        fo_max  = praat_call(pitch, "Get maximum", 0, 0, "Hertz", "Parabolic")
+        fo_min  = praat_call(pitch, "Get minimum", 0, 0, "Hertz", "Parabolic")
 
-    # Guard against Praat returning NaN / inf / 0 for poor-quality audio
-    if not np.isfinite(fo_mean) or fo_mean <= 0:
-        fo_mean = 120.0
-    if not np.isfinite(fo_max) or fo_max <= 0:
-        fo_max = fo_mean * 1.2
-    if not np.isfinite(fo_min) or fo_min <= 0:
-        fo_min = fo_mean * 0.8
+        # Guard against Praat returning NaN / inf / 0 for poor-quality audio
+        if not np.isfinite(fo_mean) or fo_mean <= 0:
+            fo_mean = 120.0
+        if not np.isfinite(fo_max) or fo_max <= 0:
+            fo_max = fo_mean * 1.2
+        if not np.isfinite(fo_min) or fo_min <= 0:
+            fo_min = fo_mean * 0.8
 
-    # ── Jitter (local) ──────────────────────────────────────────────────────
-    point_process = praat_call([sound, pitch], "To PointProcess (cc)")
-    # jitter_local is dimensionless fraction; multiply × 100 → MDVP:Jitter(%)
-    jitter_local = praat_call(
-        point_process, "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3
-    )
-    if not np.isfinite(jitter_local) or jitter_local < 0:
-        jitter_local = 0.00371
-    jitter_pct = jitter_local * 100.0
-    # MDVP:Jitter(Abs) = mean absolute period difference in seconds
-    jitter_abs = praat_call(
-        point_process, "Get jitter (local, absolute)", 0, 0, 0.0001, 0.02, 1.3
-    )
-    if not np.isfinite(jitter_abs) or jitter_abs < 0:
-        jitter_abs = jitter_pct / (fo_mean * 100.0 + 1e-10)
+        # ── Jitter (local) ──────────────────────────────────────────────────────
+        point_process = praat_call([sound, pitch], "To PointProcess (cc)")
+        # jitter_local is dimensionless fraction; multiply × 100 → MDVP:Jitter(%)
+        jitter_local = praat_call(
+            point_process, "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3
+        )
+        if not np.isfinite(jitter_local) or jitter_local < 0:
+            jitter_local = 0.00371
+        jitter_pct = jitter_local * 100.0
+        # MDVP:Jitter(Abs) = mean absolute period difference in seconds
+        jitter_abs = praat_call(
+            point_process, "Get jitter (local, absolute)", 0, 0, 0.0001, 0.02, 1.3
+        )
+        if not np.isfinite(jitter_abs) or jitter_abs < 0:
+            jitter_abs = jitter_pct / (fo_mean * 100.0 + 1e-10)
 
-    # ── Shimmer (local) ─────────────────────────────────────────────────────
-    shimmer_local = praat_call(
-        [sound, point_process],
-        "Get shimmer (local)", 0, 0, 0.0001, 0.02, 1.3, 1.6
-    )
-    if not np.isfinite(shimmer_local) or shimmer_local < 0:
-        shimmer_local = 0.02971
+        # ── Shimmer (local) ─────────────────────────────────────────────────────
+        shimmer_local = praat_call(
+            [sound, point_process],
+            "Get shimmer (local)", 0, 0, 0.0001, 0.02, 1.3, 1.6
+        )
+        if not np.isfinite(shimmer_local) or shimmer_local < 0:
+            shimmer_local = 0.02971
 
-    # ── Harmonics-to-Noise Ratio (HNR) ─────────────────────────────────────
-    harmonicity = praat_call(sound, "To Harmonicity (cc)", 0.01, 75.0, 0.1, 1.0)
-    hnr = praat_call(harmonicity, "Get mean", 0, 0)
-    if not np.isfinite(hnr):
-        hnr = 21.03
-    # NHR = 1/HNR (clamped to a realistic range)
-    nhr = float(np.clip(1.0 / (hnr + 1e-6), 0.0, 0.5))
+        # ── Harmonics-to-Noise Ratio (HNR) ─────────────────────────────────────
+        harmonicity = praat_call(sound, "To Harmonicity (cc)", 0.01, 75.0, 0.1, 1.0)
+        hnr = praat_call(harmonicity, "Get mean", 0, 0)
+        if not np.isfinite(hnr):
+            hnr = 21.03
+        # NHR = 1/HNR (clamped to a realistic range)
+        nhr = float(np.clip(1.0 / (hnr + 1e-6), 0.0, 0.5))
 
-    # ── Nonlinear measures from the F0 series ───────────────────────────────
-    # We rebuild an F0 array from librosa for DFA/RPDE/D2 (needs dense series)
-    y, sr = _load_audio(audio_path)
-    f0_arr = _f0_series_librosa(y, sr)
+        # ── Nonlinear measures from the F0 series ───────────────────────────────
+        # We rebuild an F0 array from librosa for DFA/RPDE/D2 (needs dense series)
+        y, sr = _load_audio(wav_path)
+        f0_arr = _f0_series_librosa(y, sr)
 
-    dfa    = _dfa_exponent(f0_arr)
-    rpde   = _rpde(f0_arr)
-    d2     = _correlation_dimension(f0_arr)
-    spread1 = float(np.std(np.log(f0_arr + 1e-10)))
-    spread2 = float(np.std(f0_arr))
+        dfa    = _dfa_exponent(f0_arr)
+        rpde   = _rpde(f0_arr)
+        d2     = _correlation_dimension(f0_arr)
+        spread1 = float(np.std(np.log(f0_arr + 1e-10)))
+        spread2 = float(np.std(f0_arr))
 
-    # ── Composite / derived features (same formulas as training script) ──────
-    freq_range         = fo_max - fo_min
-    instability_ratio  = jitter_pct * shimmer_local
-    signal_quality     = hnr / (nhr + 1e-10)
-    voice_health_score = float(np.clip(
-        hnr / (jitter_pct * shimmer_local + 1e-10), 0.0, 200.0
-    ))
-    complexity_score   = float(rpde * d2)
+        # ── Composite / derived features (same formulas as training script) ──────
+        freq_range         = fo_max - fo_min
+        instability_ratio  = jitter_pct * shimmer_local
+        signal_quality     = hnr / (nhr + 1e-10)
+        voice_health_score = float(np.clip(
+            hnr / (jitter_pct * shimmer_local + 1e-10), 0.0, 200.0
+        ))
+        complexity_score   = float(rpde * d2)
 
-    return {
-        "MDVP:Fo(Hz)":        float(fo_mean),
-        "MDVP:Fhi(Hz)":       float(fo_max),
-        "MDVP:Flo(Hz)":       float(fo_min),
-        "MDVP:Jitter(%)":     float(jitter_pct),
-        "MDVP:Jitter(Abs)":   float(jitter_abs),
-        "MDVP:Shimmer":       float(shimmer_local),
-        "NHR":                float(nhr),
-        "HNR":                float(hnr),
-        "RPDE":               float(rpde),
-        "DFA":                float(dfa),
-        "spread1":            float(spread1),
-        "spread2":            float(spread2),
-        "D2":                 float(d2),
-        "instability_ratio":  float(instability_ratio),
-        "signal_quality":     float(signal_quality),
-        "freq_range":         float(freq_range),
-        "complexity_score":   float(complexity_score),
-        "voice_health_score": float(voice_health_score),
-    }
+        return {
+            "MDVP:Fo(Hz)":        float(fo_mean),
+            "MDVP:Fhi(Hz)":       float(fo_max),
+            "MDVP:Flo(Hz)":       float(fo_min),
+            "MDVP:Jitter(%)":     float(jitter_pct),
+            "MDVP:Jitter(Abs)":   float(jitter_abs),
+            "MDVP:Shimmer":       float(shimmer_local),
+            "NHR":                float(nhr),
+            "HNR":                float(hnr),
+            "RPDE":               float(rpde),
+            "DFA":                float(dfa),
+            "spread1":            float(spread1),
+            "spread2":            float(spread2),
+            "D2":                 float(d2),
+            "instability_ratio":  float(instability_ratio),
+            "signal_quality":     float(signal_quality),
+            "freq_range":         float(freq_range),
+            "complexity_score":   float(complexity_score),
+            "voice_health_score": float(voice_health_score),
+        }
+    finally:
+        if _wav_is_temp and os.path.exists(wav_path):
+            try:
+                os.remove(wav_path)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------

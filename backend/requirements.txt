@@ -26,6 +26,8 @@ shap
 # Audio processing
 librosa>=0.10.0
 soundfile>=0.12.0
+imageio-ffmpeg>=0.4.9    # bundles ffmpeg binary — needed to decode .m4a from mobile
+praat-parselmouth>=0.4.3 # Praat-compatible acoustic feature extraction
 
 # Speech-to-text (Whisper)
 openai-whisper
