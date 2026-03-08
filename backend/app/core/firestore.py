@@ -68,7 +68,7 @@ class FirestoreService:
     def get_user_by_firebase_uid(self, firebase_uid: str) -> Optional[Dict[str, Any]]:
         """Get user by Firebase UID"""
         users_ref = self.db.collection('users')
-        query = users_ref.where('firebase_uid', '==', firebase_uid).limit(1)
+        query = users_ref.where(filter=firestore.FieldFilter('firebase_uid', '==', firebase_uid)).limit(1)
         docs = query.get()
         
         for doc in docs:
@@ -80,7 +80,7 @@ class FirestoreService:
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
         users_ref = self.db.collection('users')
-        query = users_ref.where('email', '==', email).limit(1)
+        query = users_ref.where(filter=firestore.FieldFilter('email', '==', email)).limit(1)
         docs = query.get()
         
         for doc in docs:
@@ -115,7 +115,7 @@ class FirestoreService:
     def get_user_test_results(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all test results for a user"""
         results_ref = self.db.collection('test_results')
-        query = results_ref.where('user_id', '==', user_id).order_by('created_at', direction=firestore.Query.DESCENDING)
+        query = results_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('created_at', direction=firestore.Query.DESCENDING)
         docs = query.get()
         
         results = []
@@ -136,7 +136,7 @@ class FirestoreService:
     def get_user_voice_analyses(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all voice analyses for a user"""
         analyses_ref = self.db.collection('voice_analyses')
-        query = analyses_ref.where('user_id', '==', user_id).order_by('created_at', direction=firestore.Query.DESCENDING)
+        query = analyses_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('created_at', direction=firestore.Query.DESCENDING)
         docs = query.get()
         
         analyses = []
