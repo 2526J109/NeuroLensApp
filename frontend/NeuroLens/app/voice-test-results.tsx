@@ -13,8 +13,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 type RiskLevel = 'Low' | 'Moderate' | 'High';
 
 const getRiskLevelFromPercentage = (percentage: number): RiskLevel => {
-    if (percentage < 30) return 'Low';
-    if (percentage < 60) return 'Moderate';
+    if (percentage < 45) return 'Low';
+    if (percentage < 70) return 'Moderate';
     return 'High';
 };
 
@@ -125,7 +125,7 @@ export default function VoiceTestResultsScreen() {
                 <View style={styles.summaryCard}>
                     <Text style={styles.summaryTitle}>{t('results.voiceAssessment')}</Text>
                     <Text style={styles.summaryStatus}>
-                        {t('results.status.good').split(':')[0]}: {statusParam === 'good' ? t('results.status.good') : t('results.status.warning')}
+                        {t('results.status.label')}: {statusParam === 'good' ? t('results.status.good') : t('results.status.warning')}
                     </Text>
                     <Text style={styles.summaryText}>{getSummaryText()}</Text>
                 </View>
