@@ -54,6 +54,8 @@ def _risk_level(risk_pct: float) -> str:
 def predict_drawing_risk(features: Dict[str, float]) -> Dict[str, Any]:
     bundle = _load_bundle()
 
+    logger.info("[DrawingLocalPredictor] Raw features received: %s", features)
+
     # ── Trained sklearn model ─────────────────────────────────────────────
     if bundle is not None:
         try:
@@ -70,6 +72,7 @@ def predict_drawing_risk(features: Dict[str, float]) -> Dict[str, Any]:
             )
             row_scaled = scaler.transform(row)
             prob       = float(model.predict_proba(row_scaled)[:, 1][0])
+            logger.info("[DrawingLocalPredictor] Scaled row: %s  →  P(Parkinson)=%.4f", row_scaled.tolist(), prob)
             risk_pct   = round(prob * 100, 2)
             conf_pct   = round(max(prob, 1.0 - prob) * 100, 2)
             return {
