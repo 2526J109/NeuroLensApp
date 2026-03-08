@@ -374,9 +374,16 @@ export default function VoiceAnalysisScreen() {
       }
 
       const result = await response.json();
+      console.log('API response:', JSON.stringify(result));
+
       const percentage = parseFloat(result?.risk_percentage) || 0;
-      const status = result?.risk_category || 'Unknown';
-      const description = `Voice analysis completed. Risk: ${result?.risk_percentage} (${status})`;
+
+      // Map predictor output ('Low Risk' / 'Moderate Risk' / 'High Risk')
+      // to the values the results screen understands ('good' / 'warning').
+      const riskCategory: string = result?.risk_category || '';
+      const status = riskCategory === 'Low Risk' ? 'good' : 'warning';
+
+      const description = `Voice analysis completed. Risk: ${result?.risk_percentage} (${riskCategory})`;
       router.push(
         `/voice-test-results?percentage=${Math.round(percentage)}&status=${status}&description=${encodeURIComponent(description)}`
       );
