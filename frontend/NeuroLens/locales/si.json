@@ -176,7 +176,7 @@
         "healthAssessment": "සෞඛ්‍ය ඇගයීම",
         "progress": {
             "title": "ඔබේ ප්‍රගතිය",
-            "subtitle": "පරීක්ෂණ 4න් 1ක් සම්පූර්ණයි",
+            "subtitle": "පරීක්ෂණ 4න් %{current}ක් සම්පූර්ණයි",
             "viewResults": "ප්‍රතිඵල පෙන්වන්න",
             "complete": "සම්පූර්ණයි"
         },

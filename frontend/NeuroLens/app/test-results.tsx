@@ -9,6 +9,8 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAssessment } from '@/contexts/AssessmentContext';
+import { useEffect } from 'react';
 import { PenTool, ShieldCheck, AlertTriangle, AlertCircle, ChevronRight } from 'lucide-react-native';
 
 interface ModelPrediction {
@@ -39,7 +41,12 @@ const TIPS: Record<string, string[]> = {
 export default function TestResultsScreen() {
     const { t } = useLanguage();
     const router = useRouter();
+    const { markTaskComplete } = useAssessment();
     const params = useLocalSearchParams();
+
+    useEffect(() => {
+        markTaskComplete('drawing');
+    }, [markTaskComplete]);
 
     let prediction: ModelPrediction | null = null;
     if (params.prediction) {

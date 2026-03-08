@@ -176,7 +176,7 @@
         "healthAssessment": "Health Assessment",
         "progress": {
             "title": "Your Progress",
-            "subtitle": "1 of 4 tests completed",
+            "subtitle": "%{current} of 4 tests completed",
             "viewResults": "View Results",
             "complete": "Complete"
         },

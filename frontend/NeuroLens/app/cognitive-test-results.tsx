@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAssessment } from '@/contexts/AssessmentContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type ContributingFactor = {
@@ -44,8 +46,14 @@ const getRecommendation = (rank: number): string => {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 export default function CognitiveTestResultsScreen() {
+    const { t } = useLanguage();
     const router = useRouter();
+    const { markTaskComplete } = useAssessment();
     const params = useLocalSearchParams();
+
+    useEffect(() => {
+        markTaskComplete('cognitive');
+    }, [markTaskComplete]);
 
     // Parse params passed from cognitive-test.tsx
     const percentileRank = params.percentile_rank
@@ -56,8 +64,8 @@ export default function CognitiveTestResultsScreen() {
         : [];
 
     // Animations
-    const barAnim   = useRef(new Animated.Value(0)).current;
-    const fadeAnim  = useRef(new Animated.Value(0)).current;
+    const barAnim = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
 
     useEffect(() => {
@@ -78,8 +86,8 @@ export default function CognitiveTestResultsScreen() {
         ]).start();
     }, []);
 
-    const accentColor  = getPercentileColor(percentileRank);
-    const lightBg      = `${accentColor}18`;
+    const accentColor = getPercentileColor(percentileRank);
+    const lightBg = `${accentColor}18`;
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>

@@ -9,6 +9,8 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAssessment } from '@/contexts/AssessmentContext';
+import { useEffect } from 'react';
 
 type RiskLevel = 'Low' | 'Moderate' | 'High';
 
@@ -21,7 +23,12 @@ const getRiskLevelFromPercentage = (percentage: number): RiskLevel => {
 export default function VoiceTestResultsScreen() {
     const { t } = useLanguage();
     const router = useRouter();
+    const { markTaskComplete } = useAssessment();
     const params = useLocalSearchParams();
+
+    useEffect(() => {
+        markTaskComplete('voice');
+    }, [markTaskComplete]);
 
     const percentageParam = params.percentage
         ? Number(params.percentage as string)

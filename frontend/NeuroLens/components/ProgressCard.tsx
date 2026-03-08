@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useRouter } from 'expo-router';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAssessment } from '@/contexts/AssessmentContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 375;
@@ -9,8 +11,9 @@ const isTablet = SCREEN_WIDTH >= 768;
 
 export const ProgressCard = () => {
     const { t } = useLanguage();
-    // 25% progress
-    const percentage = 25;
+    const router = useRouter();
+    const { completedCount } = useAssessment();
+    const percentage = (completedCount / 4) * 100;
 
     // Responsive sizing
     const chartSize = isSmallScreen ? 80 : isTablet ? 120 : 100;
@@ -20,14 +23,7 @@ export const ProgressCard = () => {
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     const handleViewResults = () => {
-        const url = 'http://localhost:8081/results';
-        if (Platform.OS === 'web') {
-            // Navigate in the same tab for web
-            window.location.href = url;
-        } else {
-            // Use Linking for native platforms
-            Linking.openURL(url);
-        }
+        router.push('/(tabs)/results');
     };
 
     return (
@@ -35,7 +31,7 @@ export const ProgressCard = () => {
             <View style={styles.contentContainer}>
                 <View style={styles.textContainer}>
                     <Text style={styles.cardTitle}>{t('home.progress.title')}</Text>
-                    <Text style={styles.subtitle}>{t('home.progress.subtitle')}</Text>
+                    <Text style={styles.subtitle}>{t('home.progress.subtitle', { current: completedCount })}</Text>
 
                     <TouchableOpacity
                         style={styles.button}

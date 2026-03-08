@@ -4,15 +4,20 @@ import { Stack, useRouter } from 'expo-router';
 import { Watch, Bluetooth, X, Check } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BleManager, Device } from 'react-native-ble-plx';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_ENDPOINTS } from '../constants/api';
+import { useAssessment } from '../contexts/AssessmentContext'; // Assuming this path
+
+// Define PredictionResult type based on context
+type PredictionResult = { ratio: string, result: 'HEALTHY' | 'PARKINSONS' };
 
 export default function WearableScreen() {
     const router = useRouter();
     const { userProfile, user } = useAuth();
     const { t } = useLanguage();
+    const { markTaskComplete } = useAssessment(); // Added useAssessment
     const manager = useMemo(() => new BleManager(), []);
     const [isScanning, setIsScanning] = useState(false);
     const [devices, setDevices] = useState<Device[]>([]);
@@ -32,7 +37,9 @@ export default function WearableScreen() {
         _setAssessmentStep(step);
         assessmentStepRef.current = step;
     };
-    const [stepResults, setStepResults] = useState<{ [key: number]: { ratio: string, result: 'HEALTHY' | 'PARKINSONS' } }>({});
+    const [stepResults, setStepResults] = useState<{ [key: number]: PredictionResult }>({}); // Changed type to PredictionResult
+
+    const deviceRef = useRef<Device | null>(null); // Added deviceRef
 
     const NEUROLENS_SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
     const TREMOR_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
@@ -43,42 +50,58 @@ export default function WearableScreen() {
         };
     }, [manager]);
 
+    // Function to upload final results
+    const uploadFinalResults = async (finalResults: { [key: number]: PredictionResult }) => {
+        if (!user || !userProfile) {
+            console.error('User or user profile not available for uploading results.');
+            return;
+        }
+        try {
+            const token = await user.getIdToken();
+            console.log('Final complete payload being sent:', JSON.stringify(finalResults, null, 2));
+            const formattedResults: Record<string, any> = {};
+            Object.keys(finalResults).forEach((key) => {
+                formattedResults[key.toString()] = finalResults[Number(key)];
+            });
+
+            const payload = {
+                user_id: userProfile.firebase_uid,
+                global_verdict: Object.values(finalResults).some(r => r.result === 'PARKINSONS') ? 'PARKINSONS' : 'HEALTHY',
+                probability_score: Math.round(
+                    (Object.values(finalResults).reduce((sum, r) => sum + parseFloat(r.ratio), 0) /
+                        Math.max(1, Object.values(finalResults).length)) * 100
+                ),
+                step_results: formattedResults
+            };
+
+            console.log('Fetching URL:', API_ENDPOINTS.WEARABLE_ANALYSIS.ANALYZE);
+
+            const response = await fetch(API_ENDPOINTS.WEARABLE_ANALYSIS.ANALYZE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                console.error('Failed to upload final results to Firestore', await response.text());
+            } else {
+                console.log('Results uploaded to Firestore successfully:', await response.json());
+                // Mark task as complete globally
+                markTaskComplete('wearable');
+            }
+        } catch (error) {
+            console.error('Failed to upload final results to Firestore:', error);
+        }
+    };
+
     // Save prediction to DB when the assessment finishes
     useEffect(() => {
         const submitToBackend = async () => {
             if (assessmentStep === 4 && user && userProfile) {
-                try {
-                    const token = await user.getIdToken();
-
-                    const payload = {
-                        user_id: userProfile.firebase_uid,
-                        global_verdict: Object.values(stepResults).some(r => r.result === 'PARKINSONS') ? 'PARKINSONS' : 'HEALTHY',
-                        probability_score: Math.round(
-                            (Object.values(stepResults).reduce((sum, r) => sum + parseFloat(r.ratio), 0) /
-                                Math.max(1, Object.values(stepResults).length)) * 100
-                        ),
-                        step_results: stepResults
-                    };
-
-                    console.log('Fetching URL:', API_ENDPOINTS.WEARABLE_ANALYSIS.ANALYZE);
-
-                    const response = await fetch(API_ENDPOINTS.WEARABLE_ANALYSIS.ANALYZE, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        console.error('Failed to save wearable prediction', await response.text());
-                    } else {
-                        console.log('Wearable prediction saved successfully');
-                    }
-                } catch (error) {
-                    console.error('Error saving wearable prediction:', error);
-                }
+                await uploadFinalResults(stepResults);
             }
         };
 
@@ -486,15 +509,18 @@ export default function WearableScreen() {
                                         </View>
                                     ))}
 
+                                    <View style={styles.disclaimer}>
+                                        <Text style={styles.disclaimerTitle}>{t('results.importantNotice')}</Text>
+                                        <Text style={styles.disclaimerText}>
+                                            {t('results.disclaimer')}
+                                        </Text>
+                                    </View>
+
                                     <TouchableOpacity
-                                        style={[styles.startButton, { marginTop: 32, width: '100%' }]}
-                                        onPress={() => {
-                                            setAssessmentStep(0);
-                                            setSessionStatus('IDLE');
-                                            setStepResults({});
-                                        }}
+                                        style={[styles.startButton, { marginTop: 32, width: '100%', backgroundColor: '#0F766E' }]}
+                                        onPress={() => router.replace('/(tabs)')}
                                     >
-                                        <Text style={styles.startButtonText}>{t('wearable.restartAssessment')}</Text>
+                                        <Text style={styles.startButtonText}>{t('results.backToHome')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -797,6 +823,26 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
         color: '#0F172A',
+    },
+    disclaimer: {
+        backgroundColor: '#FEF3C7',
+        borderLeftWidth: 4,
+        borderLeftColor: '#F59E0B',
+        borderRadius: 12,
+        padding: 16,
+        marginTop: 24,
+        width: '100%',
+    },
+    disclaimerTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#92400E',
+        marginBottom: 8,
+    },
+    disclaimerText: {
+        fontSize: 14,
+        color: '#92400E',
+        lineHeight: 20,
     },
     scanningIndicator: {
         flexDirection: 'row',
