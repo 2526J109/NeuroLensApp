@@ -18,6 +18,7 @@ import { DrawingCanvas, DrawingPoint } from '@/components/DrawingCanvas';
 import { SpiralGuide } from '@/components/SpiralGuide';
 import { WaveGuide } from '@/components/WaveGuide';
 import { formatDrawingData, DrawingDataJSON } from '@/utils/dataExport';
+import { useAssessment } from '@/contexts/AssessmentContext';
 
 const CANVAS_SIZE = Math.min(Dimensions.get('window').width - 80, 350);
 const WAVE_WIDTH = CANVAS_SIZE;
@@ -28,6 +29,7 @@ type TestType = 'spiral' | 'wave';
 export default function DrawingTestScreen() {
     const { user, userProfile } = useAuth();
     const { t } = useLanguage();
+    const { sessionId, markTaskComplete } = useAssessment();
     const router = useRouter();
     const [currentTest, setCurrentTest] = useState<TestType>('spiral');
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
@@ -108,8 +110,13 @@ export default function DrawingTestScreen() {
                         spiralDataJSON!,
                         jsonData!,
                         firebaseToken,
-                        PixelRatio.get()
+                        PixelRatio.get(),
+                        sessionId || undefined
                     );
+
+                    // Mark task as complete
+                    markTaskComplete('drawing');
+
                     console.log('Prediction response:', predictionResponse);
                     router.push({
                         pathname: '/test-results',

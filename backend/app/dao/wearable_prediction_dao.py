@@ -6,10 +6,11 @@ class WearablePredictionDAO:
     def __init__(self):
         self.db = get_firestore_service()
 
-    def save_prediction(self, user_id: str, prediction: Dict[str, Any]) -> Dict[str, Any]:
+    def save_prediction(self, user_id: str, prediction: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         """Save a wearable prediction for a user."""
         record = {
             'user_id': user_id,
+            'session_id': session_id,
             'global_verdict': prediction.get('global_verdict', ''),
             'probability_score': prediction.get('probability_score', 0.0),
             'step_results': prediction.get('step_results', {}),

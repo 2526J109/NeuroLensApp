@@ -3,6 +3,7 @@ import { DrawingDataJSON } from '../utils/dataExport';
 
 export interface DrawingPredictionRequest {
   user_id: string;
+  session_id?: string;
   spiral_data?: DrawingDataJSON;
   wave_data?: DrawingDataJSON;
   pixel_ratio?: number;
@@ -19,10 +20,12 @@ export const analyzeDrawingPrediction = async (
   spiralData?: DrawingDataJSON,
   waveData?: DrawingDataJSON,
   firebaseToken?: string,
-  pixelRatio?: number
+  pixelRatio?: number,
+  sessionId?: string
 ): Promise<DrawingPredictionResponse> => {
   const requestData: DrawingPredictionRequest = {
     user_id: userId,
+    session_id: sessionId,
     spiral_data: spiralData,
     wave_data: waveData,
     pixel_ratio: pixelRatio,

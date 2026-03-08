@@ -7,6 +7,7 @@ class StepResult(BaseModel):
 
 class WearablePredictionRequest(BaseModel):
     user_id: str
+    session_id: Optional[str] = None
     global_verdict: str
     probability_score: float
     step_results: Dict[str, StepResult]

@@ -19,9 +19,11 @@ import {
   AlertCircle,
   Info,
   ArrowLeft,
+  Activity,
 } from 'lucide-react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAssessment } from '@/contexts/AssessmentContext';
 // No API import needed - results passed directly via route params
 
 interface TestResult {
@@ -173,6 +175,7 @@ export default function ResultsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { t } = useLanguage();
+  const { isSessionComplete } = useAssessment();
 
   const defaultResults = useMemo(() => getInitialTestResults(t), [t]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
@@ -348,6 +351,24 @@ export default function ResultsScreen() {
         <Text style={styles.disclaimer}>
           {t('resultsTab.disclaimerFull')}
         </Text>
+
+        {/* View Multimodal Results Button */}
+        {isSessionComplete && (
+          <TouchableOpacity
+            style={styles.multimodalButton}
+            onPress={() => router.push('/multimodal-results' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.multimodalIconContainer}>
+              <Activity size={24} color="#FFFFFF" />
+            </View>
+            <View style={styles.multimodalContent}>
+              <Text style={styles.multimodalTitle}>{t('home.progress.viewFinalAnalysis')}</Text>
+              <Text style={styles.multimodalSubtitle}>Weighted Clinical Assessment</Text>
+            </View>
+            <ArrowLeft size={20} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+        )}
 
         {/* Bottom padding for tab bar */}
         <View style={{ height: 20 }} />
@@ -598,5 +619,40 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: isSmallScreen ? 12 : 14,
     color: '#64748B',
+  },
+  multimodalButton: {
+    backgroundColor: '#6366F1',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  multimodalIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  multimodalContent: {
+    flex: 1,
+  },
+  multimodalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  multimodalSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });

@@ -15,10 +15,11 @@ import { TipCard } from '@/components/TipCard';
 
 import { useRouter } from 'expo-router';
 import { useLanguage } from '@/contexts/LanguageContext';
-
+import { useAssessment } from '@/contexts/AssessmentContext';
 export default function HomeScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { completedTasks } = useAssessment();
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -36,7 +37,7 @@ export default function HomeScreen() {
           description={t('home.tests.wearable.description')}
           icon={Watch}
           color="#14B8A6" // Teal
-          isCompleted={true}
+          isCompleted={completedTasks.includes('wearable')}
           onPress={() => router.push('/wearable')}
         />
 
@@ -45,7 +46,7 @@ export default function HomeScreen() {
           description={t('home.tests.voice.description')}
           icon={Mic}
           color="#A855F7" // Purple
-          isCompleted={false}
+          isCompleted={completedTasks.includes('voice')}
           onPress={() => router.push('/voice-analysis')}
         />
 
@@ -54,7 +55,7 @@ export default function HomeScreen() {
           description={t('home.tests.drawing.description')}
           icon={PenTool}
           color="#F97316" // Orange
-          isCompleted={false}
+          isCompleted={completedTasks.includes('drawing')}
           onPress={() => router.push('/drawing-test')}
         />
 
@@ -63,7 +64,7 @@ export default function HomeScreen() {
           description={t('home.tests.cognitive.description')}
           icon={Brain}
           color="#10B981" // Green
-          isCompleted={false}
+          isCompleted={completedTasks.includes('cognitive')}
           onPress={() => router.push('/cognitive-test')}
         />
 

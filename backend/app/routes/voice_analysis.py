@@ -105,7 +105,7 @@ async def predict_voice(
         # ── 3. Persist only the risk score ────────────────────────────────────
         if user_id:
             try:
-                voice_dao.save_result(user_id, result_dict)
+                voice_dao.save_result(user_id, result_dict, session_id=session_id)
             except Exception as db_err:
                 import logging
                 logging.getLogger(__name__).warning(

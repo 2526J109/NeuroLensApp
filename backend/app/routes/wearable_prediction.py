@@ -44,7 +44,11 @@ async def save_wearable_prediction(request: Request):
 
     try:
         # Save to database
-        saved_record = wearable_service.save_wearable_prediction(user_id, validated_data.dict())
+        saved_record = wearable_service.save_wearable_prediction(
+            user_id, 
+            validated_data.dict(), 
+            session_id=validated_data.session_id
+        )
         return saved_record
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving prediction: {str(e)}")

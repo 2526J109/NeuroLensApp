@@ -13,6 +13,7 @@ import { Stack, useRouter } from "expo-router";
 import { Brain, CheckCircle2, ChevronRight, Clock } from "lucide-react-native";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useAssessment } from "../contexts/AssessmentContext";
 
 const SCREEN = Dimensions.get("window");
 const W = SCREEN.width;
@@ -137,9 +138,9 @@ function sdmtFeatures(trials: SdmtTrial[]) {
   const std =
     rts.length > 1
       ? Math.sqrt(
-          rts.map((r) => (r - mean) ** 2).reduce((a, b) => a + b, 0) /
-            rts.length,
-        )
+        rts.map((r) => (r - mean) ** 2).reduce((a, b) => a + b, 0) /
+        rts.length,
+      )
       : 0;
   const n = rts.length;
   let slope = 0;
@@ -177,6 +178,7 @@ function tmtFeatures(taps: TmtTap[]) {
 export default function CognitiveAssessment() {
   const router = useRouter();
   const { user } = useAuth();
+  const { sessionId, markTaskComplete } = useAssessment();
   const [stage, setStage] = useState<Stage>("intro");
 
   // TMT
@@ -392,10 +394,14 @@ export default function CognitiveAssessment() {
         SEX: mappedSex,
         fampd: profile?.family_history ?? 0,
         rem: profile?.rem_sleep ?? 0,
+        session_id: sessionId || null,
       });
 
       const result = response.data;
       console.log("SUCCESS:", result);
+
+      // Mark task as complete
+      markTaskComplete('cognitive');
       router.replace(
         `/cognitive-test-results?percentile_rank=${result.percentile_rank}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
       );

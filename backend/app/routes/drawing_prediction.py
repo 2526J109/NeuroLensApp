@@ -36,7 +36,8 @@ async def _extract_and_verify(request: Request):
 async def analyze_drawing_prediction(request: Request):
     body, user_id = await _extract_and_verify(request)
     try:
-        return analyze_and_save(user_id, body)
+        session_id = body.get("session_id")
+        return analyze_and_save(user_id, body, session_id=session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
@@ -49,6 +50,7 @@ async def analyze_drawing_prediction(request: Request):
 async def analyze_drawing_local(request: Request):
     body, user_id = await _extract_and_verify(request)
     try:
-        return analyze_with_local_model(user_id, body)
+        session_id = body.get("session_id")
+        return analyze_with_local_model(user_id, body, session_id=session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

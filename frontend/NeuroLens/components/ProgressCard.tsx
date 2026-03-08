@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking, Platform, Dimensions } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useAssessment } from '@/contexts/AssessmentContext';
+import { useRouter } from 'expo-router';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -9,8 +11,11 @@ const isTablet = SCREEN_WIDTH >= 768;
 
 export const ProgressCard = () => {
     const { t } = useLanguage();
-    // 25% progress
-    const percentage = 25;
+    const { completedTasks, isSessionComplete, sessionId } = useAssessment();
+    const router = useRouter();
+
+    // Calculate real progress percentage
+    const percentage = Math.round((completedTasks.length / 4) * 100);
 
     // Responsive sizing
     const chartSize = isSmallScreen ? 80 : isTablet ? 120 : 100;
@@ -20,13 +25,13 @@ export const ProgressCard = () => {
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     const handleViewResults = () => {
-        const url = 'http://localhost:8081/results';
-        if (Platform.OS === 'web') {
-            // Navigate in the same tab for web
-            window.location.href = url;
+        if (isSessionComplete) {
+            router.push({
+                pathname: '/multimodal-results' as any,
+                params: { sessionId }
+            });
         } else {
-            // Use Linking for native platforms
-            Linking.openURL(url);
+            // Optional: show toast saying "Complete all tests first"
         }
     };
 
@@ -38,10 +43,13 @@ export const ProgressCard = () => {
                     <Text style={styles.subtitle}>{t('home.progress.subtitle')}</Text>
 
                     <TouchableOpacity
-                        style={styles.button}
+                        style={[styles.button, !isSessionComplete && styles.buttonDisabled]}
                         onPress={handleViewResults}
+                        disabled={!isSessionComplete}
                     >
-                        <Text style={styles.buttonText}>{t('home.progress.viewResults')}</Text>
+                        <Text style={styles.buttonText}>
+                            {isSessionComplete ? t('home.progress.viewFinalAnalysis') : t('home.progress.viewResults')}
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
@@ -126,6 +134,9 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
         textAlign: isSmallScreen ? 'center' : 'left',
+    },
+    buttonDisabled: {
+        backgroundColor: '#CBD5E1', // Slate 300
     },
     chartContainer: {
         justifyContent: 'center',

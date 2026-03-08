@@ -193,6 +193,7 @@
             "title": "Your Progress",
             "subtitle": "1 of 4 tests completed",
             "viewResults": "View Results",
+            "viewFinalAnalysis": "View Final Analysis",
             "complete": "Complete"
         },
         "assessmentTests": "Assessment Tests",
@@ -406,6 +407,15 @@
             "low": "%{title} shows low risk indicators. Results are within normal parameters.",
             "medium": "%{title} shows moderate risk. Some abnormalities detected. Monitor regularly.",
             "high": "%{title} shows elevated risk. Significant abnormalities detected. Consult healthcare provider."
+        },
+        "multimodal": {
+            "header": "Final Assessment",
+            "overallScore": "Overall Risk Score",
+            "summary": "This score is a weighted aggregation of your performance across all four tests using clinical AUC weights.",
+            "breakdown": "Module Breakdown",
+            "startNew": "Start New Session",
+            "loading": "Aggregating your results...",
+            "error": "Could not calculate aggregated score. Individual results are saved."
         }
     }
 }
