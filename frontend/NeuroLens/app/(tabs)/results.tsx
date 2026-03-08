@@ -24,7 +24,7 @@ import {
 import Svg, { Circle } from 'react-native-svg';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAssessment } from '@/contexts/AssessmentContext';
-// No API import needed - results passed directly via route params
+import api from '@/services/api';
 
 interface TestResult {
   id: string;
@@ -96,12 +96,12 @@ const createTestResult = (
   };
 };
 
-// Default test results (fallback) - percentages are model outputs, will be converted to risk scores
+// Initial state with 0% scores
 const getInitialTestResults = (t: (key: string) => string): TestResult[] => [
-  createTestResult('movement', t('resultsTab.tests.movement'), 75, Watch),
-  createTestResult('voice', t('resultsTab.tests.voice'), 60, Mic),
-  createTestResult('motor', t('resultsTab.tests.motor'), 78, PenTool),
-  createTestResult('cognitive', t('resultsTab.tests.cognitive'), 85, Brain),
+  createTestResult('wearable', t('history.categories.wearable'), 100, Watch),
+  createTestResult('voice', t('history.categories.voice'), 100, Mic),
+  createTestResult('drawing', t('history.categories.drawing'), 100, PenTool),
+  createTestResult('cognitive', t('history.categories.brain'), 100, Brain),
 ];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -175,66 +175,67 @@ export default function ResultsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { t } = useLanguage();
-  const { isSessionComplete } = useAssessment();
+  const { sessionId, completedTasks, isSessionComplete } = useAssessment();
 
   const defaultResults = useMemo(() => getInitialTestResults(t), [t]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  // Calculate initial overall risk score from default results
   const [overallScore, setOverallScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (testResults.length === 0) {
-      setTestResults(defaultResults);
-      const initialScore = Math.round(
-        defaultResults.reduce((sum, r) => sum + getRiskScore(r.percentage), 0) / defaultResults.length
-      );
-      setOverallScore(initialScore);
-    }
-  }, [defaultResults]);
-
-  useEffect(() => {
-    // Get voice analysis result from route params (passed directly, no database)
-    const voiceAnalysisResultParam = params.voiceAnalysisResult as string;
-    if (voiceAnalysisResultParam) {
+    const fetchLatestResults = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const voiceResult = JSON.parse(voiceAnalysisResultParam);
+        let data;
 
-        // Update voice analysis result
-        const baseResults = testResults.length > 0 ? testResults : defaultResults;
-        const updatedResults = [...baseResults];
-        const voiceIndex = updatedResults.findIndex(r => r.id === 'voice');
-
-        if (voiceIndex !== -1) {
-          const modelPercentage = voiceResult.percentage || 0;
-          const riskScore = getRiskScore(modelPercentage);
-          const riskLevel = getRiskLevel(riskScore);
-          const colors = getRiskColor(riskLevel);
-
-          updatedResults[voiceIndex] = {
-            ...updatedResults[voiceIndex],
-            percentage: modelPercentage, // Store original model output
-            status: riskLevel,
-            description: t(`resultsTab.descriptions.${riskLevel}`).replace('%{title}', t('resultsTab.tests.voice')),
-            iconColor: colors.icon,
-            backgroundColor: colors.background,
-          };
+        // 1. Try to fetch / calculate results for current session if tasks are done
+        if (sessionId && completedTasks.length > 0) {
+          try {
+            const response = await api.post(`/api/multimodal/result/${sessionId}`);
+            data = response.data;
+          } catch (sessionErr) {
+            console.warn('Session aggregation failed, falling back to latest history:', sessionErr);
+          }
         }
 
-        setTestResults(updatedResults);
+        // 2. If no current session data, fetch latest from history
+        if (!data) {
+          const response = await api.get('/api/multimodal/latest');
+          data = response.data;
+        }
 
-        // Recalculate overall risk score (average of all test risk scores)
-        const avgRiskScore = updatedResults.reduce((sum, r) => {
-          const risk = getRiskScore(r.percentage);
-          return sum + risk;
-        }, 0) / updatedResults.length;
-        setOverallScore(Math.round(avgRiskScore));
-      } catch (error) {
-        console.error('Error parsing voice analysis result:', error);
-        // Keep default results on error
+        // Map individual_scores (0-100 risk) back to percentage-health (0-100)
+        // Since getRiskScore(percentage) = 100 - percentage
+        // percentage = 100 - risk_score
+
+        const individual = data.individual_scores || {};
+        const updatedResults: TestResult[] = [
+          createTestResult('wearable', t('history.categories.wearable'), 100 - (individual.wearable || 0), Watch),
+          createTestResult('voice', t('history.categories.voice'), 100 - (individual.voice || 0), Mic),
+          createTestResult('drawing', t('history.categories.drawing'), 100 - (individual.drawing || 0), PenTool),
+          createTestResult('cognitive', t('history.categories.brain'), 100 - (individual.cognitive || 0), Brain),
+        ];
+
+        setTestResults(updatedResults);
+        setOverallScore(data.final_multimodal_risk || 0);
+      } catch (err: any) {
+        console.error('Error fetching latest results:', err);
+        if (err.response?.status === 404) {
+          setError('No assessment data found. Start a test to see results.');
+        } else {
+          setError('Failed to load latest results');
+        }
+        setTestResults(defaultResults);
+        setOverallScore(0);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, [params.voiceAnalysisResult]);
+    };
+
+    fetchLatestResults();
+  }, [t, defaultResults, sessionId, completedTasks.length]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -281,6 +282,13 @@ export default function ResultsScreen() {
 
         {/* Test Results Section */}
         <Text style={styles.sectionTitle}>{t('resultsTab.testResults')}</Text>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <AlertCircle size={20} color="#EF4444" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         {isLoading && (
           <View style={styles.loadingContainer}>
@@ -619,6 +627,20 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: isSmallScreen ? 12 : 14,
     color: '#64748B',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#EF4444',
+    flex: 1,
   },
   multimodalButton: {
     backgroundColor: '#6366F1',

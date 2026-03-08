@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAssessment } from '@/contexts/AssessmentContext';
 import api from '@/services/api';
-import { AlertCircle, CheckCircle2, ChevronRight, RefreshCcw } from 'lucide-react-native';
+import { AlertCircle, CheckCircle2, ChevronRight, RefreshCcw, Clock } from 'lucide-react-native';
 
 interface AggregatedResult {
     session_id: string;
@@ -23,6 +23,8 @@ interface AggregatedResult {
         drawing?: number;
         cognitive?: number;
     };
+    remaining_tasks: number;
+    missing_modalities: string[];
     timestamp: string;
 }
 
@@ -36,15 +38,24 @@ export default function MultimodalResultsScreen() {
 
     useEffect(() => {
         const fetchResults = async () => {
-            if (!sessionId) {
-                setError('No active session found');
-                setLoading(false);
-                return;
-            }
+            setLoading(true);
+            setError(null);
 
             try {
-                const response = await api.post(`/api/multimodal/result/${sessionId}`);
-                setResult(response.data);
+                if (sessionId) {
+                    try {
+                        const response = await api.post(`/api/multimodal/result/${sessionId}`);
+                        setResult(response.data);
+                        setLoading(false);
+                        return;
+                    } catch (err) {
+                        console.warn('Session specific fetch failed, trying latest fallback...');
+                    }
+                }
+
+                // Fallback to latest
+                const fallbackResponse = await api.get('/api/multimodal/latest');
+                setResult(fallbackResponse.data);
             } catch (err: any) {
                 console.error('Error fetching multimodal results:', err);
                 setError(err.message || 'Failed to fetch results');
@@ -112,6 +123,18 @@ export default function MultimodalResultsScreen() {
                     </View>
                 </View>
 
+                {/* Partial Result Notice */}
+                {result.remaining_tasks > 0 && (
+                    <View style={styles.pendingCard}>
+                        <Clock size={20} color="#0F766E" />
+                        <Text style={styles.pendingText}>
+                            {result.remaining_tasks === 1
+                                ? "1 task is remain."
+                                : `${result.remaining_tasks} tasks remain.`}
+                        </Text>
+                    </View>
+                )}
+
                 <Text style={styles.summaryText}>{t('resultsTab.multimodal.summary')}</Text>
 
                 {/* Breakdown Section */}
@@ -120,22 +143,39 @@ export default function MultimodalResultsScreen() {
                 </View>
 
                 <View style={styles.breakdownContainer}>
-                    {Object.entries(result.individual_scores).map(([key, score]) => (
-                        <View key={key} style={styles.breakdownItem}>
-                            <View style={styles.breakdownInfo}>
-                                <Text style={styles.breakdownLabel}>{t(`history.categories.${key === 'cognitive' ? 'brain' : key}`)}</Text>
-                                <Text style={styles.breakdownValue}>{Math.round(score)}%</Text>
+                    {['wearable', 'voice', 'drawing', 'cognitive'].map((key) => {
+                        const score = result.individual_scores?.[key as keyof typeof result.individual_scores] ?? 0;
+                        const isPending = result.missing_modalities?.includes(key);
+                        const risk = getRiskLevel(score);
+
+                        return (
+                            <View key={key} style={styles.breakdownItem}>
+                                <View style={styles.breakdownInfo}>
+                                    <View>
+                                        <Text style={styles.breakdownLabel}>
+                                            {t(`history.categories.${key === 'cognitive' ? 'brain' : key}`)}
+                                        </Text>
+                                        <Text style={[styles.breakdownRiskLabel, { color: isPending ? '#94A3B8' : risk.color }]}>
+                                            {isPending ? 'Pending' : risk.label}
+                                        </Text>
+                                    </View>
+                                    <Text style={[styles.breakdownValue, isPending && { color: '#94A3B8' }]}>
+                                        {isPending ? '--' : `${Math.round(score)}%`}
+                                    </Text>
+                                </View>
+                                <View style={styles.progressBarBg}>
+                                    {!isPending && (
+                                        <View
+                                            style={[
+                                                styles.progressBarFill,
+                                                { width: `${score}%`, backgroundColor: risk.color }
+                                            ]}
+                                        />
+                                    )}
+                                </View>
                             </View>
-                            <View style={styles.progressBarBg}>
-                                <View
-                                    style={[
-                                        styles.progressBarFill,
-                                        { width: `${score}%`, backgroundColor: getRiskLevel(score).color }
-                                    ]}
-                                />
-                            </View>
-                        </View>
-                    ))}
+                        );
+                    })}
                 </View>
 
                 {/* Disclaimer */}
@@ -246,6 +286,11 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#475569',
     },
+    breakdownRiskLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 2,
+    },
     breakdownValue: {
         fontSize: 14,
         fontWeight: 'bold',
@@ -284,6 +329,21 @@ const styles = StyleSheet.create({
     },
     resetButtonText: {
         fontSize: 16,
+        fontWeight: '600',
+        color: '#0F766E',
+    },
+    pendingCard: {
+        flexDirection: 'row',
+        backgroundColor: '#CCFBF1',
+        borderRadius: 12,
+        padding: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        marginBottom: 20,
+    },
+    pendingText: {
+        fontSize: 14,
         fontWeight: '600',
         color: '#0F766E',
     },

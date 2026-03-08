@@ -25,7 +25,7 @@ export const ProgressCard = () => {
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
     const handleViewResults = () => {
-        if (isSessionComplete) {
+        if (completedTasks.length > 0) {
             router.push({
                 pathname: '/multimodal-results' as any,
                 params: { sessionId }
@@ -43,9 +43,9 @@ export const ProgressCard = () => {
                     <Text style={styles.subtitle}>{t('home.progress.subtitle')}</Text>
 
                     <TouchableOpacity
-                        style={[styles.button, !isSessionComplete && styles.buttonDisabled]}
+                        style={[styles.button, completedTasks.length === 0 && styles.buttonDisabled]}
                         onPress={handleViewResults}
-                        disabled={!isSessionComplete}
+                        disabled={completedTasks.length === 0}
                     >
                         <Text style={styles.buttonText}>
                             {isSessionComplete ? t('home.progress.viewFinalAnalysis') : t('home.progress.viewResults')}

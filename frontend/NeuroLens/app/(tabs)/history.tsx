@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,9 +18,11 @@ import {
   ArrowDown,
   Minus,
   ArrowLeft,
+  AlertCircle,
 } from 'lucide-react-native';
 import Svg, { Polyline, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useLanguage } from '@/contexts/LanguageContext';
+import api from '@/services/api';
 
 interface AssessmentEntry {
   id: string;
@@ -81,198 +84,38 @@ const createAssessmentEntry = (
   };
 };
 
-// Assessment history with model outputs (will be converted to risk scores)
-const ASSESSMENT_HISTORY_RAW = [
-  {
-    id: '1',
-    date: 'Dec 12,2025',
-    overallHealthy: 78, // Model output: 78% healthy = 22% risk
-    categoriesHealthy: { wearable: 82, voice: 75, drawing: 80, brain: 76 },
-  },
-  {
-    id: '2',
-    date: 'Dec 5,2025',
-    overallHealthy: 75, // Model output: 75% healthy = 25% risk
-    categoriesHealthy: { wearable: 78, voice: 72, drawing: 77, brain: 73 },
-  },
-  {
-    id: '3',
-    date: 'Nov 28,2025',
-    overallHealthy: 74, // Model output: 74% healthy = 26% risk
-    categoriesHealthy: { wearable: 76, voice: 70, drawing: 75, brain: 75 },
-  },
-  {
-    id: '4',
-    date: 'Nov 21,2025',
-    overallHealthy: 77, // Model output: 77% healthy = 23% risk
-    categoriesHealthy: { wearable: 80, voice: 74, drawing: 78, brain: 76 },
-  },
-  {
-    id: '5',
-    date: 'Nov 14,2025',
-    overallHealthy: 72, // Model output: 72% healthy = 28% risk
-    categoriesHealthy: { wearable: 74, voice: 68, drawing: 73, brain: 73 },
-  },
-];
-
-// Convert to risk scores
-const ASSESSMENT_HISTORY_BASE: AssessmentEntry[] = ASSESSMENT_HISTORY_RAW.map((entry) => {
-  return createAssessmentEntry(
-    entry.id,
-    entry.date,
-    entry.overallHealthy,
-    entry.categoriesHealthy
-  );
-});
-
-// Calculate trends (for risk: lower is better, so down trend = improving, up trend = worsening)
-const ASSESSMENT_HISTORY: AssessmentEntry[] = ASSESSMENT_HISTORY_BASE.map((entry, index) => {
-  if (index === 0) {
-    return { ...entry, trend: 'stable' as const };
+// Formatting helper
+const formatDate = (isoString?: string) => {
+  if (!isoString) return 'Unknown Date';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch {
+    return isoString;
   }
+};
 
-  const prevRisk = ASSESSMENT_HISTORY_BASE[index - 1].overallScore;
-  const currentRisk = entry.overallScore;
-  const diff = currentRisk - prevRisk;
-
-  let trend: 'up' | 'down' | 'stable' = 'stable';
-  if (Math.abs(diff) <= 1) {
-    trend = 'stable';
-  } else if (diff < 0) {
-    trend = 'down'; // Risk decreased = good (green)
-  } else {
-    trend = 'up'; // Risk increased = bad (red)
+const formatShortDate = (isoString?: string) => {
+  if (!isoString) return '??';
+  try {
+    const d = new Date(isoString);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return isoString;
   }
+};
 
-  return { ...entry, trend };
-});
-
-const TOTAL_ASSESSMENTS = ASSESSMENT_HISTORY.length;
-const AVERAGE_SCORE = Math.round(
-  ASSESSMENT_HISTORY.reduce((sum, entry) => sum + entry.overallScore, 0) / ASSESSMENT_HISTORY.length
-);
-
-// Monthly data (last 6 months)
-const MONTHLY_DATA_RAW = [
-  { id: '1', date: 'Dec 2025', overallHealthy: 78, categoriesHealthy: { wearable: 82, voice: 75, drawing: 80, brain: 76 } },
-  { id: '2', date: 'Nov 2025', overallHealthy: 75, categoriesHealthy: { wearable: 78, voice: 72, drawing: 77, brain: 73 } },
-  { id: '3', date: 'Oct 2025', overallHealthy: 74, categoriesHealthy: { wearable: 76, voice: 70, drawing: 75, brain: 75 } },
-  { id: '4', date: 'Sep 2025', overallHealthy: 77, categoriesHealthy: { wearable: 80, voice: 74, drawing: 78, brain: 76 } },
-  { id: '5', date: 'Aug 2025', overallHealthy: 72, categoriesHealthy: { wearable: 74, voice: 68, drawing: 73, brain: 73 } },
-  { id: '6', date: 'Jul 2025', overallHealthy: 76, categoriesHealthy: { wearable: 79, voice: 73, drawing: 77, brain: 75 } },
-];
-
-// Weekly data (last 4 weeks)
-const WEEKLY_DATA_RAW = [
-  { id: '1', date: 'Week 4', overallHealthy: 78, categoriesHealthy: { wearable: 82, voice: 75, drawing: 80, brain: 76 } },
-  { id: '2', date: 'Week 3', overallHealthy: 75, categoriesHealthy: { wearable: 78, voice: 72, drawing: 77, brain: 73 } },
-  { id: '3', date: 'Week 2', overallHealthy: 74, categoriesHealthy: { wearable: 76, voice: 70, drawing: 75, brain: 75 } },
-  { id: '4', date: 'Week 1', overallHealthy: 77, categoriesHealthy: { wearable: 80, voice: 74, drawing: 78, brain: 76 } },
-];
-
-// Daily data (last 7 days)
-const DAILY_DATA_RAW = [
-  { id: '1', date: 'Dec 12,2025', overallHealthy: 78, categoriesHealthy: { wearable: 82, voice: 75, drawing: 80, brain: 76 } },
-  { id: '2', date: 'Dec 11,2025', overallHealthy: 75, categoriesHealthy: { wearable: 78, voice: 72, drawing: 77, brain: 73 } },
-  { id: '3', date: 'Dec 10,2025', overallHealthy: 74, categoriesHealthy: { wearable: 76, voice: 70, drawing: 75, brain: 75 } },
-  { id: '4', date: 'Dec 9,2025', overallHealthy: 77, categoriesHealthy: { wearable: 80, voice: 74, drawing: 78, brain: 76 } },
-  { id: '5', date: 'Dec 8,2025', overallHealthy: 76, categoriesHealthy: { wearable: 79, voice: 73, drawing: 77, brain: 75 } },
-  { id: '6', date: 'Dec 7,2025', overallHealthy: 73, categoriesHealthy: { wearable: 75, voice: 71, drawing: 74, brain: 72 } },
-  { id: '7', date: 'Dec 6,2025', overallHealthy: 75, categoriesHealthy: { wearable: 77, voice: 73, drawing: 76, brain: 74 } },
-];
-
-// Convert monthly data to risk scores
-const MONTHLY_DATA_BASE: AssessmentEntry[] = MONTHLY_DATA_RAW.map((entry) => {
-  return createAssessmentEntry(
-    entry.id,
-    entry.date,
-    entry.overallHealthy,
-    entry.categoriesHealthy
-  );
-});
-
-const MONTHLY_DATA: AssessmentEntry[] = MONTHLY_DATA_BASE.map((entry, index) => {
-  if (index === 0) {
-    return { ...entry, trend: 'stable' as const };
-  }
-
-  const prevRisk = MONTHLY_DATA_BASE[index - 1].overallScore;
-  const currentRisk = entry.overallScore;
-  const diff = currentRisk - prevRisk;
-
-  let trend: 'up' | 'down' | 'stable' = 'stable';
-  if (Math.abs(diff) <= 1) {
-    trend = 'stable';
-  } else if (diff < 0) {
-    trend = 'down';
-  } else {
-    trend = 'up';
-  }
-
-  return { ...entry, trend };
-});
-
-// Convert weekly data to risk scores
-const WEEKLY_DATA_BASE: AssessmentEntry[] = WEEKLY_DATA_RAW.map((entry) => {
-  return createAssessmentEntry(
-    entry.id,
-    entry.date,
-    entry.overallHealthy,
-    entry.categoriesHealthy
-  );
-});
-
-const WEEKLY_DATA: AssessmentEntry[] = WEEKLY_DATA_BASE.map((entry, index) => {
-  if (index === 0) {
-    return { ...entry, trend: 'stable' as const };
-  }
-
-  const prevRisk = WEEKLY_DATA_BASE[index - 1].overallScore;
-  const currentRisk = entry.overallScore;
-  const diff = currentRisk - prevRisk;
-
-  let trend: 'up' | 'down' | 'stable' = 'stable';
-  if (Math.abs(diff) <= 1) {
-    trend = 'stable';
-  } else if (diff < 0) {
-    trend = 'down';
-  } else {
-    trend = 'up';
-  }
-
-  return { ...entry, trend };
-});
-
-// Convert daily data to risk scores
-const DAILY_DATA_BASE: AssessmentEntry[] = DAILY_DATA_RAW.map((entry) => {
-  return createAssessmentEntry(
-    entry.id,
-    entry.date,
-    entry.overallHealthy,
-    entry.categoriesHealthy
-  );
-});
-
-const DAILY_DATA: AssessmentEntry[] = DAILY_DATA_BASE.map((entry, index) => {
-  if (index === 0) {
-    return { ...entry, trend: 'stable' as const };
-  }
-
-  const prevRisk = DAILY_DATA_BASE[index - 1].overallScore;
-  const currentRisk = entry.overallScore;
-  const diff = currentRisk - prevRisk;
-
-  let trend: 'up' | 'down' | 'stable' = 'stable';
-  if (Math.abs(diff) <= 1) {
-    trend = 'stable';
-  } else if (diff < 0) {
-    trend = 'down';
-  } else {
-    trend = 'up';
-  }
-
-  return { ...entry, trend };
-});
+interface BackendHistoryEntry {
+  id: string;
+  timestamp: string;
+  final_multimodal_risk: number;
+  individual_scores: {
+    wearable: number;
+    voice: number;
+    drawing: number;
+    cognitive: number;
+  };
+}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isSmallScreen = SCREEN_WIDTH < 400;
@@ -469,11 +312,98 @@ export default function HistoryScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [historyData, setHistoryData] = useState<AssessmentEntry[]>([]);
+
+  useEffect(() => {
+    // Keeping data hardcoded for now as requested
+    const hardcodedData: AssessmentEntry[] = [
+      {
+        id: '1',
+        date: 'Mar 8, 2026',
+        overallScore: 28,
+        trend: 'down',
+        categories: { wearable: 32, voice: 25, drawing: 15, brain: 40 }
+      },
+      {
+        id: '2',
+        date: 'Mar 5, 2026',
+        overallScore: 35,
+        trend: 'up',
+        categories: { wearable: 38, voice: 30, drawing: 22, brain: 50 }
+      },
+      {
+        id: '3',
+        date: 'Feb 28, 2026',
+        overallScore: 30,
+        trend: 'stable',
+        categories: { wearable: 35, voice: 28, drawing: 18, brain: 39 }
+      },
+      {
+        id: '4',
+        date: 'Feb 20, 2026',
+        overallScore: 42,
+        trend: 'down',
+        categories: { wearable: 45, voice: 40, drawing: 35, brain: 48 }
+      },
+      {
+        id: '5',
+        date: 'Feb 10, 2026',
+        overallScore: 55,
+        trend: 'stable',
+        categories: { wearable: 60, voice: 55, drawing: 50, brain: 55 }
+      }
+    ];
+
+    setHistoryData(hardcodedData);
+    setLoading(false);
+  }, []);
+
+  const fetchHistory = async () => {
+    // API fetching disabled for now
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, 500);
+  };
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / SCREEN_WIDTH);
     setActiveIndex(index);
   };
+
+  const totalAssessments = historyData.length;
+  const averageRisk = totalAssessments > 0
+    ? Math.round(historyData.reduce((sum, e) => sum + e.overallScore, 0) / totalAssessments)
+    : 0;
+
+  // Filter for graphs
+  const dailyData = [...historyData].slice(0, 7).reverse();
+  const weeklyData = [...historyData].slice(0, 4).reverse();
+  const monthlyData = [...historyData].slice(0, 6).reverse();
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#14B8A6" />
+        <Text style={styles.loadingText}>Loading history...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.centerContainer}>
+        <AlertCircle size={48} color="#EF4444" />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchHistory}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -506,17 +436,17 @@ export default function HistoryScreen() {
           >
             {/* Daily Progress Card */}
             <View style={styles.progressCard}>
-              <LineGraph data={DAILY_DATA} title={t('history.graphs.daily')} />
+              <LineGraph data={dailyData} title={t('history.graphs.daily')} />
             </View>
 
             {/* Weekly Progress Card */}
             <View style={styles.progressCard}>
-              <LineGraph data={WEEKLY_DATA} title={t('history.graphs.weekly')} />
+              <LineGraph data={weeklyData} title={t('history.graphs.weekly')} />
             </View>
 
             {/* Monthly Progress Card */}
             <View style={styles.progressCard}>
-              <LineGraph data={MONTHLY_DATA} title={t('history.graphs.monthly')} />
+              <LineGraph data={monthlyData} title={t('history.graphs.monthly')} />
             </View>
           </ScrollView>
 
@@ -532,63 +462,69 @@ export default function HistoryScreen() {
         <View style={styles.summaryCard}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>{t('history.summary.totalAssessments')}</Text>
-            <Text style={styles.summaryValue}>{TOTAL_ASSESSMENTS}</Text>
+            <Text style={styles.summaryValue}>{totalAssessments}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>{t('history.summary.averageRisk')}</Text>
-            <Text style={[styles.summaryValue, { color: getRiskColor(getRiskLevel(AVERAGE_SCORE)) }]}>
-              {AVERAGE_SCORE}%
+            <Text style={[styles.summaryValue, { color: getRiskColor(getRiskLevel(averageRisk)) }]}>
+              {averageRisk}%
             </Text>
           </View>
         </View>
 
         {/* Assessment History Entries */}
-        {ASSESSMENT_HISTORY.map((entry) => (
-          <View key={entry.id} style={styles.assessmentCard}>
-            {/* Date and Overall Score Row */}
-            <View style={styles.assessmentHeader}>
-              <View style={styles.dateContainer}>
-                <Calendar size={18} color="#64748B" />
-                <Text style={styles.dateText}>{entry.date}</Text>
-              </View>
-              <View style={styles.scoreContainer}>
-                <TrendIcon trend={entry.trend} />
-                <Text style={[styles.overallScoreText, { color: getRiskColor(getRiskLevel(entry.overallScore)) }]}>
-                  {entry.overallScore}%
-                </Text>
-              </View>
-            </View>
-
-            {/* Category Scores */}
-            <View style={styles.categoriesContainer}>
-              <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>{t('history.categories.wearable')}</Text>
-                <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.wearable)) }]}>
-                  {entry.categories.wearable}%
-                </Text>
-              </View>
-              <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>{t('history.categories.voice')}</Text>
-                <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.voice)) }]}>
-                  {entry.categories.voice}%
-                </Text>
-              </View>
-              <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>{t('history.categories.drawing')}</Text>
-                <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.drawing)) }]}>
-                  {entry.categories.drawing}%
-                </Text>
-              </View>
-              <View style={styles.categoryItem}>
-                <Text style={styles.categoryLabel}>{t('history.categories.brain')}</Text>
-                <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.brain)) }]}>
-                  {entry.categories.brain}%
-                </Text>
-              </View>
-            </View>
+        {historyData.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No assessments found yet.</Text>
           </View>
-        ))}
+        ) : (
+          historyData.map((entry) => (
+            <View key={entry.id} style={styles.assessmentCard}>
+              {/* Date and Overall Score Row */}
+              <View style={styles.assessmentHeader}>
+                <View style={styles.dateContainer}>
+                  <Calendar size={18} color="#64748B" />
+                  <Text style={styles.dateText}>{entry.date}</Text>
+                </View>
+                <View style={styles.scoreContainer}>
+                  <TrendIcon trend={entry.trend} />
+                  <Text style={[styles.overallScoreText, { color: getRiskColor(getRiskLevel(entry.overallScore)) }]}>
+                    {entry.overallScore}%
+                  </Text>
+                </View>
+              </View>
+
+              {/* Category Scores */}
+              <View style={styles.categoriesContainer}>
+                <View style={styles.categoryItem}>
+                  <Text style={styles.categoryLabel}>{t('history.categories.wearable')}</Text>
+                  <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.wearable)) }]}>
+                    {entry.categories.wearable}%
+                  </Text>
+                </View>
+                <View style={styles.categoryItem}>
+                  <Text style={styles.categoryLabel}>{t('history.categories.voice')}</Text>
+                  <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.voice)) }]}>
+                    {entry.categories.voice}%
+                  </Text>
+                </View>
+                <View style={styles.categoryItem}>
+                  <Text style={styles.categoryLabel}>{t('history.categories.drawing')}</Text>
+                  <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.drawing)) }]}>
+                    {entry.categories.drawing}%
+                  </Text>
+                </View>
+                <View style={styles.categoryItem}>
+                  <Text style={styles.categoryLabel}>{t('history.categories.brain')}</Text>
+                  <Text style={[styles.categoryScore, { color: getRiskColor(getRiskLevel(entry.categories.brain)) }]}>
+                    {entry.categories.brain}%
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ))
+        )}
 
         {/* Bottom padding for tab bar */}
         <View style={{ height: 20 }} />
@@ -601,6 +537,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748B',
+  },
+  errorText: {
+    marginTop: 16,
+    marginBottom: 24,
+    fontSize: 16,
+    color: '#EF4444',
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#14B8A6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#64748B',
+    fontSize: 16,
   },
   header: {
     flexDirection: 'row',
