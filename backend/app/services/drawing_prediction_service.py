@@ -198,6 +198,10 @@ def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, An
 def analyze_with_local_model(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, Any]:
     spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
     wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    # pixel_ratio converts React Native logical pixels → physical pixels so that
+    # coordinate-scale-dependent features (wavy_wave_rmse) match the training
+    # data which was collected in physical pixels on the Vivo X27 (1080px wide).
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
 
     # Fetch age from Firestore profile so the model gets the real value
     age: float = 0.0
@@ -211,7 +215,7 @@ def analyze_with_local_model(user_id: str, drawing_data: Dict[str, Any]) -> Dict
     except Exception:
         pass  
 
-    rfe_features = extract_rfe_features(spiral_points, wave_points)
+    rfe_features = extract_rfe_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
     rfe_features["age"] = age   # inject so scaler finds it if model was trained with age
 
     prediction = predict_drawing_risk(rfe_features)

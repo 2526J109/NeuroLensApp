@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     ScrollView,
     Dimensions,
+    PixelRatio,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -104,7 +105,8 @@ export default function DrawingTestScreen() {
                         userId,
                         spiralDataJSON!,
                         jsonData!,
-                        firebaseToken
+                        firebaseToken,
+                        PixelRatio.get()
                     );
                     console.log('Prediction response:', predictionResponse);
                     // Navigate to results screen with prediction

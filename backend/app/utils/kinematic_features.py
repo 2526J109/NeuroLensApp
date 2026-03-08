@@ -88,16 +88,16 @@ RFE_FEATURE_NAMES: List[str] = [
 def extract_rfe_features(
     spiral_points: List[Dict[str, float]],
     wave_points: List[Dict[str, float]],
+    pixel_ratio: float = 1.0,
 ) -> Dict[str, float]:
     """
-    Matches the training  preprocessing exactly:
-      1. Resample to 60 Hz  (training app captured at uniform 60 Hz)
-      2. Geometry features on resampled raw positions  (notebook
-         extract_geometry_features uses raw x,y -- no time normalization)
-      3. Kinematic features on Gaussian-smoothed (sigma=5) resampled positions
-         -- approximates the hardware-smooth vx,vy stored in training CSVs
-      4. Velocity/jerk via np.diff chains (paper Sec 3.3: a=Dv/Dt, j=Da/Dt);
-         vel_cv and jerk_cv are dimensionless std/mean ratios so dt cancels
+    Matches the training preprocessing exactly:
+      1. Scale coords by pixel_ratio (logical→physical px, matching training device)
+      2. Resample to 60 Hz  (training app captured at uniform 60 Hz)
+      3. Geometry features on resampled raw positions
+      4. Kinematic features on Gaussian-smoothed (sigma=5) resampled positions
+      5. Velocity/jerk via np.diff chains (paper Sec 3.3: a=Dv/Dt, j=Da/Dt);
+         vel_cv and jerk_cv are dimensionless std/mean ratios so scale cancels
     """
     SIGMA = 5
 
