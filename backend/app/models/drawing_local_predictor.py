@@ -4,7 +4,6 @@ import os
 import logging
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 from app.utils.kinematic_features import RFE_FEATURE_NAMES
@@ -56,61 +55,40 @@ def predict_drawing_risk(features: Dict[str, float]) -> Dict[str, Any]:
 
     logger.info("[DrawingLocalPredictor] Raw features received: %s", features)
 
-    # ── Trained sklearn model ─────────────────────────────────────────────
-    if bundle is not None:
-        try:
-            model   = bundle["model"]
-            scaler  = bundle["scaler"]
+    if bundle is None:
+        raise RuntimeError(
+            "drawing_lr_model.joblib not found or failed to load. "
+            "Ensure the model file exists at: " + _MODEL_PATH
+        )
 
-           
-            scaler_cols: List[str] = list(
-                getattr(scaler, "feature_names_in_", bundle.get("features", RFE_FEATURE_NAMES))
-            )
-            row = pd.DataFrame(
-                [[features.get(f, 0.0) for f in scaler_cols]],
-                columns=scaler_cols,
-            )
-            row_scaled = scaler.transform(row)
-            prob       = float(model.predict_proba(row_scaled)[:, 1][0])
-            logger.info("[DrawingLocalPredictor] Scaled row: %s  →  P(Parkinson)=%.4f", row_scaled.tolist(), prob)
-            risk_pct   = round(prob * 100, 2)
-            conf_pct   = round(max(prob, 1.0 - prob) * 100, 2)
-            return {
-                "risk_percentage": risk_pct,
-                "risk_level":      _risk_level(risk_pct),
-                "label":           "Parkinson's Detected" if prob >= 0.5 else "Normal",
-                "confidence":      conf_pct,
-                "source":          "local_model",
-            }
-        except Exception as exc:
-            logger.warning(
-                "[DrawingLocalPredictor] Inference error: %s — using heuristic.", exc
-            )
+    model  = bundle["model"]
+    scaler = bundle["scaler"]
 
-    w = {
-        "spiral_vel_cv":         3.6,
-        "spiral_jerk_cv":        2.6,
-        "wavy_vel_cv":           2.0,
-        "wavy_wave_rmse":        1.1,
-        "wavy_radius_resid_std": 0.8,
-        "wavy_jerk_cv":          0.6,
-    }
-    total_w = sum(w.values())  # 10.7
+    scaler_cols: List[str] = list(
+        getattr(scaler, "feature_names_in_", bundle.get("features", RFE_FEATURE_NAMES))
+    )
+    # Use scaler training means as defaults for any missing feature (e.g. age when
+    # Firestore fetch fails).  Defaulting to 0 is dangerous because 0 can be 13+
+    # standard deviations from the training mean (e.g. age mean=68, std=5), which
+    # drives the model far outside its training distribution.
+    scaler_means = dict(zip(scaler.feature_names_in_, scaler.mean_))
+    row = pd.DataFrame(
+        [[features.get(f, scaler_means.get(f, 0.0)) for f in scaler_cols]],
+        columns=scaler_cols,
+    )
+    row_scaled = scaler.transform(row)
+    prob = float(model.predict_proba(row_scaled)[:, 1][0])
+    logger.info(
+        "[DrawingLocalPredictor] Scaled row: %s  →  P(Parkinson)=%.4f",
+        row_scaled.tolist(), prob
+    )
 
-    def _sigmoid(v: float, scale: float = 1.0) -> float:
-        return float(1.0 / (1.0 + np.exp(-v * scale)))
-
-    score = sum(
-        w[f] * _sigmoid(features.get(f, 0.0))
-        for f in RFE_FEATURE_NAMES
-    ) / total_w  
-
-    risk_pct = round(score * 100, 2)
-    conf_pct = round(max(score, 1.0 - score) * 100, 2)
+    risk_pct = round(prob * 100, 2)
+    conf_pct = round(max(prob, 1.0 - prob) * 100, 2)
     return {
         "risk_percentage": risk_pct,
         "risk_level":      _risk_level(risk_pct),
-        "label":           "Parkinson's Detected" if risk_pct >= 50.0 else "Normal",
+        "label":           "Parkinson's Detected" if prob >= 0.5 else "Normal",
         "confidence":      conf_pct,
-        "source":          "rule_based_fallback",
+        "source":          "local_model",
     }

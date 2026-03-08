@@ -47,8 +47,7 @@ def _compute_jerk_cv(x: np.ndarray, y: np.ndarray, t: np.ndarray) -> float:
 
 
 def _compute_radius_resid_std(x: np.ndarray, y: np.ndarray) -> float:
-    """Std of radial distance from centroid — path deviation from ideal circle."""
-    r = np.sqrt((x - np.mean(x))**2 + (y - np.mean(y))**2)
+    r = np.sqrt(x**2 + y**2)
     return float(np.std(r))
 
 
@@ -90,66 +89,103 @@ def extract_rfe_features(
     spiral_points: List[Dict[str, float]],
     wave_points: List[Dict[str, float]],
 ) -> Dict[str, float]:
-    # Device DPI — converts raw screen pixels → inches (same scale as training data)
-    X_DPI: float = 403.411
-    Y_DPI: float = 401.594
+    """
+    Matches the training  preprocessing exactly:
+      1. Resample to 60 Hz  (training app captured at uniform 60 Hz)
+      2. Geometry features on resampled raw positions  (notebook
+         extract_geometry_features uses raw x,y -- no time normalization)
+      3. Kinematic features on Gaussian-smoothed (sigma=5) resampled positions
+         -- approximates the hardware-smooth vx,vy stored in training CSVs
+      4. Velocity/jerk via np.diff chains (paper Sec 3.3: a=Dv/Dt, j=Da/Dt);
+         vel_cv and jerk_cv are dimensionless std/mean ratios so dt cancels
+    """
+    SIGMA = 5
 
     features: Dict[str, float] = {k: 0.0 for k in RFE_FEATURE_NAMES}
 
-    # ── Spiral (spiral_vel_cv, spiral_jerk_cv) ────────────────────────────
-    if spiral_points and len(spiral_points) > 1:
-        sx = np.array([p["x"] for p in spiral_points], dtype=float) / X_DPI
-        sy = np.array([p["y"] for p in spiral_points], dtype=float) / Y_DPI
-        st = np.array([p["timestamp"] for p in spiral_points], dtype=float) / 1000.0
-        sx, sy, st = _resample_uniform(sx, sy, st)
+    if spiral_points and len(spiral_points) > 5:
+        sx_raw = np.array([p["x"] for p in spiral_points], dtype=float)
+        sy_raw = np.array([p["y"] for p in spiral_points], dtype=float)
+        st_raw = np.array([p["timestamp"] for p in spiral_points], dtype=float) / 1000.0
 
-        sv = compute_velocity(sx, sy, st)
-        features["spiral_vel_cv"]   = compute_vel_cv(sv)
-        features["spiral_jerk_cv"]  = _compute_jerk_cv(sx, sy, st)
+        sx_r, sy_r, _ = _resample_uniform(sx_raw, sy_raw, st_raw, hz=60.0)
+        if len(sx_r) < 6:
+            sx_r, sy_r = sx_raw, sy_raw
 
-    # ── Wavy (wavy_vel_cv, wavy_wave_rmse, wavy_radius_resid_std, wavy_jerk_cv)
-    if wave_points and len(wave_points) > 1:
-        wx = np.array([p["x"] for p in wave_points], dtype=float) / X_DPI
-        wy = np.array([p["y"] for p in wave_points], dtype=float) / Y_DPI
-        wt = np.array([p["timestamp"] for p in wave_points], dtype=float) / 1000.0
-        wx, wy, wt = _resample_uniform(wx, wy, wt)
+        sx = gaussian_filter1d(sx_r, sigma=SIGMA)
+        sy = gaussian_filter1d(sy_r, sigma=SIGMA)
 
-        wv = compute_velocity(wx, wy, wt)
-        features["wavy_vel_cv"]          = compute_vel_cv(wv)
-        features["wavy_wave_rmse"]        = _compute_wave_rmse(wy)
-        features["wavy_radius_resid_std"] = _compute_radius_resid_std(wx, wy)
-        features["wavy_jerk_cv"]          = _compute_jerk_cv(wx, wy, wt)
+        vx = np.diff(sx)
+        vy = np.diff(sy)
+        vel = np.sqrt(vx**2 + vy**2)
+        features["spiral_vel_cv"] = float(np.std(vel) / (np.mean(vel) + 1e-8))
+
+        ax = np.diff(vx)
+        ay = np.diff(vy)
+        jx = np.diff(ax)
+        jy = np.diff(ay)
+        jerk = np.sqrt(jx**2 + jy**2)
+        features["spiral_jerk_cv"] = float(np.std(jerk) / (np.mean(jerk) + 1e-8))
+
+    if wave_points and len(wave_points) > 5:
+        wx_raw = np.array([p["x"] for p in wave_points], dtype=float)
+        wy_raw = np.array([p["y"] for p in wave_points], dtype=float)
+        wt_raw = np.array([p["timestamp"] for p in wave_points], dtype=float) / 1000.0
+
+        wx_r, wy_r, _ = _resample_uniform(wx_raw, wy_raw, wt_raw, hz=60.0)
+        if len(wx_r) < 6:
+            wx_r, wy_r = wx_raw, wy_raw
+
+        # Geometry on resampled raw positions -- matches notebook extract_geometry_features
+        y_ref = gaussian_filter1d(wy_r, sigma=SIGMA)
+        features["wavy_wave_rmse"]        = float(np.sqrt(np.mean((wy_r - y_ref)**2)))
+        features["wavy_radius_resid_std"] = float(np.std(np.sqrt(wx_r**2 + wy_r**2)))
+
+        wx = gaussian_filter1d(wx_r, sigma=SIGMA)
+        wy = gaussian_filter1d(wy_r, sigma=SIGMA)
+
+        vx = np.diff(wx)
+        vy = np.diff(wy)
+        vel = np.sqrt(vx**2 + vy**2)
+        features["wavy_vel_cv"] = float(np.std(vel) / (np.mean(vel) + 1e-8))
+
+        ax = np.diff(vx)
+        ay = np.diff(vy)
+        jx = np.diff(ax)
+        jy = np.diff(ay)
+        jerk = np.sqrt(jx**2 + jy**2)
+        features["wavy_jerk_cv"] = float(np.std(jerk) / (np.mean(jerk) + 1e-8))
 
     return features
-
 
 # ── Original 5-feature extractor (used by existing HF-Space pipeline) ────────
 
 def extract_kinematic_features(spiral_points: List[Dict[str, float]], wave_points: List[Dict[str, float]]) -> Dict[str, float]:
     """
     Extract 5 core kinematic features from spiral and wave point sequences.
-    
-    Args:
-        spiral_points: List of dicts with 'x', 'y', 'timestamp' (ms)
-        wave_points: List of dicts with 'x', 'y', 'timestamp' (ms)
-        
-    Returns:
-        Dictionary of 5 extracted features
+    Uses the same preprocessing as extract_rfe_features:
+      - Raw pixel coordinates (no DPI conversion)
+      - Resample to 60 Hz (matches training data capture rate)
+      - Gaussian smooth (sigma=5) before kinematic computation
+      - np.diff-based velocity (via compute_velocity)
     """
-    # Device DPI — converts raw screen pixels → inches (same scale as training data)
-    X_DPI: float = 403.411
-    Y_DPI: float = 401.594
-
+    SIGMA = 5
     features = {}
 
     # ---- Spiral Data ----
-    if spiral_points and len(spiral_points) > 1:
-        sx = np.array([p["x"] for p in spiral_points]) / X_DPI
-        sy = np.array([p["y"] for p in spiral_points]) / Y_DPI
-        st = np.array([p["timestamp"] for p in spiral_points]) / 1000.0
-        sx, sy, st = _resample_uniform(sx, sy, st)
+    if spiral_points and len(spiral_points) > 5:
+        sx_raw = np.array([p["x"] for p in spiral_points], dtype=float)
+        sy_raw = np.array([p["y"] for p in spiral_points], dtype=float)
+        st_raw = np.array([p["timestamp"] for p in spiral_points], dtype=float) / 1000.0
 
-        spiral_velocity = compute_velocity(sx, sy, st)
+        sx_r, sy_r, st_r = _resample_uniform(sx_raw, sy_raw, st_raw, hz=60.0)
+        if len(sx_r) < 6:
+            sx_r, sy_r, st_r = sx_raw, sy_raw, st_raw
+
+        sx = gaussian_filter1d(sx_r, sigma=SIGMA)
+        sy = gaussian_filter1d(sy_r, sigma=SIGMA)
+
+        spiral_velocity = compute_velocity(sx, sy, st_r)
         spiral_curvature = compute_curvature(sx, sy)
 
         features["spiral_vel_cv"] = float(compute_vel_cv(spiral_velocity))
@@ -161,13 +197,19 @@ def extract_kinematic_features(spiral_points: List[Dict[str, float]], wave_point
         features["spiral_curv_std"] = 0.0
 
     # ---- Wave Data ----
-    if wave_points and len(wave_points) > 1:
-        wx = np.array([p["x"] for p in wave_points]) / X_DPI
-        wy = np.array([p["y"] for p in wave_points]) / Y_DPI
-        wt = np.array([p["timestamp"] for p in wave_points]) / 1000.0
-        wx, wy, wt = _resample_uniform(wx, wy, wt)
+    if wave_points and len(wave_points) > 5:
+        wx_raw = np.array([p["x"] for p in wave_points], dtype=float)
+        wy_raw = np.array([p["y"] for p in wave_points], dtype=float)
+        wt_raw = np.array([p["timestamp"] for p in wave_points], dtype=float) / 1000.0
 
-        wave_velocity = compute_velocity(wx, wy, wt)
+        wx_r, wy_r, wt_r = _resample_uniform(wx_raw, wy_raw, wt_raw, hz=60.0)
+        if len(wx_r) < 6:
+            wx_r, wy_r, wt_r = wx_raw, wy_raw, wt_raw
+
+        wx = gaussian_filter1d(wx_r, sigma=SIGMA)
+        wy = gaussian_filter1d(wy_r, sigma=SIGMA)
+
+        wave_velocity = compute_velocity(wx, wy, wt_r)
 
         features["wave_vel_cv"] = float(compute_vel_cv(wave_velocity))
         features["wave_pause_ratio"] = float(compute_pause_ratio(wave_velocity))
