@@ -37,6 +37,8 @@ export default function SignupScreen() {
     birthday?: string;
     gender?: string;
     handedness?: string;
+    familyHistory?: string;
+    remSleep?: string;
   }>({});
 
   // New fields
@@ -47,12 +49,18 @@ export default function SignupScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [handedness, setHandedness] = useState<string>('');
   const [showHandednessDropdown, setShowHandednessDropdown] = useState(false);
+  const [familyHistory, setFamilyHistory] = useState<string>('');
+  const [showFamilyDropdown, setShowFamilyDropdown] = useState(false);
+  const [remSleep, setRemSleep] = useState<string>('');
+  const [showRemDropdown, setShowRemDropdown] = useState(false);
 
   // Dynamic z-index for dropdowns
   const [dropdownZIndex, setDropdownZIndex] = useState(100);
 
   const genderOptions = ['Male', 'Female', 'Prefer not to say'];
   const handednessOptions = ['Left', 'Right'];
+  const familyHistoryOptions = ['No', 'Yes', 'Not Sure'];
+  const remSleepOptions = ['No', 'Yes'];
 
   const languages = [
     { code: 'en', label: 'GB English', flag: 'GB' },
@@ -68,6 +76,8 @@ export default function SignupScreen() {
       birthday?: string;
       gender?: string;
       handedness?: string;
+      familyHistory?: string;
+      remSleep?: string;
     } = {};
 
     // Validate full name first
@@ -136,7 +146,21 @@ export default function SignupScreen() {
 
     // Validate handedness
     if (!handedness) {
-      newErrors.handedness = t('auth.validation.selectHandedness');
+      newErrors.handedness = t('auth.validation.selectHandedness') || 'Please select your handedness';
+      setErrors(newErrors);
+      return false;
+    }
+
+    // Validate family history
+    if (!familyHistory) {
+      newErrors.familyHistory = 'Please select an option';
+      setErrors(newErrors);
+      return false;
+    }
+
+    // Validate REM sleep
+    if (!remSleep) {
+      newErrors.remSleep = 'Please select an option';
       setErrors(newErrors);
       return false;
     }
@@ -149,7 +173,23 @@ export default function SignupScreen() {
     if (validateForm()) {
       setLoading(true);
       try {
-        await signUp(email, password, fullName, gender, birthday, handedness);
+        let mappedFamilyHistory = 0;
+        if (familyHistory === 'Yes') mappedFamilyHistory = 1;
+        else if (familyHistory === 'Not Sure') mappedFamilyHistory = 2;
+        
+        let mappedRemSleep = 0;
+        if (remSleep === 'Yes') mappedRemSleep = 1;
+
+        await signUp(
+          email,
+          password,
+          fullName,
+          gender,
+          birthday,
+          handedness,
+          mappedFamilyHistory,
+          mappedRemSleep
+        );
 
         Toast.show({
           type: 'success',
@@ -207,6 +247,8 @@ export default function SignupScreen() {
                 setShowLanguageDropdown(!showLanguageDropdown);
                 setShowGenderDropdown(false);
                 setShowHandednessDropdown(false);
+                setShowFamilyDropdown(false);
+                setShowRemDropdown(false);
               }}
               activeOpacity={0.7}
             >
@@ -380,6 +422,8 @@ export default function SignupScreen() {
                   setShowDatePicker(true);
                   setShowGenderDropdown(false);
                   setShowHandednessDropdown(false);
+                  setShowFamilyDropdown(false);
+                  setShowRemDropdown(false);
                   setShowLanguageDropdown(false);
                   setFocusedField('birthday');
                 }}
@@ -419,6 +463,8 @@ export default function SignupScreen() {
                     const isOpening = !showGenderDropdown;
                     setShowGenderDropdown(isOpening);
                     setShowHandednessDropdown(false);
+                    setShowFamilyDropdown(false);
+                    setShowRemDropdown(false);
                     setShowLanguageDropdown(false);
                     setShowDatePicker(false);
                     setFocusedField(isOpening ? 'gender' : null);
@@ -498,6 +544,8 @@ export default function SignupScreen() {
                     const isOpening = !showHandednessDropdown;
                     setShowHandednessDropdown(isOpening);
                     setShowGenderDropdown(false);
+                    setShowFamilyDropdown(false);
+                    setShowRemDropdown(false);
                     setShowLanguageDropdown(false);
                     setShowDatePicker(false);
                     setFocusedField(isOpening ? 'handedness' : null);
@@ -556,6 +604,174 @@ export default function SignupScreen() {
                       <AlertCircle size={16} color="#FFFFFF" />
                     </View>
                     <Text style={styles.errorTooltipText}>{errors.handedness}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Family History Field */}
+            <View style={[styles.inputGroup, showFamilyDropdown && { zIndex: 1002 }]}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.inputLabel}>{t('auth.familyHistory')}</Text>
+              </View>
+              <Text style={styles.fieldQuestion}>
+                {t('auth.familyHistoryQuestion')}
+              </Text>
+              <View style={[styles.dropdownContainer, showFamilyDropdown && { zIndex: 1002 }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownButton,
+                    focusedField === 'familyHistory' && styles.inputWrapperFocused,
+                    errors.familyHistory && styles.inputWrapperError
+                  ]}
+                  onPress={() => {
+                    const isOpening = !showFamilyDropdown;
+                    setShowFamilyDropdown(isOpening);
+                    setShowGenderDropdown(false);
+                    setShowHandednessDropdown(false);
+                    setShowRemDropdown(false);
+                    setShowLanguageDropdown(false);
+                    setShowDatePicker(false);
+                    setFocusedField(isOpening ? 'familyHistory' : null);
+                    if (isOpening) {
+                      setDropdownZIndex(1002);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.dropdownButtonText, !familyHistory && styles.dropdownPlaceholder]}>
+                    {familyHistory ? t(`auth.familyHistoryOptions.${familyHistory}`) : t('auth.selectOption')}
+                  </Text>
+                  <ChevronDown size={20} color="#64748B" />
+                </TouchableOpacity>
+
+                {showFamilyDropdown && (
+                  <>
+                    <TouchableWithoutFeedback
+                      onPress={() => {
+                        setShowFamilyDropdown(false);
+                        setFocusedField(null);
+                      }}
+                    >
+                      <View style={[styles.dropdownOverlay, { zIndex: dropdownZIndex - 1 }]} />
+                    </TouchableWithoutFeedback>
+                    <View style={[styles.dropdownMenu, { zIndex: dropdownZIndex }]}>
+                      {familyHistoryOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            setFamilyHistory(option);
+                            setShowFamilyDropdown(false);
+                            setFocusedField(null);
+                            if (errors.familyHistory) {
+                              setErrors({ ...errors, familyHistory: undefined });
+                            }
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.dropdownOptionText}>{t(`auth.familyHistoryOptions.${option}`)}</Text>
+                          {familyHistory === option && (
+                            <Check size={16} color="#14B8A6" />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </View>
+              {errors.familyHistory && (
+                <View style={styles.errorTooltip}>
+                  <View style={styles.errorTooltipArrow} />
+                  <View style={styles.errorTooltipContent}>
+                    <View style={styles.errorIconContainer}>
+                      <AlertCircle size={16} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.errorTooltipText}>{errors.familyHistory}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* REM Sleep Field */}
+            <View style={[styles.inputGroup, showRemDropdown && { zIndex: 1003 }]}>
+              <View style={styles.labelContainer}>
+                <Text style={styles.inputLabel}>{t('auth.remSleep')}</Text>
+              </View>
+              <Text style={styles.fieldQuestion}>
+                {t('auth.remSleepQuestion')}
+              </Text>
+              <View style={[styles.dropdownContainer, showRemDropdown && { zIndex: 1003 }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownButton,
+                    focusedField === 'remSleep' && styles.inputWrapperFocused,
+                    errors.remSleep && styles.inputWrapperError
+                  ]}
+                  onPress={() => {
+                    const isOpening = !showRemDropdown;
+                    setShowRemDropdown(isOpening);
+                    setShowGenderDropdown(false);
+                    setShowHandednessDropdown(false);
+                    setShowFamilyDropdown(false);
+                    setShowLanguageDropdown(false);
+                    setShowDatePicker(false);
+                    setFocusedField(isOpening ? 'remSleep' : null);
+                    if (isOpening) {
+                      setDropdownZIndex(1003);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.dropdownButtonText, !remSleep && styles.dropdownPlaceholder]}>
+                    {remSleep ? t(`auth.remSleepOptions.${remSleep}`) : t('auth.selectOption')}
+                  </Text>
+                  <ChevronDown size={20} color="#64748B" />
+                </TouchableOpacity>
+
+                {showRemDropdown && (
+                  <>
+                    <TouchableWithoutFeedback
+                      onPress={() => {
+                        setShowRemDropdown(false);
+                        setFocusedField(null);
+                      }}
+                    >
+                      <View style={[styles.dropdownOverlay, { zIndex: dropdownZIndex - 1 }]} />
+                    </TouchableWithoutFeedback>
+                    <View style={[styles.dropdownMenu, { zIndex: dropdownZIndex }]}>
+                      {remSleepOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            setRemSleep(option);
+                            setShowRemDropdown(false);
+                            setFocusedField(null);
+                            if (errors.remSleep) {
+                              setErrors({ ...errors, remSleep: undefined });
+                            }
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.dropdownOptionText}>{t(`auth.remSleepOptions.${option}`)}</Text>
+                          {remSleep === option && (
+                            <Check size={16} color="#14B8A6" />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </View>
+              {errors.remSleep && (
+                <View style={styles.errorTooltip}>
+                  <View style={styles.errorTooltipArrow} />
+                  <View style={styles.errorTooltipContent}>
+                    <View style={styles.errorIconContainer}>
+                      <AlertCircle size={16} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.errorTooltipText}>{errors.remSleep}</Text>
                   </View>
                 </View>
               )}
@@ -1008,6 +1224,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
+  },
+  fieldQuestion: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#334155',
+    marginBottom: 10,
+    lineHeight: 20,
   },
   inputWrapper: {
     backgroundColor: '#FFFFFF',

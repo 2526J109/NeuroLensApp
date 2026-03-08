@@ -19,6 +19,8 @@ interface UserProfile {
   gender?: string;
   birthday?: string;
   handedness?: string;
+  family_history?: number;
+  rem_sleep?: number;
 }
 
 interface AuthContextType {
@@ -31,7 +33,9 @@ interface AuthContextType {
     fullName?: string,
     gender?: string,
     birthday?: string,
-    handedness?: string
+    handedness?: string,
+    familyHistory?: number,
+    remSleep?: number
   ) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -98,12 +102,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     fullName?: string,
     gender?: string,
     birthday?: string,
-    handedness?: string
+    handedness?: string,
+    familyHistory?: number,
+    remSleep?: number
   ) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const token = await userCredential.user.getIdToken();
-      await authService.register(token, email, fullName, gender, birthday, handedness);
+      await authService.register(token, email, fullName, gender, birthday, handedness, familyHistory, remSleep);
       await fetchUserProfile(userCredential.user);
     } catch (error: any) {
       throw new Error(error.message || 'Failed to sign up');

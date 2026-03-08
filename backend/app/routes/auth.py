@@ -41,7 +41,9 @@ async def register_user(
         full_name=request.full_name,
         gender=request.gender,
         birthday=request.birthday,
-        handedness=request.handedness
+        handedness=request.handedness,
+        family_history=request.family_history,
+        rem_sleep=request.rem_sleep
     )
     
     user = user_dao.create(user_data)

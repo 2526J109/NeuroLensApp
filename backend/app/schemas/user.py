@@ -10,6 +10,8 @@ class UserBase(BaseModel):
     gender: Optional[str] = None
     birthday: Optional[str] = None
     handedness: Optional[str] = None
+    family_history: Optional[int] = None
+    rem_sleep: Optional[int] = None
 
 
 class UserCreate(UserBase):
@@ -23,6 +25,8 @@ class UserUpdate(BaseModel):
     gender: Optional[str] = None
     birthday: Optional[str] = None
     handedness: Optional[str] = None
+    family_history: Optional[int] = None
+    rem_sleep: Optional[int] = None
 
 
 class UserResponse(UserBase):
