@@ -9,6 +9,8 @@ class RegisterRequest(BaseModel):
     gender: Optional[str] = None
     birthday: Optional[str] = None
     handedness: Optional[str] = None
+    family_history: Optional[int] = None
+    rem_sleep: Optional[int] = None
 
 
 class LoginResponse(BaseModel):

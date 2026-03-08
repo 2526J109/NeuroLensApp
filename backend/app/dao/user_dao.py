@@ -31,6 +31,8 @@ class UserDAO:
             'gender': user_data.gender,
             'birthday': user_data.birthday,
             'handedness': user_data.handedness,
+            'family_history': user_data.family_history,
+            'rem_sleep': user_data.rem_sleep,
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat()
         }
