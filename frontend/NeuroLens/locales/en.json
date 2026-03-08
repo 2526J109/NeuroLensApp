@@ -46,6 +46,7 @@
         "recommendations": "Recommendations",
         "importantNotice": "Important Notice",
         "disclaimer": "This AI assessment is NOT a medical diagnosis. Always consult a qualified healthcare professional for proper evaluation.",
+        "noPrediction": "No Result",
         "backToHome": "Back to Home",
         "status": {
             "label": "Status",
@@ -326,6 +327,7 @@
         "clear": "Clear",
         "nextWave": "Next: Wave",
         "complete": "Complete",
+        "analyzing": "Analyzing…",
         "saveDrawing": "Save Drawing",
         "patternsCompleted": "Patterns completed",
         "data": {

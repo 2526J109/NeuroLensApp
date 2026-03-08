@@ -33,6 +33,7 @@ export default function DrawingTestScreen() {
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
     const [canvasKey, setCanvasKey] = useState(0);
     const [completedTests, setCompletedTests] = useState<TestType[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Store JSON data for both tests
     const [spiralDataJSON, setSpiralDataJSON] = useState<DrawingDataJSON | null>(null);
@@ -98,6 +99,7 @@ export default function DrawingTestScreen() {
 
             // Get Firebase token
             const sendPrediction = async () => {
+                setIsSubmitting(true);
                 try {
                     const firebaseToken = user ? await user.getIdToken() : undefined;
                     const userId = user?.uid || '';
@@ -109,7 +111,6 @@ export default function DrawingTestScreen() {
                         PixelRatio.get()
                     );
                     console.log('Prediction response:', predictionResponse);
-                    // Navigate to results screen with prediction
                     router.push({
                         pathname: '/test-results',
                         params: {
@@ -120,7 +121,6 @@ export default function DrawingTestScreen() {
                     });
                 } catch (err) {
                     console.error('Error sending drawing prediction:', err);
-                    // Fallback: navigate with just the data
                     router.push({
                         pathname: '/test-results',
                         params: {
@@ -128,6 +128,8 @@ export default function DrawingTestScreen() {
                             waveData: jsonData ? JSON.stringify(jsonData) : '',
                         }
                     });
+                } finally {
+                    setIsSubmitting(false);
                 }
             };
             sendPrediction();
@@ -193,7 +195,7 @@ export default function DrawingTestScreen() {
                         {isSpiral ? (
                             <SpiralGuide size={CANVAS_SIZE} rounds={2} />
                         ) : (
-                            <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={40} />
+                            <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={60} />
                         )}
 
                         {/* Drawing Canvas */}
@@ -221,12 +223,13 @@ export default function DrawingTestScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.saveButton}
+                        style={[styles.saveButton, isSubmitting && { opacity: 0.6 }]}
                         onPress={handleSave}
                         activeOpacity={0.8}
+                        disabled={isSubmitting}
                     >
                         <Text style={styles.saveButtonText}>
-                            {currentTest === 'spiral' ? t('drawing.nextWave') : t('drawing.complete')}
+                            {isSubmitting ? t('drawing.analyzing') : (currentTest === 'spiral' ? t('drawing.nextWave') : t('drawing.complete'))}
                         </Text>
                     </TouchableOpacity>
                 </View>

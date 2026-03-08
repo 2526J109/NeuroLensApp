@@ -104,8 +104,8 @@ def extract_rfe_features(
     features: Dict[str, float] = {k: 0.0 for k in RFE_FEATURE_NAMES}
 
     if spiral_points and len(spiral_points) > 5:
-        sx_raw = np.array([p["x"] for p in spiral_points], dtype=float)
-        sy_raw = np.array([p["y"] for p in spiral_points], dtype=float)
+        sx_raw = np.array([p["x"] for p in spiral_points], dtype=float) * pixel_ratio
+        sy_raw = np.array([p["y"] for p in spiral_points], dtype=float) * pixel_ratio
         st_raw = np.array([p["timestamp"] for p in spiral_points], dtype=float) / 1000.0
 
         sx_r, sy_r, _ = _resample_uniform(sx_raw, sy_raw, st_raw, hz=60.0)
@@ -128,8 +128,8 @@ def extract_rfe_features(
         features["spiral_jerk_cv"] = float(np.std(jerk) / (np.mean(jerk) + 1e-8))
 
     if wave_points and len(wave_points) > 5:
-        wx_raw = np.array([p["x"] for p in wave_points], dtype=float)
-        wy_raw = np.array([p["y"] for p in wave_points], dtype=float)
+        wx_raw = np.array([p["x"] for p in wave_points], dtype=float) * pixel_ratio
+        wy_raw = np.array([p["y"] for p in wave_points], dtype=float) * pixel_ratio
         wt_raw = np.array([p["timestamp"] for p in wave_points], dtype=float) / 1000.0
 
         wx_r, wy_r, _ = _resample_uniform(wx_raw, wy_raw, wt_raw, hz=60.0)

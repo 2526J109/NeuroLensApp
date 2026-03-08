@@ -39,7 +39,7 @@ export const analyzeDrawingPrediction = async (
   console.log('With headers:', headers);
 
   const response = await api.post<DrawingPredictionResponse>(
-    '/api/drawing-prediction/analyze',
+    '/api/drawing-prediction/analyze-local',
     requestData,
     { headers }
   );
