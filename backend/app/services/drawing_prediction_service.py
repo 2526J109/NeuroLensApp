@@ -165,7 +165,8 @@ def save_prediction_for_user(user_id: str, prediction: Dict[str, Any]) -> Dict[s
     return dao.save_prediction(user_id, prediction)
 
 
-from app.utils.kinematic_features import extract_kinematic_features
+from app.utils.kinematic_features import extract_kinematic_features, extract_rfe_features
+from app.models.drawing_local_predictor import predict_drawing_risk
 
 def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, Any]:
     """Send drawing data to model server, save prediction, and return result"""
@@ -191,4 +192,34 @@ def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, An
     prediction_to_save = {k: v for k, v in prediction.items() if k != "debug_model_input"}
     save_result = save_prediction_for_user(user_id, prediction_to_save)
     
+    return {"prediction": prediction, "save_result": save_result}
+
+
+def analyze_with_local_model(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, Any]:
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+
+    # Fetch age from Firestore profile so the model gets the real value
+    age: float = 0.0
+    try:
+        from app.dao.user_dao import UserDAO
+        from datetime import date
+        user = UserDAO().get_by_firebase_uid(user_id)
+        if user and user.get("birthday"):
+            birth = date.fromisoformat(str(user["birthday"])[:10])
+            age = round((date.today() - birth).days / 365.25, 1)
+    except Exception:
+        pass  
+
+    rfe_features = extract_rfe_features(spiral_points, wave_points)
+    rfe_features["age"] = age   # inject so scaler finds it if model was trained with age
+
+    prediction = predict_drawing_risk(rfe_features)
+    prediction["rfe_features"] = rfe_features   # returned to caller for transparency
+
+    prediction_to_save = {
+        k: v for k, v in prediction.items() if k not in ("rfe_features", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save)
+
     return {"prediction": prediction, "save_result": save_result}
