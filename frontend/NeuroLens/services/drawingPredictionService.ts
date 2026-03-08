@@ -5,6 +5,7 @@ export interface DrawingPredictionRequest {
   user_id: string;
   spiral_data?: DrawingDataJSON;
   wave_data?: DrawingDataJSON;
+  pixel_ratio?: number;
 }
 
 export interface DrawingPredictionResponse {
@@ -17,12 +18,14 @@ export const analyzeDrawingPrediction = async (
   userId: string,
   spiralData?: DrawingDataJSON,
   waveData?: DrawingDataJSON,
-  firebaseToken?: string
+  firebaseToken?: string,
+  pixelRatio?: number
 ): Promise<DrawingPredictionResponse> => {
   const requestData: DrawingPredictionRequest = {
     user_id: userId,
     spiral_data: spiralData,
     wave_data: waveData,
+    pixel_ratio: pixelRatio,
   };
 
   const headers: any = {

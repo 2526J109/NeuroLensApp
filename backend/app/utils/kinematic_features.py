@@ -88,24 +88,24 @@ RFE_FEATURE_NAMES: List[str] = [
 def extract_rfe_features(
     spiral_points: List[Dict[str, float]],
     wave_points: List[Dict[str, float]],
+    pixel_ratio: float = 1.0,
 ) -> Dict[str, float]:
     """
-    Matches the training  preprocessing exactly:
-      1. Resample to 60 Hz  (training app captured at uniform 60 Hz)
-      2. Geometry features on resampled raw positions  (notebook
-         extract_geometry_features uses raw x,y -- no time normalization)
-      3. Kinematic features on Gaussian-smoothed (sigma=5) resampled positions
-         -- approximates the hardware-smooth vx,vy stored in training CSVs
-      4. Velocity/jerk via np.diff chains (paper Sec 3.3: a=Dv/Dt, j=Da/Dt);
-         vel_cv and jerk_cv are dimensionless std/mean ratios so dt cancels
+    Matches the training preprocessing exactly:
+      1. Scale coords by pixel_ratio (logical→physical px, matching training device)
+      2. Resample to 60 Hz  (training app captured at uniform 60 Hz)
+      3. Geometry features on resampled raw positions
+      4. Kinematic features on Gaussian-smoothed (sigma=5) resampled positions
+      5. Velocity/jerk via np.diff chains (paper Sec 3.3: a=Dv/Dt, j=Da/Dt);
+         vel_cv and jerk_cv are dimensionless std/mean ratios so scale cancels
     """
     SIGMA = 5
 
     features: Dict[str, float] = {k: 0.0 for k in RFE_FEATURE_NAMES}
 
     if spiral_points and len(spiral_points) > 5:
-        sx_raw = np.array([p["x"] for p in spiral_points], dtype=float)
-        sy_raw = np.array([p["y"] for p in spiral_points], dtype=float)
+        sx_raw = np.array([p["x"] for p in spiral_points], dtype=float) * pixel_ratio
+        sy_raw = np.array([p["y"] for p in spiral_points], dtype=float) * pixel_ratio
         st_raw = np.array([p["timestamp"] for p in spiral_points], dtype=float) / 1000.0
 
         sx_r, sy_r, _ = _resample_uniform(sx_raw, sy_raw, st_raw, hz=60.0)
@@ -128,8 +128,8 @@ def extract_rfe_features(
         features["spiral_jerk_cv"] = float(np.std(jerk) / (np.mean(jerk) + 1e-8))
 
     if wave_points and len(wave_points) > 5:
-        wx_raw = np.array([p["x"] for p in wave_points], dtype=float)
-        wy_raw = np.array([p["y"] for p in wave_points], dtype=float)
+        wx_raw = np.array([p["x"] for p in wave_points], dtype=float) * pixel_ratio
+        wy_raw = np.array([p["y"] for p in wave_points], dtype=float) * pixel_ratio
         wt_raw = np.array([p["timestamp"] for p in wave_points], dtype=float) / 1000.0
 
         wx_r, wy_r, _ = _resample_uniform(wx_raw, wy_raw, wt_raw, hz=60.0)

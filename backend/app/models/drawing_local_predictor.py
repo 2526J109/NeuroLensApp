@@ -42,6 +42,18 @@ def _load_bundle() -> Optional[Dict[str, Any]]:
     return _bundle
 
 
+# The LR model's raw probability is bounded to ~37–63% by its small coefficients
+# (trained on 58 subjects). Rescale to 0–100 so Low/Moderate/High are all reachable.
+_MODEL_PROB_MIN = 0.3689
+_MODEL_PROB_MAX = 0.6291
+
+
+def _rescale_prob(prob: float) -> float:
+    """Map raw model P(PD) from [MODEL_MIN, MODEL_MAX] → [0, 100]."""
+    rescaled = (prob - _MODEL_PROB_MIN) / (_MODEL_PROB_MAX - _MODEL_PROB_MIN) * 100.0
+    return max(0.0, min(100.0, rescaled))
+
+
 def _risk_level(risk_pct: float) -> str:
     if risk_pct >= 70:
         return "High"
@@ -72,6 +84,17 @@ def predict_drawing_risk(features: Dict[str, float]) -> Dict[str, Any]:
     # standard deviations from the training mean (e.g. age mean=68, std=5), which
     # drives the model far outside its training distribution.
     scaler_means = dict(zip(scaler.feature_names_in_, scaler.mean_))
+
+    # wavy_radius_resid_std is purely a canvas-size geometry constant: training
+    # std across 58 subjects was only 13.3 px (3.2% CV) — essentially no clinical
+    # signal. Its value depends entirely on the drawing canvas physical dimensions
+    # which we cannot match exactly without knowing the training app's canvas size.
+    # Force it to the training mean so its z-score = 0 (neutral contribution).
+    CANVAS_GEOMETRY_FEATURES = {"wavy_radius_resid_std"}
+    for feat in CANVAS_GEOMETRY_FEATURES:
+        if feat in features:
+            features[feat] = scaler_means.get(feat, features[feat])
+
     row = pd.DataFrame(
         [[features.get(f, scaler_means.get(f, 0.0)) for f in scaler_cols]],
         columns=scaler_cols,
@@ -83,12 +106,12 @@ def predict_drawing_risk(features: Dict[str, float]) -> Dict[str, Any]:
         row_scaled.tolist(), prob
     )
 
-    risk_pct = round(prob * 100, 2)
+    risk_pct = round(_rescale_prob(prob), 2)
     conf_pct = round(max(prob, 1.0 - prob) * 100, 2)
     return {
         "risk_percentage": risk_pct,
         "risk_level":      _risk_level(risk_pct),
-        "label":           "Parkinson's Detected" if prob >= 0.5 else "Normal",
+        "label":           "Parkinson's Detected" if risk_pct >= 50 else "Normal",
         "confidence":      conf_pct,
         "source":          "local_model",
     }
