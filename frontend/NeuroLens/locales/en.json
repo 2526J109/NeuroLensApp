@@ -48,6 +48,7 @@
         "disclaimer": "This AI assessment is NOT a medical diagnosis. Always consult a qualified healthcare professional for proper evaluation.",
         "backToHome": "Back to Home",
         "status": {
+            "label": "Status",
             "good": "Good",
             "warning": "Warning"
         },
