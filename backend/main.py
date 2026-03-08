@@ -1,19 +1,56 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import voice_analysis
 from app.routes import auth
 from app.routes import drawing_prediction
+from app.routes import voice_multimodal
 from app.routes import cognitive_analysis    
 from app.core.firebase import initialize_firebase
 from app.core.config import settings
+import logging
 import uvicorn
 
+logger = logging.getLogger(__name__)
+
 initialize_firebase()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Startup: eagerly load all heavy ML models (Whisper + multimodal predictor)
+    so the first real request is never blocked by model loading.
+    Cloud Run will mark the container as ready only after startup completes,
+    which prevents 503s caused by cold-start timeouts.
+    """
+    logger.info("=== NeuroLens API startup: warming up ML models ===")
+
+    # 1. Multimodal predictor (joblib sklearn models)
+    try:
+        voice_multimodal.get_predictor()
+        logger.info("Multimodal predictor — ready")
+    except Exception as e:
+        logger.error("Multimodal predictor failed to load at startup: %s", e)
+
+    # 2. Whisper speech-to-text (tiny model, ~75 MB)
+    try:
+        voice_multimodal._load_whisper_eagerly()
+        logger.info("Whisper model — ready")
+    except Exception as e:
+        logger.error("Whisper failed to load at startup: %s", e)
+
+    logger.info("=== Startup complete — ready to serve requests ===")
+    yield
+    # (shutdown logic can go here if needed)
+    logger.info("=== NeuroLens API shutting down ===")
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -29,7 +66,9 @@ app.add_middleware(
 app.include_router(voice_analysis.router, prefix=settings.API_V1_STR)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(drawing_prediction.router, prefix=settings.API_V1_STR)
+app.include_router(voice_multimodal.router, prefix=settings.API_V1_STR)
 app.include_router(cognitive_analysis.router, prefix=settings.API_V1_STR) 
+
 
 @app.get("/")
 async def root():

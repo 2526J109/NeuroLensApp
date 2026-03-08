@@ -6,10 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BleManager, Device } from 'react-native-ble-plx';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function WearableScreen() {
     const router = useRouter();
     const { userProfile } = useAuth();
+    const { t } = useLanguage();
     const manager = useMemo(() => new BleManager(), []);
     const [isScanning, setIsScanning] = useState(false);
     const [devices, setDevices] = useState<Device[]>([]);
@@ -58,11 +60,11 @@ export default function WearableScreen() {
                 const granted = await PermissionsAndroid.request(
                     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
                     {
-                        title: 'Location Permission',
-                        message: 'NeuroLens needs location permission to scan for Bluetooth devices.',
-                        buttonNeutral: 'Ask Me Later',
-                        buttonNegative: 'Cancel',
-                        buttonPositive: 'OK',
+                        title: t('wearable.alerts.locationTitle'),
+                        message: t('wearable.alerts.locationMessage'),
+                        buttonNeutral: t('wearable.alerts.later'),
+                        buttonNegative: t('wearable.alerts.cancel'),
+                        buttonPositive: t('wearable.alerts.ok'),
                     }
                 );
                 return granted === PermissionsAndroid.RESULTS.GRANTED;
@@ -74,7 +76,7 @@ export default function WearableScreen() {
     const startScan = async () => {
         const hasPermission = await requestPermissions();
         if (!hasPermission) {
-            Alert.alert('Permission Denied', 'Bluetooth permissions are required.');
+            Alert.alert(t('wearable.alerts.permissionDenied'), t('wearable.alerts.bluetoothRequired'));
             return;
         }
 
@@ -115,7 +117,7 @@ export default function WearableScreen() {
             setConnectedDevice(connected);
             setIsModalVisible(false);
 
-            Alert.alert('Connected', `Connected to ${device.name}`);
+            Alert.alert(t('wearable.alerts.connected'), t('wearable.alerts.connectedTo', { name: device.name }));
 
             // Monitor the characteristic
             connected.monitorCharacteristicForService(
@@ -168,7 +170,7 @@ export default function WearableScreen() {
 
         } catch (error) {
             console.log(error);
-            Alert.alert('Connection Failed', 'Could not connect.');
+            Alert.alert(t('wearable.alerts.connectionFailed'), t('wearable.alerts.couldNotConnect'));
         }
     };
 
@@ -256,7 +258,7 @@ export default function WearableScreen() {
 
         } catch (error) {
             console.log("Failed to start assessment:", error);
-            Alert.alert("Error", "Failed to start assessment. Is the device still connected?");
+            Alert.alert(t('wearable.alerts.error'), t('wearable.alerts.failedStart'));
         }
     };
 
@@ -282,7 +284,7 @@ export default function WearableScreen() {
         <SafeAreaView style={styles.container} edges={['bottom']}>
             <Stack.Screen
                 options={{
-                    headerTitle: 'Wearable Device',
+                    headerTitle: t('wearable.title'),
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: '#F8FAFC' },
                     headerTitleStyle: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
@@ -298,19 +300,19 @@ export default function WearableScreen() {
                     </View>
 
                     <Text style={styles.statusTitle}>
-                        {connectedDevice ? connectedDevice.name : 'No Device Connected'}
+                        {connectedDevice ? connectedDevice.name : t('wearable.noDevice')}
                     </Text>
 
                     {connectedDevice ? (
                         <View style={{ width: '100%', alignItems: 'center', marginTop: 16 }}>
                             {assessmentStep === 0 && (
                                 <View style={styles.wizardIntro}>
-                                    <Text style={styles.statusSubtitle}>Begin the standardized Parkinson's Assessment. This will guide you through 3 movement tasks (1 minute each).</Text>
+                                    <Text style={styles.statusSubtitle}>{t('wearable.introSubtitle')}</Text>
                                     <TouchableOpacity
                                         style={styles.startButton}
                                         onPress={() => setAssessmentStep(1)}
                                     >
-                                        <Text style={styles.startButtonText}>Begin Assessment</Text>
+                                        <Text style={styles.startButtonText}>{t('wearable.beginAssessment')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -320,10 +322,10 @@ export default function WearableScreen() {
                                     {sessionStatus === 'IDLE' && (
                                         <View style={styles.stepContainer}>
                                             <View style={styles.stepHeader}>
-                                                <Text style={styles.stepBadge}>Step {assessmentStep} of 3</Text>
+                                                <Text style={styles.stepBadge}>{t('wearable.stepOf', { step: assessmentStep })}</Text>
                                                 <Text style={styles.stepTitle}>
-                                                    {assessmentStep === 1 ? "Resting Tremor" :
-                                                        assessmentStep === 2 ? "Postural Tremor" : "Kinetic Tremor"}
+                                                    {assessmentStep === 1 ? t('wearable.steps.restingTitle') :
+                                                        assessmentStep === 2 ? t('wearable.steps.posturalTitle') : t('wearable.steps.kineticTitle')}
                                                 </Text>
                                             </View>
 
@@ -334,28 +336,33 @@ export default function WearableScreen() {
                                             </View>
 
                                             <Text style={styles.stepInstructions}>
-                                                {assessmentStep === 1 ? "Place your hands comfortably in your lap. Try to relax and remain as still as possible." :
-                                                    assessmentStep === 2 ? "Stretch your arms straight out in front of you, palms facing down, and keep them level." :
-                                                        "Slowly and repeatedly touch your finger to your nose, then extend your arm back out."}
+                                                {assessmentStep === 1 ? t('wearable.steps.restingDesc') :
+                                                    assessmentStep === 2 ? t('wearable.steps.posturalDesc') :
+                                                        t('wearable.steps.kineticDesc')}
                                             </Text>
 
                                             <TouchableOpacity
                                                 style={[styles.startButton, { backgroundColor: '#14B8A6' }]}
                                                 onPress={startAssessment}
                                             >
-                                                <Text style={styles.startButtonText}>Start Recording</Text>
+                                                <Text style={styles.startButtonText}>{t('wearable.startRecording')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     )}
 
                                     {sessionStatus === 'GATHERING' && (
                                         <View style={styles.progressContainer}>
-                                            <Text style={styles.progressTitle}>Recording {assessmentStep === 1 ? "Resting" : assessmentStep === 2 ? "Postural" : "Kinetic"}...</Text>
-                                            <Text style={styles.progressText}>Observation {sessionProgress} of {sessionTotal}</Text>
+                                            <Text style={styles.progressTitle}>
+                                                {t('wearable.recordingStatus', {
+                                                    type: assessmentStep === 1 ? t('wearable.steps.restingTitle') :
+                                                        assessmentStep === 2 ? t('wearable.steps.posturalTitle') : t('wearable.steps.kineticTitle')
+                                                })}
+                                            </Text>
+                                            <Text style={styles.progressText}>{t('wearable.observation', { current: sessionProgress, total: sessionTotal })}</Text>
                                             <View style={styles.progressBarBackground}>
                                                 <View style={{ height: '100%', backgroundColor: '#14B8A6', borderRadius: 6, width: `${Math.round((sessionProgress / Math.max(1, sessionTotal)) * 100)}%` as any }} />
                                             </View>
-                                            <Text style={styles.progressHint}>Continue the task until the timer finishes.</Text>
+                                            <Text style={styles.progressHint}>{t('wearable.continueHint')}</Text>
                                             <ActivityIndicator style={{ marginTop: 16 }} size="small" color="#14B8A6" />
                                         </View>
                                     )}
@@ -364,12 +371,15 @@ export default function WearableScreen() {
                                         <View style={[styles.resultContainer, sessionResult === 'PARKINSONS' ? styles.resultAlert : styles.resultSuccess]}>
                                             <Check size={32} color={sessionResult === 'PARKINSONS' ? "#B91C1C" : "#0D9488"} style={{ marginBottom: 12 }} />
                                             <Text style={[styles.resultTitle, sessionResult === 'PARKINSONS' && { color: '#991B1B' }]}>
-                                                {assessmentStep === 1 ? "Resting" : assessmentStep === 2 ? "Postural" : "Kinetic"} Assessment Complete
+                                                {t('wearable.assessmentComplete', {
+                                                    type: assessmentStep === 1 ? t('wearable.steps.restingTitle') :
+                                                        assessmentStep === 2 ? t('wearable.steps.posturalTitle') : t('wearable.steps.kineticTitle')
+                                                })}
                                             </Text>
 
                                             <Text style={styles.resultRatio}>
-                                                Window Vote: {sessionResult === 'PARKINSONS' ? "Signs detected" : "No signs detected"}
-                                                ({Math.round(parseFloat(sessionRatio) * 100)}% detection)
+                                                {sessionResult === 'PARKINSONS' ? t('wearable.windowVoteSigns') : t('wearable.windowVoteNoSigns')}
+                                                {t('wearable.detectionPercentage', { percentage: Math.round(parseFloat(sessionRatio) * 100) })}
                                             </Text>
 
                                             {assessmentStep < 3 ? (
@@ -380,7 +390,7 @@ export default function WearableScreen() {
                                                         setSessionStatus('IDLE');
                                                     }}
                                                 >
-                                                    <Text style={styles.startButtonText}>Proceed to Next Task</Text>
+                                                    <Text style={styles.startButtonText}>{t('wearable.proceedNext')}</Text>
                                                 </TouchableOpacity>
                                             ) : (
                                                 <ActivityIndicator style={{ marginTop: 24 }} color="#3B82F6" />
@@ -393,37 +403,37 @@ export default function WearableScreen() {
                             {assessmentStep === 4 && (
                                 <View style={styles.summaryContainer}>
                                     <View style={styles.globalVerdictCard}>
-                                        <Text style={styles.globalVerdictLabel}>Overall Clinical Verdict</Text>
+                                        <Text style={styles.globalVerdictLabel}>{t('wearable.clinicalVerdict')}</Text>
                                         <Text style={[styles.globalVerdictValue,
                                         Object.values(stepResults).some(r => r.result === 'PARKINSONS') ? { color: '#B91C1C' } : { color: '#0D9488' }
                                         ]}>
                                             {Object.values(stepResults).some(r => r.result === 'PARKINSONS')
-                                                ? "Parkinson's Characteristics Detected"
-                                                : "Healthy Movement Observed"}
+                                                ? t('wearable.parkinsonsDetected')
+                                                : t('wearable.healthyObserved')}
                                         </Text>
                                         <Text style={styles.probabilityScore}>
-                                            Probability Score: {Math.round(Math.max(...Object.values(stepResults).map(r => parseFloat(r.ratio))) * 100)}%
+                                            {t('wearable.probabilityScore', { score: Math.round(Math.max(...Object.values(stepResults).map(r => parseFloat(r.ratio))) * 100) })}
                                         </Text>
                                         <Text style={styles.globalVerdictSubtext}>
-                                            Based on aggregate analysis of Resting, Postural, and Kinetic tasks.
+                                            {t('wearable.verdictSubtext')}
                                         </Text>
                                     </View>
 
-                                    <Text style={styles.summaryHeader}>Detailed Breakdown</Text>
+                                    <Text style={styles.summaryHeader}>{t('wearable.detailedBreakdown')}</Text>
 
                                     {[1, 2, 3].map((step) => (
                                         <View key={step} style={styles.summaryItem}>
                                             <View style={styles.summaryItemTitleGroup}>
                                                 <Text style={styles.summaryItemLabel}>
-                                                    {step === 1 ? "Resting Task" : step === 2 ? "Postural Task" : "Kinetic Task"}
+                                                    {step === 1 ? t('wearable.tasks.resting') : step === 2 ? t('wearable.tasks.postural') : t('wearable.tasks.kinetic')}
                                                 </Text>
                                                 <Text style={[styles.summaryBadge, stepResults[step - 1]?.result === 'PARKINSONS' ? styles.badgeAlert : styles.badgeSuccess]}>
-                                                    {stepResults[step - 1]?.result === 'PARKINSONS' ? `${Math.round(parseFloat(stepResults[step - 1]?.ratio || "0") * 100)}%` : "Healthy"}
+                                                    {stepResults[step - 1]?.result === 'PARKINSONS' ? `${Math.round(parseFloat(stepResults[step - 1]?.ratio || "0") * 100)}%` : t('wearable.healthy')}
                                                 </Text>
                                             </View>
                                             <Text style={styles.summaryItemDetail}>
-                                                {stepResults[step - 1]?.result === 'PARKINSONS' ? "Signs detected in " : "No signs detected in "}
-                                                {Math.round(parseFloat(stepResults[step - 1]?.ratio || "0") * sessionTotal)} of {sessionTotal} windows
+                                                {stepResults[step - 1]?.result === 'PARKINSONS' ? t('wearable.signsDetectedIn') : t('wearable.noSignsDetectedIn')}
+                                                {t('wearable.ofWindows', { total: sessionTotal, current: Math.round(parseFloat(stepResults[step - 1]?.ratio || "0") * sessionTotal) })}
                                             </Text>
                                         </View>
                                     ))}
@@ -436,14 +446,14 @@ export default function WearableScreen() {
                                             setStepResults({});
                                         }}
                                     >
-                                        <Text style={styles.startButtonText}>Restart Entire Assessment</Text>
+                                        <Text style={styles.startButtonText}>{t('wearable.restartAssessment')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
                         </View>
                     ) : (
                         <Text style={styles.statusSubtitle}>
-                            Connect your wearable to begin collecting movement data
+                            {t('wearable.connectPrompt')}
                         </Text>
                     )}
                 </View>
@@ -455,7 +465,7 @@ export default function WearableScreen() {
                         onPress={disconnectDevice}
                     >
                         <X size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                        <Text style={styles.buttonText}>Disconnect Device</Text>
+                        <Text style={styles.buttonText}>{t('wearable.disconnectDevice')}</Text>
                     </TouchableOpacity>
                 ) : (
                     <TouchableOpacity
@@ -464,32 +474,32 @@ export default function WearableScreen() {
                         onPress={startScan}
                     >
                         <Bluetooth size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                        <Text style={styles.buttonText}>Connect Device</Text>
+                        <Text style={styles.buttonText}>{t('wearable.connectDevice')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Instructions Card */}
                 <View style={styles.instructionsCard}>
-                    <Text style={styles.instructionsTitle}>Assessment Protocol</Text>
+                    <Text style={styles.instructionsTitle}>{t('wearable.protocol.title')}</Text>
 
                     <View style={styles.bulletPoint}>
                         <Text style={styles.bullet}>1.</Text>
-                        <Text style={styles.instructionText}>Fasten the wearable securely to your wrist.</Text>
+                        <Text style={styles.instructionText}>{t('wearable.protocol.step1')}</Text>
                     </View>
 
                     <View style={styles.bulletPoint}>
                         <Text style={styles.bullet}>2.</Text>
-                        <Text style={styles.instructionText}>After pressing Start, place your phone down on the table.</Text>
+                        <Text style={styles.instructionText}>{t('wearable.protocol.step2')}</Text>
                     </View>
 
                     <View style={styles.bulletPoint}>
                         <Text style={styles.bullet}>3.</Text>
-                        <Text style={styles.instructionText}>Rest your hands completely still in your lap and relax.</Text>
+                        <Text style={styles.instructionText}>{t('wearable.protocol.step3')}</Text>
                     </View>
 
                     <View style={styles.bulletPoint}>
                         <Text style={styles.bullet}>4.</Text>
-                        <Text style={styles.instructionText}>Wait for the assessment to complete (approx. 45 seconds). The result screen will appear automatically.</Text>
+                        <Text style={styles.instructionText}>{t('wearable.protocol.step4')}</Text>
                     </View>
                 </View>
 
@@ -503,7 +513,7 @@ export default function WearableScreen() {
             >
                 <SafeAreaView style={styles.modalContainer}>
                     <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Select Device</Text>
+                        <Text style={styles.modalTitle}>{t('wearable.modal.selectDevice')}</Text>
                         <TouchableOpacity onPress={() => {
                             setIsModalVisible(false);
                             manager.stopDeviceScan();
@@ -516,7 +526,7 @@ export default function WearableScreen() {
                     {isScanning && (
                         <View style={styles.scanningIndicator}>
                             <ActivityIndicator size="small" color="#14B8A6" />
-                            <Text style={styles.scanningText}>Scanning for devices...</Text>
+                            <Text style={styles.scanningText}>{t('wearable.modal.scanning')}</Text>
                         </View>
                     )}
 
@@ -532,7 +542,7 @@ export default function WearableScreen() {
                                     <Bluetooth size={24} color="#64748B" />
                                 </View>
                                 <View style={styles.deviceInfo}>
-                                    <Text style={styles.deviceName}>{item.name || 'Unknown Device'}</Text>
+                                    <Text style={styles.deviceName}>{item.name || t('wearable.modal.unknown')}</Text>
                                     <Text style={styles.deviceId}>{item.id}</Text>
                                 </View>
                             </TouchableOpacity>
@@ -540,7 +550,7 @@ export default function WearableScreen() {
                         contentContainerStyle={styles.deviceList}
                         ListEmptyComponent={
                             !isScanning ? (
-                                <Text style={styles.emptyText}>No devices found</Text>
+                                <Text style={styles.emptyText}>{t('wearable.modal.noDevices')}</Text>
                             ) : null
                         }
                     />

@@ -15,10 +15,12 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft, AlertCircle } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { resetPassword } = useAuth();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ email?: string }>({});
@@ -28,9 +30,9 @@ export default function ForgotPasswordScreen() {
     const newErrors: { email?: string } = {};
 
     if (!email.trim()) {
-      newErrors.email = 'Please fill out this field';
+      newErrors.email = t('auth.validation.fillField');
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('auth.validation.validEmail');
     }
 
     setErrors(newErrors);
@@ -42,12 +44,12 @@ export default function ForgotPasswordScreen() {
       setLoading(true);
       try {
         await resetPassword(email);
-        
+
         // Show success toast
         Toast.show({
           type: 'success',
-          text1: 'Email Sent!',
-          text2: 'Password reset link sent to your email.',
+          text1: t('auth.resetPassword.emailSentTitle'),
+          text2: t('auth.resetPassword.emailSentMessage'),
           position: 'top',
           visibilityTime: 3000,
           topOffset: 60,
@@ -59,8 +61,8 @@ export default function ForgotPasswordScreen() {
         // Show error toast
         Toast.show({
           type: 'error',
-          text1: 'Error',
-          text2: error.message || 'Failed to send reset email. Please try again.',
+          text1: t('auth.resetPassword.errorTitle'),
+          text2: error.message || t('auth.resetPassword.errorMessage'),
           position: 'top',
           visibilityTime: 4000,
           topOffset: 60,
@@ -112,9 +114,9 @@ export default function ForgotPasswordScreen() {
               </View>
             </View>
             <Text style={styles.appName}>NeuroLens</Text>
-            <Text style={styles.titleText}>Forgot Password?</Text>
+            <Text style={styles.titleText}>{t('auth.forgotPassword')}</Text>
             <Text style={styles.subtitleText}>
-              Enter your email address and we'll send you a link to reset your password.
+              {t('auth.resetPassword.subtitle')}
             </Text>
           </View>
 
@@ -122,7 +124,7 @@ export default function ForgotPasswordScreen() {
           <View style={styles.inputSection}>
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Text style={styles.inputLabel}>Email Address</Text>
+                <Text style={styles.inputLabel}>{t('auth.emailAddress')}</Text>
               </View>
               <View style={[
                 styles.inputWrapper,
@@ -133,7 +135,7 @@ export default function ForgotPasswordScreen() {
                     styles.input,
                     Platform.OS === 'web' && { outline: 'none' as any }
                   ]}
-                  placeholder="Enter your email"
+                  placeholder={t('auth.enterEmail')}
                   placeholderTextColor="#94A3B8"
                   value={email}
                   onChangeText={(text) => {
@@ -173,7 +175,7 @@ export default function ForgotPasswordScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.resetButtonText}>Send Reset Link</Text>
+              <Text style={styles.resetButtonText}>{t('auth.resetPassword.sendLink')}</Text>
             )}
           </TouchableOpacity>
 
@@ -182,7 +184,7 @@ export default function ForgotPasswordScreen() {
             onPress={handleBackToLogin}
             style={styles.backToLoginContainer}
           >
-            <Text style={styles.backToLoginText}>Back to Sign In</Text>
+            <Text style={styles.backToLoginText}>{t('auth.resetPassword.backToSignIn')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

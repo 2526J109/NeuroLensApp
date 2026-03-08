@@ -1,0 +1,394 @@
+{
+    "prompts": {
+        "1": "Please say Hi , How are you?. ",
+        "2": "Please sustain the vowel 'Aaaaa' for 5 seconds."
+    },
+    "permissions": {
+        "microphoneRequired": "Permission to access microphone is required!"
+    },
+    "errors": {
+        "failedStart": "Failed to start recording",
+        "incompleteTestTitle": "Incomplete Test",
+        "incompleteTestMessage": "Please complete all recordings before submitting.",
+        "analysisErrorTitle": "Analysis Error",
+        "analysisErrorMessage": "Failed to analyze voice recordings. Please try again.",
+        "analysisFailedTitle": "Analysis Failed",
+        "analysisFailedMessage": "Could not complete voice analysis. Please make sure the backend server is running and try again.\\n\\nDetails: %{details}",
+        "ok": "OK",
+        "unknownError": "Unknown error"
+    },
+    "voiceAnalysis": {
+        "headerTitle": "Voice Analysis",
+        "promptCount": "Prompt %{current} of %{total}",
+        "tapToHear": "Tap the speaker icon to hear the prompt",
+        "playRecording": "Play Recording",
+        "stopRecording": "Stop Recording",
+        "startRecording": "Start Recording",
+        "nextPrompt": "Next Prompt",
+        "completeTest": "Complete Test",
+        "analyzing": "Analyzing...",
+        "recordingsCompleted": "Recordings completed"
+    },
+    "results": {
+        "title": "Test Results",
+        "drawingAnalysis": "Drawing Analysis",
+        "voiceAssessment": "Voice Assessment",
+        "riskAssessment": "Risk Assessment",
+        "riskLevel": {
+            "Low": "Low",
+            "Moderate": "Moderate",
+            "High": "High"
+        },
+        "riskDescription": "%{riskLevel} Risk — %{label}",
+        "scoreDetails": "Score Details",
+        "riskScore": "Risk Score",
+        "confidence": "Confidence",
+        "recommendations": "Recommendations",
+        "importantNotice": "Important Notice",
+        "disclaimer": "This AI assessment is NOT a medical diagnosis. Always consult a qualified healthcare professional for proper evaluation.",
+        "backToHome": "Back to Home",
+        "status": {
+            "good": "Good",
+            "warning": "Warning"
+        },
+        "voiceSummaries": {
+            "good": "Voice characteristics within normal range. No significant tremor detected.",
+            "moderate": "Slight voice tremor detected. Consider monitoring your symptoms and practicing voice exercises.",
+            "high": "Moderate voice tremor and reduced clarity detected. Consider consulting a healthcare professional."
+        },
+        "voiceRecommendations": {
+            "low": "Your voice characteristics appear within normal range. Continue monitoring your health and consult a doctor if you notice any changes.",
+            "moderate": "Mild changes in voice patterns are present. Consider regular checkups and practicing breathing and voice exercises to support vocal stability.",
+            "high": "Your voice patterns show indicators that may benefit from professional evaluation. We recommend discussing these findings with a neurologist or healthcare provider."
+        },
+        "tips": {
+            "Low": [
+                "Continue regular health monitoring",
+                "Maintain an active and balanced lifestyle",
+                "Schedule annual neurological check-ups"
+            ],
+            "Moderate": [
+                "Consider scheduling a neurologist visit",
+                "Track any new or worsening symptoms",
+                "Repeat this assessment in 4–6 weeks"
+            ],
+            "High": [
+                "Consult a neurologist as soon as possible",
+                "Bring a detailed symptom history",
+                "Do not rely on this AI assessment alone"
+            ]
+        }
+    },
+    "profile": {
+        "title": "Profile",
+        "personalInfo": "Personal Information",
+        "email": "Email",
+        "gender": "Gender",
+        "dob": "Date of Birth",
+        "settings": "Settings",
+        "pushNotifications": "Push Notifications",
+        "dataPrivacyMode": "Data Privacy Mode",
+        "language": "Language",
+        "privacyAndSecurity": "Privacy & Security",
+        "signOut": "Sign Out",
+        "patientId": "Patient ID",
+        "na": "N/A",
+        "languages": {
+            "en": "English",
+            "si": "සිංහල",
+            "ta": "தமிழ்"
+        }
+    },
+    "auth": {
+        "welcomeBack": "Welcome Back",
+        "createYourAccount": "Create Your Account",
+        "emailAddress": "Email Address",
+        "enterEmail": "Enter your email",
+        "password": "Password",
+        "enterPassword": "Enter your password",
+        "forgotPassword": "Forgot Password?",
+        "signIn": "Sign In",
+        "dontHaveAccount": "Don't have an account?",
+        "createAccount": "Create Account",
+        "alreadyHaveAccount": "Already have an account?",
+        "fullName": "Full Name",
+        "enterFullName": "Enter your full name",
+        "birthday": "Birthday",
+        "selectBirthday": "Select your birthday",
+        "gender": "Gender",
+        "selectGender": "Select your gender",
+        "handedness": "Handedness",
+        "selectHandedness": "Select left or right hand",
+        "byContinuing": "By continuing, you agree to our",
+        "termsOfService": "Terms of Service",
+        "and": "and",
+        "privacyPolicy": "Privacy Policy",
+        "loginSuccessful": "Login Successful!",
+        "welcomeToNeuroLens": "Welcome back to NeuroLens",
+        "loginFailed": "Login Failed",
+        "checkCredentials": "Please check your credentials and try again.",
+        "registrationSuccessful": "Registration Successful!",
+        "accountCreated": "Your account has been created.",
+        "registrationFailed": "Registration Failed",
+        "validation": {
+            "fillField": "Please fill out this field",
+            "validEmail": "Please enter a valid email address",
+            "passwordLength": "Password must be at least 8 characters",
+            "nameLength": "Name must be at least 2 characters",
+            "selectGender": "Please select your gender",
+            "enterBirthday": "Please enter your birthday",
+            "validDate": "Please enter a valid date of birth",
+            "formatDate": "Please enter a valid date (YYYY-MM-DD)",
+            "selectHandedness": "Please select your handedness"
+        },
+        "genderOptions": {
+            "Male": "Male",
+            "Female": "Female",
+            "Prefer not to say": "Prefer not to say"
+        },
+        "handednessOptions": {
+            "Left Hand": "Left Hand",
+            "Right Hand": "Right Hand",
+            "Left": "Left",
+            "Right": "Right"
+        },
+        "datePicker": {
+            "selectBirthday": "Select Birthday",
+            "done": "Done",
+            "year": "Year",
+            "month": "Month",
+            "day": "Day",
+            "confirm": "Confirm"
+        },
+        "resetPassword": {
+            "emailSentTitle": "Email Sent!",
+            "emailSentMessage": "Password reset link sent to your email.",
+            "errorTitle": "Error",
+            "errorMessage": "Failed to send reset email. Please try again.",
+            "subtitle": "Enter your email address and we'll send you a link to reset your password.",
+            "sendLink": "Send Reset Link",
+            "backToSignIn": "Back to Sign In"
+        }
+    },
+    "home": {
+        "welcomeBack": "Welcome back",
+        "healthAssessment": "Health Assessment",
+        "progress": {
+            "title": "Your Progress",
+            "subtitle": "1 of 4 tests completed",
+            "viewResults": "View Results",
+            "complete": "Complete"
+        },
+        "assessmentTests": "Assessment Tests",
+        "tests": {
+            "wearable": {
+                "title": "Wearable Device",
+                "description": "Connect & collect movement data"
+            },
+            "voice": {
+                "title": "Voice Analysis",
+                "description": "Record voice samples"
+            },
+            "drawing": {
+                "title": "Drawing Test",
+                "description": "Trace patterns & shapes"
+            },
+            "cognitive": {
+                "title": "Brain Games",
+                "description": "Cognitive activity tests"
+            }
+        },
+        "tip": {
+            "title": "Tip: ",
+            "description": "Complete all four tests for the most accurate assessment results."
+        }
+    },
+    "onboarding": {
+        "welcomeTitle": "Welcome to NeuroLens",
+        "welcomeSubtitle": "Your Health Companion",
+        "selectLanguage": "Select Your Preferred Language",
+        "continue": "Continue"
+    },
+    "wearable": {
+        "title": "Wearable Device",
+        "noDevice": "No Device Connected",
+        "introSubtitle": "Begin the standardized Parkinson's Assessment. This will guide you through 3 movement tasks (1 minute each).",
+        "beginAssessment": "Begin Assessment",
+        "stepOf": "Step %{step} of 3",
+        "steps": {
+            "restingTitle": "Resting Tremor",
+            "posturalTitle": "Postural Tremor",
+            "kineticTitle": "Kinetic Tremor",
+            "restingDesc": "Place your hands comfortably in your lap. Try to relax and remain as still as possible.",
+            "posturalDesc": "Stretch your arms straight out in front of you, palms facing down, and keep them level.",
+            "kineticDesc": "Slowly and repeatedly touch your finger to your nose, then extend your arm back out."
+        },
+        "startRecording": "Start Recording",
+        "recordingStatus": "Recording %{type}...",
+        "observation": "Observation %{current} of %{total}",
+        "continueHint": "Continue the task until the timer finishes.",
+        "assessmentComplete": "%{type} Assessment Complete",
+        "windowVoteSigns": "Window Vote: Signs detected",
+        "windowVoteNoSigns": "Window Vote: No signs detected",
+        "detectionPercentage": "(%{percentage}% detection)",
+        "proceedNext": "Proceed to Next Task",
+        "clinicalVerdict": "Overall Clinical Verdict",
+        "parkinsonsDetected": "Parkinson's Characteristics Detected",
+        "healthyObserved": "Healthy Movement Observed",
+        "probabilityScore": "Probability Score: %{score}%",
+        "verdictSubtext": "Based on aggregate analysis of Resting, Postural, and Kinetic tasks.",
+        "detailedBreakdown": "Detailed Breakdown",
+        "tasks": {
+            "resting": "Resting Task",
+            "postural": "Postural Task",
+            "kinetic": "Kinetic Task"
+        },
+        "healthy": "Healthy",
+        "signsDetectedIn": "Signs detected in ",
+        "noSignsDetectedIn": "No signs detected in ",
+        "ofWindows": " of %{total} windows",
+        "restartAssessment": "Restart Entire Assessment",
+        "connectPrompt": "Connect your wearable to begin collecting movement data",
+        "disconnectDevice": "Disconnect Device",
+        "connectDevice": "Connect Device",
+        "protocol": {
+            "title": "Assessment Protocol",
+            "step1": "Fasten the wearable securely to your wrist.",
+            "step2": "After pressing Start, place your phone down on the table.",
+            "step3": "Rest your hands completely still in your lap and relax.",
+            "step4": "Wait for the assessment to complete (approx. 45 seconds). The result screen will appear automatically."
+        },
+        "modal": {
+            "selectDevice": "Select Device",
+            "scanning": "Scanning for devices...",
+            "noDevices": "No devices found",
+            "unknown": "Unknown Device"
+        },
+        "alerts": {
+            "permissionDenied": "Permission Denied",
+            "bluetoothRequired": "Bluetooth permissions are required.",
+            "connected": "Connected",
+            "connectedTo": "Connected to %{name}",
+            "connectionFailed": "Connection Failed",
+            "couldNotConnect": "Could not connect.",
+            "error": "Error",
+            "failedStart": "Failed to start assessment. Is the device still connected?",
+            "locationTitle": "Location Permission",
+            "locationMessage": "NeuroLens needs location permission to scan for Bluetooth devices.",
+            "later": "Ask Me Later",
+            "cancel": "Cancel",
+            "ok": "OK"
+        }
+    },
+    "cognitive": {
+        "title": "Assessment",
+        "intro": {
+            "title": "Cognitive Health",
+            "description": "We will check your mental processing speed and working memory.",
+            "task1": "Task 1: Pattern Matching",
+            "task2": "Task 2: Logical Sequencing"
+        },
+        "step": "Step %{step}",
+        "quickMatch": {
+            "title": "Quick Match",
+            "description": "Look at the key at the top. Match the center symbol to its number as fast as you can.",
+            "start": "Start Activity"
+        },
+        "sequenceMemory": {
+            "title": "Sequence Memory",
+            "description": "A sequence will flash. Remember the numbers, then pick the option that shows them",
+            "sortedSuffix": "Sorted (Smallest to Largest)",
+            "start": "Start Activity",
+            "memorize": "MEMORIZE NOW",
+            "recall": "RECALL ORDER",
+            "memorizeHint": "Keep the numbers in mind...",
+            "recallHint": "Select the correct sorted order:",
+            "roundOf": "Round %{round} of %{total}"
+        },
+        "progress": "Progress: %{current} / %{total}",
+        "success": {
+            "title": "Success",
+            "description": "Your cognitive assessment is complete. Results have been recorded.",
+            "returnHome": "Return Home"
+        }
+    },
+    "drawing": {
+        "title": "Drawing Test",
+        "spiral": {
+            "title": "Spiral",
+            "description": "Draw a spiral starting from the center"
+        },
+        "wave": {
+            "title": "Wave",
+            "description": "Draw a continuous wave pattern"
+        },
+        "clear": "Clear",
+        "nextWave": "Next: Wave",
+        "complete": "Complete",
+        "saveDrawing": "Save Drawing",
+        "patternsCompleted": "Patterns completed",
+        "data": {
+            "title": "Drawing Data",
+            "points": "Points captured:",
+            "duration": "Duration:",
+            "latestX": "Latest X:",
+            "latestY": "Latest Y:"
+        }
+    },
+    "history": {
+        "title": "History",
+        "graphs": {
+            "daily": "Daily Risk Score Progress",
+            "weekly": "Weekly Risk Score Progress",
+            "monthly": "Monthly Risk Score Progress"
+        },
+        "summary": {
+            "totalAssessments": "Total Assessments",
+            "averageRisk": "Average Risk"
+        },
+        "categories": {
+            "wearable": "Wearable",
+            "voice": "Voice",
+            "drawing": "Drawing",
+            "brain": "Brain"
+        },
+        "noData": "No data available yet"
+    },
+    "tabs": {
+        "home": "Home",
+        "history": "History",
+        "results": "Results",
+        "profile": "Profile"
+    },
+    "resultsTab": {
+        "overallRiskScore": "Overall Risk Score",
+        "combinedAssessment": "Combined Risk Assessment",
+        "riskLevel": {
+            "low": "Low Risk",
+            "medium": "Medium Risk",
+            "high": "High Risk"
+        },
+        "testResults": "Test Results",
+        "loadingVoice": "Loading voice analysis results...",
+        "recommendations": {
+            "title": "Recommendations",
+            "items": [
+                "Continue regular assessments every 2 weeks",
+                "Voice exercises may help improve speech clarity",
+                "Share these results with your healthcare provider"
+            ]
+        },
+        "disclaimerFull": "This assessment is for monitoring purposes only and does not constitute a medical diagnosis. Always consult with a qualified healthcare professional.",
+        "tests": {
+            "movement": "Movement Analysis",
+            "voice": "Voice Analysis",
+            "motor": "Motor Control",
+            "cognitive": "Cognitive Function"
+        },
+        "descriptions": {
+            "low": "%{title} shows low risk indicators. Results are within normal parameters.",
+            "medium": "%{title} shows moderate risk. Some abnormalities detected. Monitor regularly.",
+            "high": "%{title} shows elevated risk. Significant abnormalities detected. Consult healthcare provider."
+        }
+    }
+}

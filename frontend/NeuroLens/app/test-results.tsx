@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { PenTool, ShieldCheck, AlertTriangle, AlertCircle, ChevronRight } from 'lucide-react-native';
 
 interface ModelPrediction {
@@ -24,18 +25,19 @@ interface PredictionParam {
 }
 
 const RISK = {
-    Low:      { color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0', Icon: ShieldCheck },
+    Low: { color: '#10B981', bg: '#ECFDF5', border: '#A7F3D0', Icon: ShieldCheck },
     Moderate: { color: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A', Icon: AlertTriangle },
-    High:     { color: '#EF4444', bg: '#FEF2F2', border: '#FECACA', Icon: AlertCircle },
+    High: { color: '#EF4444', bg: '#FEF2F2', border: '#FECACA', Icon: AlertCircle },
 } as const;
 
 const TIPS: Record<string, string[]> = {
-    Low:      ['Continue regular health monitoring', 'Maintain an active and balanced lifestyle', 'Schedule annual neurological check-ups'],
+    Low: ['Continue regular health monitoring', 'Maintain an active and balanced lifestyle', 'Schedule annual neurological check-ups'],
     Moderate: ['Consider scheduling a neurologist visit', 'Track any new or worsening symptoms', 'Repeat this assessment in 4–6 weeks'],
-    High:     ['Consult a neurologist as soon as possible', 'Bring a detailed symptom history', 'Do not rely on this AI assessment alone'],
+    High: ['Consult a neurologist as soon as possible', 'Bring a detailed symptom history', 'Do not rely on this AI assessment alone'],
 };
 
 export default function TestResultsScreen() {
+    const { t } = useLanguage();
     const router = useRouter();
     const params = useLocalSearchParams();
 
@@ -49,19 +51,19 @@ export default function TestResultsScreen() {
         }
     }
 
-    const riskLevel  = (prediction?.risk_level  ?? 'Low') as keyof typeof RISK;
-    const riskPct    = prediction?.risk_percentage ?? 0;
+    const riskLevel = (prediction?.risk_level ?? 'Low') as keyof typeof RISK;
+    const riskPct = prediction?.risk_percentage ?? 0;
     const confidence = prediction?.confidence ?? 0;
-    const label      = prediction?.label ?? 'No prediction available';
+    const label = prediction?.label ?? t('results.noPrediction');
 
     const { color, bg, border, Icon } = RISK[riskLevel];
-    const tips = TIPS[riskLevel];
+    const tips = (t(`results.tips.${riskLevel}`, { returnObjects: true }) as unknown) as string[] || [];
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>
             <Stack.Screen
                 options={{
-                    headerTitle: 'Test Results',
+                    headerTitle: t('results.title'),
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: '#F8FAFC' },
                     headerTitleStyle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
@@ -76,21 +78,23 @@ export default function TestResultsScreen() {
                     <View style={[styles.iconWrap, { backgroundColor: '#F97316' }]}>
                         <PenTool color="#FFFFFF" size={24} />
                     </View>
-                    <Text style={styles.heroTitle}>Drawing Analysis</Text>
+                    <Text style={styles.heroTitle}>{t('results.drawingAnalysis')}</Text>
                     <Text style={[styles.heroScore, { color }]}>{riskPct.toFixed(1)}%</Text>
                     <View style={[styles.badge, { backgroundColor: bg, borderColor: border }]}>
                         <Icon color={color} size={14} />
-                        <Text style={[styles.badgeText, { color }]}>{riskLevel} Risk — {label}</Text>
+                        <Text style={[styles.badgeText, { color }]}>
+                            {t('results.riskDescription', { riskLevel: t(`results.riskLevel.${riskLevel}`), label })}
+                        </Text>
                     </View>
                 </View>
 
                 {/* Scores */}
                 {prediction && (
                     <View style={styles.card}>
-                        <Text style={styles.cardTitle}>Score Details</Text>
+                        <Text style={styles.cardTitle}>{t('results.scoreDetails')}</Text>
 
                         <View style={styles.scoreRow}>
-                            <Text style={styles.scoreRowLabel}>Risk Score</Text>
+                            <Text style={styles.scoreRowLabel}>{t('results.riskScore')}</Text>
                             <View style={styles.barTrack}>
                                 <View style={[styles.barFill, { width: `${Math.min(riskPct, 100)}%` as any, backgroundColor: color }]} />
                             </View>
@@ -98,7 +102,7 @@ export default function TestResultsScreen() {
                         </View>
 
                         <View style={styles.scoreRow}>
-                            <Text style={styles.scoreRowLabel}>Confidence</Text>
+                            <Text style={styles.scoreRowLabel}>{t('results.confidence')}</Text>
                             <View style={styles.barTrack}>
                                 <View style={[styles.barFill, { width: `${Math.min(confidence, 100)}%` as any, backgroundColor: '#14B8A6' }]} />
                             </View>
@@ -109,7 +113,7 @@ export default function TestResultsScreen() {
 
                 {/* Recommendations */}
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Recommendations</Text>
+                    <Text style={styles.cardTitle}>{t('results.recommendations')}</Text>
                     {tips.map((tip, i) => (
                         <View key={i} style={styles.tipRow}>
                             <View style={[styles.tipDot, { backgroundColor: color }]} />
@@ -120,9 +124,9 @@ export default function TestResultsScreen() {
 
                 {/* Disclaimer */}
                 <View style={styles.disclaimer}>
-                    <Text style={styles.disclaimerTitle}>Important Notice</Text>
+                    <Text style={styles.disclaimerTitle}>{t('results.importantNotice')}</Text>
                     <Text style={styles.disclaimerText}>
-                        This AI assessment is <Text style={styles.bold}>NOT a medical diagnosis</Text>. Always consult a qualified healthcare professional for proper evaluation.
+                        {t('results.disclaimer')}
                     </Text>
                 </View>
 
@@ -132,7 +136,7 @@ export default function TestResultsScreen() {
                     onPress={() => router.replace('/(tabs)')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.homeBtnText}>Back to Home</Text>
+                    <Text style={styles.homeBtnText}>{t('results.backToHome')}</Text>
                     <ChevronRight color="#14B8A6" size={18} />
                 </TouchableOpacity>
 

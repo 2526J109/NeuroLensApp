@@ -5,10 +5,11 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libsndfile1 \
     ffmpeg \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend code
@@ -16,7 +17,7 @@ COPY . /app
 
 # Install Python dependencies
 RUN pip install --upgrade pip \
-    && pip install -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt
 
 # Expose FastAPI port
 EXPOSE 8080

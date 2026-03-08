@@ -19,31 +19,25 @@ const getApiBaseUrl = () => {
     // For physical devices, set EXPO_PUBLIC_API_BASE_URL to your LAN IP.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Platform } = require('react-native');
-    if (Platform.OS === 'android') return 'https://neurolens-api-903113706545.asia-south1.run.app/';
-    return 'http://localhost:8000/';
+    if (Platform.OS === 'android') return 'https://neurolens-api-903113706545.asia-south1.run.app';
+    return 'http://localhost:8000';
   }
   // Production URL (include /api prefix to match backend)
-  return 'https://neurolens-api-903113706545.asia-south1.run.app/';
+  return 'https://neurolens-api-903113706545.asia-south1.run.app';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
+
 export const API_ENDPOINTS = {
   VOICE_ANALYSIS: {
-    // Multipart endpoint — accepts real audio files
-    PREDICT_VOICE: `${API_BASE_URL}/api/voice-analysis/predict_voice`,
-    // Legacy JSON-only endpoint (kept for fallback)
-    ANALYZE: `${API_BASE_URL}/api/voice-analysis/analyze`,
-    RESULTS: (sessionId: string) => `${API_BASE_URL}/api/voice-analysis/results/${sessionId}`,
-    UPLOAD: `${API_BASE_URL}/api/voice-analysis/upload`,
+    // JSON endpoint (kept for reference)
+    PREDICT_MULTIMODAL: `${API_BASE_URL}/api/predict-multimodal`,
+    // Audio-upload endpoint — sends actual recordings for real feature extraction
+    PREDICT_MULTIMODAL_AUDIO: `${API_BASE_URL}/api/predict-multimodal-audio`,
   },
-  
   DRAWING_ANALYSIS: {
     ANALYZE: `${API_BASE_URL}/api/drawing-prediction/analyze`,
-  },
-  
-  COGNITIVE_ANALYSIS: {
-    PREDICT: `${API_BASE_URL}/api/cognitive-analysis/predict`,
   },
 };
 

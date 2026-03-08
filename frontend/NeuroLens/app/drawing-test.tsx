@@ -12,6 +12,7 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RotateCcw } from 'lucide-react-native';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { DrawingCanvas, DrawingPoint } from '@/components/DrawingCanvas';
 import { SpiralGuide } from '@/components/SpiralGuide';
 import { WaveGuide } from '@/components/WaveGuide';
@@ -25,12 +26,13 @@ type TestType = 'spiral' | 'wave';
 
 export default function DrawingTestScreen() {
     const { user, userProfile } = useAuth();
+    const { t } = useLanguage();
     const router = useRouter();
     const [currentTest, setCurrentTest] = useState<TestType>('spiral');
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
     const [canvasKey, setCanvasKey] = useState(0);
     const [completedTests, setCompletedTests] = useState<TestType[]>([]);
-    
+
     // Store JSON data for both tests
     const [spiralDataJSON, setSpiralDataJSON] = useState<DrawingDataJSON | null>(null);
     const [waveDataJSON, setWaveDataJSON] = useState<DrawingDataJSON | null>(null);
@@ -60,7 +62,7 @@ export default function DrawingTestScreen() {
 
         // Create JSON object for current test
         const jsonData = formatDrawingData(currentTest, drawingData);
-        
+
         // Store JSON based on test type
         if (currentTest === 'spiral') {
             setSpiralDataJSON(jsonData);
@@ -138,7 +140,7 @@ export default function DrawingTestScreen() {
         <SafeAreaView style={styles.container} edges={['bottom']}>
             <Stack.Screen
                 options={{
-                    headerTitle: 'Drawing Test',
+                    headerTitle: t('drawing.title'),
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: '#FFFFFF' },
                     headerTitleStyle: {
@@ -166,8 +168,8 @@ export default function DrawingTestScreen() {
                         </View>
                     </View>
                     <View style={styles.progressLabels}>
-                        <Text style={[styles.progressLabel, currentTest === 'spiral' && styles.progressLabelActive]}>Spiral</Text>
-                        <Text style={[styles.progressLabel, currentTest === 'wave' && styles.progressLabelActive]}>Wave</Text>
+                        <Text style={[styles.progressLabel, currentTest === 'spiral' && styles.progressLabelActive]}>{t('drawing.spiral.title')}</Text>
+                        <Text style={[styles.progressLabel, currentTest === 'wave' && styles.progressLabelActive]}>{t('drawing.wave.title')}</Text>
                     </View>
                 </View>
 
@@ -176,9 +178,9 @@ export default function DrawingTestScreen() {
                     <View style={styles.iconBadge}>
                         <View style={isSpiral ? styles.iconBar : styles.iconDots} />
                     </View>
-                    <Text style={styles.title}>{isSpiral ? 'Spiral' : 'Wave'}</Text>
+                    <Text style={styles.title}>{isSpiral ? t('drawing.spiral.title') : t('drawing.wave.title')}</Text>
                     <Text style={styles.subtitle}>
-                        {isSpiral ? 'Draw a spiral starting from the center' : 'Draw a continuous wave pattern'}
+                        {isSpiral ? t('drawing.spiral.description') : t('drawing.wave.description')}
                     </Text>
                 </View>
 
@@ -191,7 +193,7 @@ export default function DrawingTestScreen() {
                         ) : (
                             <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={40} />
                         )}
-                        
+
                         {/* Drawing Canvas */}
                         <DrawingCanvas
                             key={canvasKey}
@@ -213,7 +215,7 @@ export default function DrawingTestScreen() {
                         activeOpacity={0.7}
                     >
                         <RotateCcw size={20} color="#64748B" />
-                        <Text style={styles.clearButtonText}>Clear</Text>
+                        <Text style={styles.clearButtonText}>{t('drawing.clear')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -222,7 +224,7 @@ export default function DrawingTestScreen() {
                         activeOpacity={0.8}
                     >
                         <Text style={styles.saveButtonText}>
-                            {currentTest === 'spiral' ? 'Next: Wave' : 'Complete'}
+                            {currentTest === 'spiral' ? t('drawing.nextWave') : t('drawing.complete')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -230,25 +232,25 @@ export default function DrawingTestScreen() {
                 {/* Data Information Card */}
                 {drawingData.length > 0 && (
                     <View style={styles.infoCard}>
-                        <Text style={styles.infoTitle}>Drawing Data</Text>
+                        <Text style={styles.infoTitle}>{t('drawing.data.title')}</Text>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Points captured:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.points')}</Text>
                             <Text style={styles.infoValue}>{drawingData.length}</Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Duration:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.duration')}</Text>
                             <Text style={styles.infoValue}>
                                 {((drawingData[drawingData.length - 1]?.timestamp || 0) / 1000).toFixed(2)}s
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Latest X:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.latestX')}</Text>
                             <Text style={styles.infoValue}>
                                 {drawingData[drawingData.length - 1]?.x.toFixed(1)}
                             </Text>
                         </View>
                         <View style={styles.infoRow}>
-                            <Text style={styles.infoLabel}>Latest Y:</Text>
+                            <Text style={styles.infoLabel}>{t('drawing.data.latestY')}</Text>
                             <Text style={styles.infoValue}>
                                 {drawingData[drawingData.length - 1]?.y.toFixed(1)}
                             </Text>

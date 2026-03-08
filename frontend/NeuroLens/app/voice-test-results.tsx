@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type RiskLevel = 'Low' | 'Moderate' | 'High';
 
@@ -18,6 +19,7 @@ const getRiskLevelFromPercentage = (percentage: number): RiskLevel => {
 };
 
 export default function VoiceTestResultsScreen() {
+    const { t } = useLanguage();
     const router = useRouter();
     const params = useLocalSearchParams();
 
@@ -62,21 +64,20 @@ export default function VoiceTestResultsScreen() {
         }
 
         if (statusParam === 'good') {
-            return 'Voice characteristics within normal range. No significant tremor detected.';
+            return t('results.voiceSummaries.good');
         }
 
         if (riskLevel === 'Moderate') {
-            return 'Slight voice tremor detected. Consider monitoring your symptoms and practicing voice exercises.';
+            return t('results.voiceSummaries.moderate');
         }
-
-        return 'Moderate voice tremor and reduced clarity detected. Consider consulting a healthcare professional.';
+        return t('results.voiceSummaries.high');
     };
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>
             <Stack.Screen
                 options={{
-                    headerTitle: 'Test Results',
+                    headerTitle: t('results.title'),
                     headerShadowVisible: false,
                     headerStyle: { backgroundColor: '#FFFFFF' },
                     headerTitleStyle: {
@@ -99,7 +100,7 @@ export default function VoiceTestResultsScreen() {
                         { backgroundColor: getBackgroundColor() },
                     ]}
                 >
-                    <Text style={styles.scoreLabel}>Risk Assessment</Text>
+                    <Text style={styles.scoreLabel}>{t('results.riskAssessment')}</Text>
                     <Text
                         style={[
                             styles.scorePercentage,
@@ -115,55 +116,46 @@ export default function VoiceTestResultsScreen() {
                         ]}
                     >
                         <Text style={styles.riskBadgeText}>
-                            {riskLevel} Risk
+                            {t(`results.riskLevel.${riskLevel}`)} {t('results.riskAssessment').split(' ')[0]}
                         </Text>
                     </View>
                 </View>
 
                 {/* Summary from analysis */}
                 <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>Voice Assessment</Text>
+                    <Text style={styles.summaryTitle}>{t('results.voiceAssessment')}</Text>
                     <Text style={styles.summaryStatus}>
-                        Status: {statusParam === 'good' ? 'Good' : 'Warning'}
+                        {t('results.status.good').split(':')[0]}: {statusParam === 'good' ? t('results.status.good') : t('results.status.warning')}
                     </Text>
                     <Text style={styles.summaryText}>{getSummaryText()}</Text>
                 </View>
 
                 {/* Disclaimer */}
                 <View style={styles.disclaimerCard}>
-                    <Text style={styles.disclaimerTitle}>Important Notice</Text>
+                    <Text style={styles.disclaimerTitle}>{t('results.importantNotice')}</Text>
                     <Text style={styles.disclaimerText}>
-                        This is a preliminary assessment based on voice analysis.
-                        It is NOT a medical diagnosis. Please consult a
-                        healthcare professional for proper evaluation.
+                        {t('results.disclaimer')}
                     </Text>
                 </View>
 
                 {/* Recommendations */}
                 <View style={styles.recommendationsCard}>
                     <Text style={styles.recommendationsTitle}>
-                        Recommendations
+                        {t('results.recommendations')}
                     </Text>
                     {riskLevel === 'Low' && (
                         <Text style={styles.recommendationText}>
-                            Your voice characteristics appear within normal
-                            range. Continue monitoring your health and consult a
-                            doctor if you notice any changes.
+                            {t('results.voiceRecommendations.low')}
                         </Text>
                     )}
                     {riskLevel === 'Moderate' && (
                         <Text style={styles.recommendationText}>
-                            Mild changes in voice patterns are present. Consider
-                            regular checkups and practicing breathing and voice
-                            exercises to support vocal stability.
+                            {t('results.voiceRecommendations.moderate')}
                         </Text>
                     )}
                     {riskLevel === 'High' && (
                         <Text style={styles.recommendationText}>
-                            Your voice patterns show indicators that may benefit
-                            from professional evaluation. We recommend
-                            discussing these findings with a neurologist or
-                            healthcare provider.
+                            {t('results.voiceRecommendations.high')}
                         </Text>
                     )}
                 </View>
@@ -174,7 +166,7 @@ export default function VoiceTestResultsScreen() {
                     onPress={() => router.replace('/(tabs)')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.homeButtonText}>Back to Home</Text>
+                    <Text style={styles.homeButtonText}>{t('results.backToHome')}</Text>
                 </TouchableOpacity>
 
                 <View style={{ height: 24 }} />
