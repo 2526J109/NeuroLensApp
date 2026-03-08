@@ -92,5 +92,5 @@ class ParkinsonsMultimodalPredictor:
         final_prob = self._correct_prior(raw_prob)
 
         risk_percentage = round(final_prob * 100, 2)
-        category = "Low Risk" if risk_percentage < 30 else "Moderate Risk" if risk_percentage < 70 else "High Risk"
+        category = "Low Risk" if risk_percentage < 45 else "Moderate Risk" if risk_percentage < 70 else "High Risk"
         return {"risk_percentage": f"{risk_percentage:.2f}%", "risk_category": category}
