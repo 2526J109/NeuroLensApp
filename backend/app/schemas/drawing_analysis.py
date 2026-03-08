@@ -15,6 +15,7 @@ class DrawingData(BaseModel):
 
 class DrawingAnalysisRequest(BaseModel):
     user_id: Optional[str] = Field(None, description="User ID for tracking")
+    session_id: Optional[str] = Field(None, description="Session ID for grouping tests")
     spiral_data: Optional[DrawingData] = Field(None, description="Spiral test data")
     wave_data: Optional[DrawingData] = Field(None, description="Wave test data")
 

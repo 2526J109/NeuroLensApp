@@ -5,13 +5,13 @@ class WearablePredictionService:
     def __init__(self):
         self.dao = WearablePredictionDAO()
         
-    def save_wearable_prediction(self, user_id: str, prediction_data: Dict[str, Any]) -> Dict[str, Any]:
+    def save_wearable_prediction(self, user_id: str, prediction_data: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         """
         Validate and save wearable prediction results.
         Currently it merely acts as a bridge to the DAO, but it can handle
         any preprocessing or supplementary logic needed.
         """
-        return self.dao.save_prediction(user_id, prediction_data)
+        return self.dao.save_prediction(user_id, prediction_data, session_id)
 
     def get_user_predictions(self, user_id: str):
         """

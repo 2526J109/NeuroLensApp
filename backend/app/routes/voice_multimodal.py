@@ -1,17 +1,18 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from typing import Optional
-from pydantic import BaseModel
-import pandas as pd
-from app.models.parkinsons_multimodal_predictor import ParkinsonsMultimodalPredictor
-from app.services.voice_feature_extractor import (
-    extract_acoustic_features,
-    extract_linguistic_features,
-)
 import os
-import tempfile
 import shutil
 import logging
 import warnings
+import tempfile
+import pandas as pd
+from typing import Optional
+from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from ..dao.voice_analysis_dao import VoiceAnalysisDAO
+from ..models.parkinsons_multimodal_predictor import ParkinsonsMultimodalPredictor
+from ..services.voice_feature_extractor import (
+    extract_acoustic_features,
+    extract_linguistic_features,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ router = APIRouter()
 MODEL_PATH = os.path.join(os.path.dirname(__file__), '../models/parkinsons_multimodal_fused_model.joblib')
 
 _predictor: Optional[ParkinsonsMultimodalPredictor] = None
+voice_dao = VoiceAnalysisDAO()
 
 
 def get_predictor() -> ParkinsonsMultimodalPredictor:
@@ -90,6 +92,8 @@ def _get_whisper():
 async def predict_from_audio(
     audio_0: Optional[UploadFile] = File(None, description="Recording for prompt 1"),
     audio_1: Optional[UploadFile] = File(None, description="Recording for prompt 2 (optional)"),
+    session_id: Optional[str] = Form(None),
+    user_id: Optional[str] = Form(None),
 ):
     """
     Accept one or two audio recordings, extract acoustic + linguistic features,
@@ -149,7 +153,29 @@ async def predict_from_audio(
         # ── Predict ──────────────────────────────────────────────────────────
         df_acou = pd.DataFrame([acoustic_feats])
         df_lang = pd.DataFrame([linguistic_feats])
-        return predictor.predict_risk(df_acou, df_lang)
+        result = predictor.predict_risk(df_acou, df_lang)
+        
+        # ── Persist result if user_id/session_id provided ──
+        if user_id:
+            try:
+                # risk_percentage is a string like "12.34%"
+                risk_pct_str = result.get('risk_percentage', '0%').replace('%', '')
+                try:
+                    risk_pct = float(risk_pct_str)
+                except ValueError:
+                    risk_pct = 0.0
+
+                dao_result = {
+                    'percentage': risk_pct,
+                    'status': result.get('risk_category', 'warning'),
+                    'description': f"Multimodal risk: {risk_pct}%"
+                }
+                voice_dao.save_result(user_id, dao_result, session_id=session_id)
+                logger.info("Voice result persisted to Firestore")
+            except Exception as e:
+                logger.error("Failed to persist voice result: %s", e)
+
+        return result
 
     except HTTPException:
         raise

@@ -8,11 +8,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_ENDPOINTS } from '../constants/api';
+import { useAssessment } from '../contexts/AssessmentContext';
 
 export default function WearableScreen() {
     const router = useRouter();
     const { userProfile, user } = useAuth();
     const { t } = useLanguage();
+    const { sessionId, markTaskComplete } = useAssessment();
     const manager = useMemo(() => new BleManager(), []);
     const [isScanning, setIsScanning] = useState(false);
     const [devices, setDevices] = useState<Device[]>([]);
@@ -52,6 +54,7 @@ export default function WearableScreen() {
 
                     const payload = {
                         user_id: userProfile.firebase_uid,
+                        session_id: sessionId,
                         global_verdict: Object.values(stepResults).some(r => r.result === 'PARKINSONS') ? 'PARKINSONS' : 'HEALTHY',
                         probability_score: Math.round(
                             (Object.values(stepResults).reduce((sum, r) => sum + parseFloat(r.ratio), 0) /
@@ -75,6 +78,7 @@ export default function WearableScreen() {
                         console.error('Failed to save wearable prediction', await response.text());
                     } else {
                         console.log('Wearable prediction saved successfully');
+                        markTaskComplete('wearable');
                     }
                 } catch (error) {
                     console.error('Error saving wearable prediction:', error);

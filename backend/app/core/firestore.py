@@ -167,6 +167,31 @@ class FirestoreService:
             predictions.append(data)
         return predictions
 
+    def get_user_assessment_history(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all multimodal assessment history for a user"""
+        history_ref = self.db.collection('assessment_history')
+        query = history_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING)
+        docs = query.get()
+        
+        history = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            history.append(data)
+        return history
+
+    def get_latest_assessment(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get the single most recent multimodal assessment for a user"""
+        history_ref = self.db.collection('assessment_history')
+        query = history_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(1)
+        docs = query.get()
+        
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            return data
+        return None
+
 # Get Firestore service instance (lazy singleton)
 def get_firestore_service() -> FirestoreService:
     """Get or create the Firestore service singleton instance"""
