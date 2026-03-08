@@ -52,10 +52,27 @@ def _compute_radius_resid_std(x: np.ndarray, y: np.ndarray) -> float:
     return float(np.std(r))
 
 
+def _resample_uniform(x: np.ndarray, y: np.ndarray, t: np.ndarray, hz: float = 60.0):
+    """
+    Resample (x, y) to a uniform time grid at `hz` Hz using linear interpolation.
+    This matches the fixed-rate tablet digitizer data the model was trained on,
+    and removes velocity spikes caused by irregular mobile touch event timing.
+    """
+    if len(t) < 2:
+        return x, y, t
+    t_uniform = np.arange(t[0], t[-1], 1.0 / hz)
+    if len(t_uniform) < 2:
+        return x, y, t
+    x_r = np.interp(t_uniform, t, x)
+    y_r = np.interp(t_uniform, t, y)
+    return x_r, y_r, t_uniform
+
+
 def _compute_wave_rmse(y: np.ndarray) -> float:
     """RMSE of y-trajectory vs its Gaussian-smoothed version — wave path smoothness."""
     y_smooth = gaussian_filter1d(y.astype(float), sigma=5)
     return float(np.sqrt(np.mean((y - y_smooth)**2)))
+
 
 
 
@@ -73,13 +90,18 @@ def extract_rfe_features(
     spiral_points: List[Dict[str, float]],
     wave_points: List[Dict[str, float]],
 ) -> Dict[str, float]:
+    # Device DPI — converts raw screen pixels → inches (same scale as training data)
+    X_DPI: float = 403.411
+    Y_DPI: float = 401.594
+
     features: Dict[str, float] = {k: 0.0 for k in RFE_FEATURE_NAMES}
 
     # ── Spiral (spiral_vel_cv, spiral_jerk_cv) ────────────────────────────
     if spiral_points and len(spiral_points) > 1:
-        sx = np.array([p["x"] for p in spiral_points], dtype=float)
-        sy = np.array([p["y"] for p in spiral_points], dtype=float)
+        sx = np.array([p["x"] for p in spiral_points], dtype=float) / X_DPI
+        sy = np.array([p["y"] for p in spiral_points], dtype=float) / Y_DPI
         st = np.array([p["timestamp"] for p in spiral_points], dtype=float) / 1000.0
+        sx, sy, st = _resample_uniform(sx, sy, st)
 
         sv = compute_velocity(sx, sy, st)
         features["spiral_vel_cv"]   = compute_vel_cv(sv)
@@ -87,9 +109,10 @@ def extract_rfe_features(
 
     # ── Wavy (wavy_vel_cv, wavy_wave_rmse, wavy_radius_resid_std, wavy_jerk_cv)
     if wave_points and len(wave_points) > 1:
-        wx = np.array([p["x"] for p in wave_points], dtype=float)
-        wy = np.array([p["y"] for p in wave_points], dtype=float)
+        wx = np.array([p["x"] for p in wave_points], dtype=float) / X_DPI
+        wy = np.array([p["y"] for p in wave_points], dtype=float) / Y_DPI
         wt = np.array([p["timestamp"] for p in wave_points], dtype=float) / 1000.0
+        wx, wy, wt = _resample_uniform(wx, wy, wt)
 
         wv = compute_velocity(wx, wy, wt)
         features["wavy_vel_cv"]          = compute_vel_cv(wv)
@@ -113,13 +136,18 @@ def extract_kinematic_features(spiral_points: List[Dict[str, float]], wave_point
     Returns:
         Dictionary of 5 extracted features
     """
+    # Device DPI — converts raw screen pixels → inches (same scale as training data)
+    X_DPI: float = 403.411
+    Y_DPI: float = 401.594
+
     features = {}
 
     # ---- Spiral Data ----
     if spiral_points and len(spiral_points) > 1:
-        sx = np.array([p["x"] for p in spiral_points])
-        sy = np.array([p["y"] for p in spiral_points])
+        sx = np.array([p["x"] for p in spiral_points]) / X_DPI
+        sy = np.array([p["y"] for p in spiral_points]) / Y_DPI
         st = np.array([p["timestamp"] for p in spiral_points]) / 1000.0
+        sx, sy, st = _resample_uniform(sx, sy, st)
 
         spiral_velocity = compute_velocity(sx, sy, st)
         spiral_curvature = compute_curvature(sx, sy)
@@ -134,9 +162,10 @@ def extract_kinematic_features(spiral_points: List[Dict[str, float]], wave_point
 
     # ---- Wave Data ----
     if wave_points and len(wave_points) > 1:
-        wx = np.array([p["x"] for p in wave_points])
-        wy = np.array([p["y"] for p in wave_points])
+        wx = np.array([p["x"] for p in wave_points]) / X_DPI
+        wy = np.array([p["y"] for p in wave_points]) / Y_DPI
         wt = np.array([p["timestamp"] for p in wave_points]) / 1000.0
+        wx, wy, wt = _resample_uniform(wx, wy, wt)
 
         wave_velocity = compute_velocity(wx, wy, wt)
 
