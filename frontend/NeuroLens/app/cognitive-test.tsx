@@ -709,50 +709,63 @@ export default function CognitiveAssessment() {
 
         {/* ── SDMT INSTRUCTION ── */}
         {stage === "sdmt_instr" && (
-          <InfoScreen>
+          <View style={styles.sdmtInstrScreen}>
             <Text style={styles.tag}>
               {sdmtPhase === "practice"
                 ? t("cognitive.sdmtInstrTagAct2")
                 : t("cognitive.sdmtInstrTagNow")}
             </Text>
             <Text style={styles.title}>{t("cognitive.activity2Title")}</Text>
-            <SdmtKey />
-            <Text style={styles.sub}>
-              {t("cognitive.sdmtInstrSub")}
-            </Text>
+            <Text style={styles.sub}>{t("cognitive.sdmtInstrSub")}</Text>
+            {/* Example row showing one symbol → digit mapping */}
+            <View style={styles.instrExample}>
+              <View style={styles.instrExSymBox}>
+                <Text style={styles.instrExSym}>{SYMBOLS[1].s}</Text>
+              </View>
+              <Text style={styles.instrExArrow}>→</Text>
+              <View style={[styles.instrExDigBox, { borderColor: C.green }]}>
+                <Text style={[styles.instrExDig, { color: C.green }]}>{SYMBOLS[1].d}</Text>
+              </View>
+              <Text style={styles.instrExHint}>tap the matching number</Text>
+            </View>
             <Text style={styles.note}>
               {sdmtPhase === "practice"
                 ? t("cognitive.sdmtInstrNotePrac")
                 : t("cognitive.sdmtInstrNoteReal")}
             </Text>
+
             <TouchableOpacity
               style={styles.btn}
-              onPress={
-                sdmtPhase === "practice" ? startSdmtPractice : startSdmtReal
-              }
+              onPress={sdmtPhase === "practice" ? startSdmtPractice : startSdmtReal}
             >
               <Text style={styles.btnTxt}>
-                {sdmtPhase === "practice" ? t("cognitive.startPractice") : t("cognitive.startActivity")}
+                {sdmtPhase === "practice"
+                  ? t("cognitive.startPractice")
+                  : t("cognitive.startActivity")}
               </Text>
             </TouchableOpacity>
-          </InfoScreen>
+          </View>
         )}
 
         {/* ── SDMT PRACTICE ── */}
         {stage === "sdmt_practice" && (
           <View style={styles.sdmtScreen}>
-            <View>
-              <View style={styles.taskBar}>
-                <Text style={styles.taskTag}>{t("cognitive.practiceTag")}</Text>
-                <Text style={styles.taskHint}>
-                  {PRACTICE_N_SDMT - pracDone} {t("cognitive.sdmtPracLeft")}
+            {/* Header row */}
+            <View style={styles.taskBar}>
+              <Text style={styles.taskTag}>{t("cognitive.practiceTag")}</Text>
+              <View style={styles.pracPillWrap}>
+                <Text style={styles.pracPillTxt}>
+                  {PRACTICE_N_SDMT - pracDone} left
                 </Text>
               </View>
-              <SdmtKey />
             </View>
 
-            {/* pointerEvents=none so symbol display never blocks numpad taps */}
-            <View style={styles.symArea} pointerEvents="none">
+            {/* Key */}
+            <SdmtKey />
+
+            {/* Symbol display — sits in a defined card, no floating */}
+            {/* pointerEvents="none" preserved — do NOT remove */}
+            <View style={styles.symCard} pointerEvents="none">
               <Text style={styles.symTxt}>
                 {symQueue[trialIdx] !== undefined
                   ? SYMBOLS[symQueue[trialIdx]].s
@@ -780,6 +793,7 @@ export default function CognitiveAssessment() {
               )}
             </View>
 
+            {/* Numpad — unchanged handler */}
             <Numpad onPress={handleSdmt} />
           </View>
         )}
@@ -794,27 +808,20 @@ export default function CognitiveAssessment() {
               </View>
             ) : (
               <>
-                <View>
-                  <View style={styles.taskBar}>
-                    <Text style={styles.taskTag}>{t("cognitive.quickMatch")}</Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <Clock size={13} color={C.muted} />
-                      <Text style={styles.timerTxt}>
-                        {Math.ceil(timeLeft / 1000)}s
-                      </Text>
-                    </View>
+                {/* Header */}
+                <View style={styles.taskBar}>
+                  <Text style={styles.taskTag}>{t("cognitive.quickMatch")}</Text>
+                  <View style={styles.timerPill}>
+                    <Clock size={12} color={C.green} />
+                    <Text style={styles.timerTxt}>{Math.ceil(timeLeft / 1000)}s</Text>
                   </View>
-                  <SdmtKey />
                 </View>
 
-                {/* pointerEvents=none so symbol display never blocks numpad taps */}
-                <View style={styles.symArea} pointerEvents="none">
+                {/* Key */}
+                <SdmtKey />
+
+                {/* Symbol card — pointerEvents="none" preserved */}
+                <View style={styles.symCard} pointerEvents="none">
                   <Text style={styles.symTxt}>
                     {symQueue[trialIdx] !== undefined
                       ? SYMBOLS[symQueue[trialIdx]].s
@@ -822,6 +829,7 @@ export default function CognitiveAssessment() {
                   </Text>
                 </View>
 
+                {/* Numpad + progress bar */}
                 <View>
                   <Numpad onPress={handleSdmt} />
                   <View style={[styles.progTrack, { marginTop: 12 }]}>
@@ -1029,14 +1037,122 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   btnTxt: { color: C.white, fontSize: 17, fontWeight: "700" },
+  // ── Instruction screen layout ──────────────────────────────────────────────
+  sdmtInstrScreen: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 28,
+    gap: 14,
+    justifyContent: "center",
+  },
+  instrKeyWrap: {
+    backgroundColor: C.white,
+    borderRadius: 18,
+    padding: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  instrExample: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: C.greenLt,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  instrExSymBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: C.white,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  instrExSym: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: C.ink,
+  },
+  instrExArrow: {
+    fontSize: 20,
+    color: C.muted,
+    fontWeight: "300",
+  },
+  instrExDigBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 2.5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: C.white,
+  },
+  instrExDig: {
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  instrExHint: {
+    flex: 1,
+    fontSize: 13,
+    color: C.mid,
+    fontWeight: "500",
+  },
+  // ── Task screen — symbol display card ─────────────────────────────────────
+  symCard: {
+    flex: 1,
+    marginVertical: 10,
+    backgroundColor: C.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: C.border,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    minHeight: 90,
+    maxHeight: 160,
+  },
+  // ── Timer pill ─────────────────────────────────────────────────────────────
+  timerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: C.greenLt,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  // ── Practice "X left" pill ─────────────────────────────────────────────────
+  pracPillWrap: {
+    backgroundColor: C.subtle,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  pracPillTxt: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: C.muted,
+  },
+  // ── Key styles ─────────────────────────────────────────────────────────────
   keyOuter: {
     backgroundColor: C.subtle,
     borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   keyLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     color: "#94A3B8",
     textTransform: "uppercase",
@@ -1045,7 +1161,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   keyRow: { flexDirection: "row", justifyContent: "space-between" },
-  keyCell: { alignItems: "center" },
+  keyCell: { alignItems: "center", gap: 2 },
   keySym: {
     fontSize: Math.min(15, W * 0.038),
     fontWeight: "800",
@@ -1055,18 +1171,12 @@ const styles = StyleSheet.create({
     height: 1.5,
     width: "70%",
     backgroundColor: C.border,
-    marginVertical: 3,
+    marginVertical: 2,
   },
   keyDig: {
     fontSize: Math.min(13, W * 0.034),
     fontWeight: "800",
     color: C.green,
-  },
-  symArea: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: 70,
   },
   symTxt: { fontSize: Math.min(64, W * 0.18), color: C.ink, fontWeight: "800" },
   fbBadge: {
@@ -1096,7 +1206,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   numpadTxt: { fontWeight: "800", color: C.ink },
-  timerTxt: { fontSize: 14, fontWeight: "700", color: "#94A3B8" },
+  timerTxt: { fontSize: 13, fontWeight: "700", color: C.green },
   pauseScreen: {
     flex: 1,
     justifyContent: "center",
