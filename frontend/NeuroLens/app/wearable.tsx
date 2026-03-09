@@ -491,14 +491,12 @@ export default function WearableScreen() {
                                     ))}
 
                                     <TouchableOpacity
-                                        style={[styles.startButton, { marginTop: 32, width: '100%' }]}
+                                        style={[styles.startButton, { marginTop: 32, width: '100%', backgroundColor: '#0F172A' }]}
                                         onPress={() => {
-                                            setAssessmentStep(0);
-                                            setSessionStatus('IDLE');
-                                            setStepResults({});
+                                            router.replace('/(tabs)');
                                         }}
                                     >
-                                        <Text style={styles.startButtonText}>{t('wearable.restartAssessment')}</Text>
+                                        <Text style={styles.startButtonText}>{t('results.backToHome')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}

@@ -219,7 +219,7 @@ export default function ResultsScreen() {
         ];
 
         setTestResults(updatedResults);
-        setOverallScore(data.final_multimodal_risk || 0);
+        setOverallScore(data.final_score ?? data.final_multimodal_risk ?? 0);
       } catch (err: any) {
         console.error('Error fetching latest results:', err);
         if (err.response?.status === 404) {

@@ -99,7 +99,7 @@ export default function MultimodalResultsScreen() {
         );
     }
 
-    const overallRisk = getRiskLevel(result.final_score);
+    const overallRisk = getRiskLevel(result.final_score ?? (result as any).final_multimodal_risk ?? 0);
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -116,7 +116,7 @@ export default function MultimodalResultsScreen() {
                 <View style={[styles.scoreCard, { backgroundColor: overallRisk.bg }]}>
                     <Text style={styles.scoreLabel}>{t('resultsTab.multimodal.overallScore')}</Text>
                     <Text style={[styles.scorePercentage, { color: overallRisk.color }]}>
-                        {Math.round(result.final_score)}%
+                        {Math.round(result.final_score ?? (result as any).final_multimodal_risk ?? 0)}%
                     </Text>
                     <View style={[styles.riskBadge, { backgroundColor: overallRisk.color }]}>
                         <Text style={styles.riskBadgeText}>{overallRisk.label}</Text>
