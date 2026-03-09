@@ -395,29 +395,23 @@
         "activity2Time": "~1 minute",
         "introNote": "A short practice round comes before each activity.",
         "letsBegin": "Let's Begin",
-        
         "tmtInstrTag": "Activity 1 of 2",
         "tmtInstrSub": "Tap the dots in order — 1, then 2, then 3 — as quickly as you can.",
         "tmtInstrLabel": "The dot you tap next glows green",
         "tmtInstrNote": "You'll practice with 5 dots first.",
         "startPractice": "Start Practice",
-        
         "practiceTag": "PRACTICE",
         "tapNext": "Tap",
         "glowHint": "The glowing dot is where to tap next",
-        
         "tmtRestTitle": "Good job!",
         "tmtRestSub": "Now the real activity — 25 dots. Tap them in order as quickly as you can.",
         "tmtRestNote": "Take a breath whenever you're ready.",
         "imReady": "I'm Ready",
-        
         "tmtRealTag": "CONNECT THE DOTS",
-        
         "breakTitle": "Activity 1 Done!",
         "breakSub": "Well done. Take a moment to rest before the next activity.",
         "upNext": "UP NEXT",
         "continueBtn": "Continue When Ready",
-        
         "sdmtInstrTagAct2": "Activity 2 of 2",
         "sdmtInstrTagNow": "Activity 2 — Starting Now",
         "sdmtKey": "KEY — match symbol to number",
@@ -425,11 +419,9 @@
         "sdmtInstrNotePrac": "5 practice rounds first — you'll see if you're right.",
         "sdmtInstrNoteReal": "60 seconds. Go as fast as you can. Mistakes are okay.",
         "startActivity": "Start Activity",
-        
         "sdmtPracLeft": "left",
         "correct": "✓  Correct",
         "wrong": "Not quite",
-        
         "takeBreath": "Take a breath",
         "continuing": "Continuing shortly…",
         "quickMatch": "QUICK MATCH",

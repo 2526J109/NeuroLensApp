@@ -405,12 +405,12 @@ export default function CognitiveAssessment() {
       // Mark task as complete
       markTaskComplete('cognitive');
       router.replace(
-        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
+        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&risk_probability=${result.risk_probability}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
       );
     } catch (error) {
       console.error("Cognitive submit failed:", error);
       router.replace(
-        "/cognitive-test-results?percentile_rank=50&contributing_factors=%5B%5D"
+        "/cognitive-test-results?percentile_rank=50&risk_probability=0.5&contributing_factors=%5B%5D"
       );
     }
   }, [router, user]);
