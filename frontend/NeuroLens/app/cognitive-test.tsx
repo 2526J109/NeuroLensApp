@@ -13,6 +13,7 @@ import { Stack, useRouter } from "expo-router";
 import { Brain, CheckCircle2, ChevronRight, Clock } from "lucide-react-native";
 import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
 import { useAssessment } from "../contexts/AssessmentContext";
 
 const SCREEN = Dimensions.get("window");
@@ -178,6 +179,7 @@ function tmtFeatures(taps: TmtTap[]) {
 export default function CognitiveAssessment() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { sessionId, markTaskComplete } = useAssessment();
   const [stage, setStage] = useState<Stage>("intro");
 
@@ -403,12 +405,12 @@ export default function CognitiveAssessment() {
       // Mark task as complete
       markTaskComplete('cognitive');
       router.replace(
-        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
+        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&risk_probability=${result.risk_probability}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
       );
     } catch (error) {
       console.error("Cognitive submit failed:", error);
       router.replace(
-        "/cognitive-test-results?percentile_rank=50&contributing_factors=%5B%5D"
+        "/cognitive-test-results?percentile_rank=50&risk_probability=0.5&contributing_factors=%5B%5D"
       );
     }
   }, [router, user]);
@@ -500,7 +502,7 @@ export default function CognitiveAssessment() {
 
   const SdmtKey = () => (
     <View style={styles.keyOuter} onLayout={onKeyLayout}>
-      <Text style={styles.keyLabel}>KEY — match symbol to number</Text>
+      <Text style={styles.keyLabel}>{t("cognitive.sdmtKey")}</Text>
       <View style={styles.keyRow}>
         {SYMBOLS.map(({ s, d }) => (
           <View
@@ -543,7 +545,7 @@ export default function CognitiveAssessment() {
     <SafeAreaView style={styles.safe}>
       <Stack.Screen
         options={{
-          headerTitle: "Brain Health Check",
+          headerTitle: t("cognitive.title"),
           headerShadowVisible: false,
           headerTintColor: C.green,
           headerTitleStyle: { color: C.ink, fontWeight: "700", fontSize: 17 },
@@ -558,9 +560,9 @@ export default function CognitiveAssessment() {
             <View style={styles.iconCircle}>
               <Brain size={34} color={C.green} />
             </View>
-            <Text style={styles.title}>Brain Health Check</Text>
+            <Text style={styles.title}>{t("cognitive.title")}</Text>
             <Text style={styles.sub}>
-              Two short activities to check your thinking speed and attention.
+              {t("cognitive.subtitle")}
             </Text>
             <View style={styles.listBox}>
               <View style={styles.listRow}>
@@ -568,8 +570,8 @@ export default function CognitiveAssessment() {
                   <Text style={styles.badgeTxt}>1</Text>
                 </View>
                 <View>
-                  <Text style={styles.listTitle}>Connect the Dots</Text>
-                  <Text style={styles.listSub}>~2 minutes</Text>
+                  <Text style={styles.listTitle}>{t("cognitive.activity1Title")}</Text>
+                  <Text style={styles.listSub}>{t("cognitive.activity1Time")}</Text>
                 </View>
               </View>
               <View style={styles.divider} />
@@ -578,19 +580,19 @@ export default function CognitiveAssessment() {
                   <Text style={styles.badgeTxt}>2</Text>
                 </View>
                 <View>
-                  <Text style={styles.listTitle}>Quick Match</Text>
-                  <Text style={styles.listSub}>~1 minute</Text>
+                  <Text style={styles.listTitle}>{t("cognitive.activity2Title")}</Text>
+                  <Text style={styles.listSub}>{t("cognitive.activity2Time")}</Text>
                 </View>
               </View>
             </View>
             <Text style={styles.note}>
-              A short practice round comes before each activity.
+              {t("cognitive.introNote")}
             </Text>
             <TouchableOpacity
               style={styles.btn}
               onPress={() => setStage("tmt_instr")}
             >
-              <Text style={styles.btnTxt}>Let's Begin</Text>
+              <Text style={styles.btnTxt}>{t("cognitive.letsBegin")}</Text>
               <ChevronRight color={C.white} size={18} />
             </TouchableOpacity>
           </InfoScreen>
@@ -599,22 +601,22 @@ export default function CognitiveAssessment() {
         {/* ── TMT INSTRUCTION ── */}
         {stage === "tmt_instr" && (
           <InfoScreen>
-            <Text style={styles.tag}>Activity 1 of 2</Text>
-            <Text style={styles.title}>Connect the Dots</Text>
+            <Text style={styles.tag}>{t("cognitive.tmtInstrTag")}</Text>
+            <Text style={styles.title}>{t("cognitive.activity1Title")}</Text>
             <Text style={styles.sub}>
-              Tap the dots in order — 1, then 2, then 3 — as quickly as you can.
+              {t("cognitive.tmtInstrSub")}
             </Text>
             <View style={styles.exampleRow}>
               <View style={styles.exDot}>
                 <Text style={styles.exDotTxt}>3</Text>
               </View>
               <Text style={styles.exLabel}>
-                The dot you tap next glows green
+                {t("cognitive.tmtInstrLabel")}
               </Text>
             </View>
-            <Text style={styles.note}>You'll practice with 5 dots first.</Text>
+            <Text style={styles.note}>{t("cognitive.tmtInstrNote")}</Text>
             <TouchableOpacity style={styles.btn} onPress={startTmtPractice}>
-              <Text style={styles.btnTxt}>Start Practice</Text>
+              <Text style={styles.btnTxt}>{t("cognitive.startPractice")}</Text>
             </TouchableOpacity>
           </InfoScreen>
         )}
@@ -623,16 +625,16 @@ export default function CognitiveAssessment() {
         {stage === "tmt_practice" && (
           <View style={styles.taskScreen}>
             <View style={styles.taskBar}>
-              <Text style={styles.taskTag}>PRACTICE</Text>
+              <Text style={styles.taskTag}>{t("cognitive.practiceTag")}</Text>
               <Text style={styles.taskHint}>
-                Tap <Text style={styles.taskHL}>{nextDot}</Text>
+                {t("cognitive.tapNext")} <Text style={styles.taskHL}>{nextDot}</Text>
               </Text>
             </View>
             <View style={styles.canvas} onLayout={onCanvasLayout}>
               <DotCanvas positions={RAW_5} total={PRACTICE_N} />
             </View>
             <Text style={styles.hintBelow}>
-              The glowing dot is where to tap next
+              {t("cognitive.glowHint")}
             </Text>
             <View style={styles.progTrack}>
               <View
@@ -651,16 +653,15 @@ export default function CognitiveAssessment() {
             <View style={styles.iconCircle}>
               <CheckCircle2 size={34} color={C.green} />
             </View>
-            <Text style={styles.title}>Good job!</Text>
+            <Text style={styles.title}>{t("cognitive.tmtRestTitle")}</Text>
             <Text style={styles.sub}>
-              Now the real activity — 25 dots. Tap them in order as quickly as
-              you can.
+              {t("cognitive.tmtRestSub")}
             </Text>
             <Text style={styles.note}>
-              Take a breath whenever you're ready.
+              {t("cognitive.tmtRestNote")}
             </Text>
             <TouchableOpacity style={styles.btn} onPress={startTmtReal}>
-              <Text style={styles.btnTxt}>I'm Ready</Text>
+              <Text style={styles.btnTxt}>{t("cognitive.imReady")}</Text>
             </TouchableOpacity>
           </InfoScreen>
         )}
@@ -669,9 +670,9 @@ export default function CognitiveAssessment() {
         {stage === "tmt_real" && (
           <View style={styles.taskScreen}>
             <View style={styles.taskBar}>
-              <Text style={styles.taskTag}>CONNECT THE DOTS</Text>
+              <Text style={styles.taskTag}>{t("cognitive.tmtRealTag")}</Text>
               <Text style={styles.taskHint}>
-                Tap <Text style={styles.taskHL}>{nextDot}</Text>
+                {t("cognitive.tapNext")} <Text style={styles.taskHL}>{nextDot}</Text>
                 <Text style={styles.taskTotal}> / {DOT_COUNT}</Text>
               </Text>
             </View>
@@ -695,71 +696,82 @@ export default function CognitiveAssessment() {
             <View style={styles.iconCircle}>
               <CheckCircle2 size={34} color={C.green} />
             </View>
-            <Text style={styles.title}>Activity 1 Done!</Text>
+            <Text style={styles.title}>{t("cognitive.breakTitle")}</Text>
             <Text style={styles.sub}>
-              Well done. Take a moment to rest before the next activity.
+              {t("cognitive.breakSub")}
             </Text>
             <View style={styles.upNext}>
-              <Text style={styles.upLabel}>UP NEXT</Text>
-              <Text style={styles.upName}>Quick Match · ~1 min</Text>
+              <Text style={styles.upLabel}>{t("cognitive.upNext")}</Text>
+              <Text style={styles.upName}>{t("cognitive.activity2Title")} · {t("cognitive.activity2Time")}</Text>
             </View>
             <TouchableOpacity
               style={styles.btn}
               onPress={() => setStage("sdmt_instr")}
             >
-              <Text style={styles.btnTxt}>Continue When Ready</Text>
+              <Text style={styles.btnTxt}>{t("cognitive.continueBtn")}</Text>
             </TouchableOpacity>
           </InfoScreen>
         )}
 
         {/* ── SDMT INSTRUCTION ── */}
         {stage === "sdmt_instr" && (
-          <InfoScreen>
+          <View style={styles.sdmtInstrScreen}>
             <Text style={styles.tag}>
               {sdmtPhase === "practice"
-                ? "Activity 2 of 2"
-                : "Activity 2 — Starting Now"}
+                ? t("cognitive.sdmtInstrTagAct2")
+                : t("cognitive.sdmtInstrTagNow")}
             </Text>
-            <Text style={styles.title}>Quick Match</Text>
-            <SdmtKey />
-            <Text style={styles.sub}>
-              A symbol will appear. Tap the{" "}
-              <Text style={styles.bold}>matching number</Text> from the key
-              above.
-            </Text>
+            <Text style={styles.title}>{t("cognitive.activity2Title")}</Text>
+            <Text style={styles.sub}>{t("cognitive.sdmtInstrSub")}</Text>
+            {/* Example row showing one symbol → digit mapping */}
+            <View style={styles.instrExample}>
+              <View style={styles.instrExSymBox}>
+                <Text style={styles.instrExSym}>{SYMBOLS[1].s}</Text>
+              </View>
+              <Text style={styles.instrExArrow}>→</Text>
+              <View style={[styles.instrExDigBox, { borderColor: C.green }]}>
+                <Text style={[styles.instrExDig, { color: C.green }]}>{SYMBOLS[1].d}</Text>
+              </View>
+              <Text style={styles.instrExHint}>tap the matching number</Text>
+            </View>
             <Text style={styles.note}>
               {sdmtPhase === "practice"
-                ? "5 practice rounds first — you'll see if you're right."
-                : "60 seconds. Go as fast as you can. Mistakes are okay."}
+                ? t("cognitive.sdmtInstrNotePrac")
+                : t("cognitive.sdmtInstrNoteReal")}
             </Text>
+
             <TouchableOpacity
               style={styles.btn}
-              onPress={
-                sdmtPhase === "practice" ? startSdmtPractice : startSdmtReal
-              }
+              onPress={sdmtPhase === "practice" ? startSdmtPractice : startSdmtReal}
             >
               <Text style={styles.btnTxt}>
-                {sdmtPhase === "practice" ? "Start Practice" : "Start Activity"}
+                {sdmtPhase === "practice"
+                  ? t("cognitive.startPractice")
+                  : t("cognitive.startActivity")}
               </Text>
             </TouchableOpacity>
-          </InfoScreen>
+          </View>
         )}
 
         {/* ── SDMT PRACTICE ── */}
         {stage === "sdmt_practice" && (
           <View style={styles.sdmtScreen}>
-            <View>
-              <View style={styles.taskBar}>
-                <Text style={styles.taskTag}>PRACTICE</Text>
-                <Text style={styles.taskHint}>
+            {/* Header row */}
+            <View style={styles.taskBar}>
+              <Text style={styles.taskTag}>{t("cognitive.practiceTag")}</Text>
+              <View style={styles.pracPillWrap}>
+                <Text style={styles.pracPillTxt}>
                   {PRACTICE_N_SDMT - pracDone} left
                 </Text>
               </View>
-              <SdmtKey />
             </View>
 
-            {/* pointerEvents=none so symbol display never blocks numpad taps */}
-            <View style={styles.symArea} pointerEvents="none">
+            {/* Key */}
+            <SdmtKey />
+
+            {/* Symbol display — sits in a defined card, no floating */}
+            {/* pointerEvents="none" preserved — do NOT remove */}
+            <View style={styles.symCard} pointerEvents="none">
               <Text style={styles.symTxt}>
                 {symQueue[trialIdx] !== undefined
                   ? SYMBOLS[symQueue[trialIdx]].s
@@ -781,12 +793,13 @@ export default function CognitiveAssessment() {
                       { color: feedback === "correct" ? C.greenDk : C.amberTx },
                     ]}
                   >
-                    {feedback === "correct" ? "✓  Correct" : "Not quite"}
+                    {feedback === "correct" ? t("cognitive.correct") : t("cognitive.wrong")}
                   </Text>
                 </View>
               )}
             </View>
 
+            {/* Numpad — unchanged handler */}
             <Numpad onPress={handleSdmt} />
           </View>
         )}
@@ -796,32 +809,25 @@ export default function CognitiveAssessment() {
           <View style={styles.sdmtScreen}>
             {paused ? (
               <View style={styles.pauseScreen}>
-                <Text style={styles.pauseTitle}>Take a breath</Text>
-                <Text style={styles.pauseSub}>Continuing shortly…</Text>
+                <Text style={styles.pauseTitle}>{t("cognitive.takeBreath")}</Text>
+                <Text style={styles.pauseSub}>{t("cognitive.continuing")}</Text>
               </View>
             ) : (
               <>
-                <View>
-                  <View style={styles.taskBar}>
-                    <Text style={styles.taskTag}>QUICK MATCH</Text>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <Clock size={13} color={C.muted} />
-                      <Text style={styles.timerTxt}>
-                        {Math.ceil(timeLeft / 1000)}s
-                      </Text>
-                    </View>
+                {/* Header */}
+                <View style={styles.taskBar}>
+                  <Text style={styles.taskTag}>{t("cognitive.quickMatch")}</Text>
+                  <View style={styles.timerPill}>
+                    <Clock size={12} color={C.green} />
+                    <Text style={styles.timerTxt}>{Math.ceil(timeLeft / 1000)}s</Text>
                   </View>
-                  <SdmtKey />
                 </View>
 
-                {/* pointerEvents=none so symbol display never blocks numpad taps */}
-                <View style={styles.symArea} pointerEvents="none">
+                {/* Key */}
+                <SdmtKey />
+
+                {/* Symbol card — pointerEvents="none" preserved */}
+                <View style={styles.symCard} pointerEvents="none">
                   <Text style={styles.symTxt}>
                     {symQueue[trialIdx] !== undefined
                       ? SYMBOLS[symQueue[trialIdx]].s
@@ -829,6 +835,7 @@ export default function CognitiveAssessment() {
                   </Text>
                 </View>
 
+                {/* Numpad + progress bar */}
                 <View>
                   <Numpad onPress={handleSdmt} />
                   <View style={[styles.progTrack, { marginTop: 12 }]}>
@@ -851,12 +858,12 @@ export default function CognitiveAssessment() {
             <View style={styles.iconCircle}>
               <CheckCircle2 size={34} color={C.green} />
             </View>
-            <Text style={styles.title}>All Done!</Text>
+            <Text style={styles.title}>{t("cognitive.success.title")}</Text>
             <Text style={styles.sub}>
-              Your brain health check is complete. Results have been recorded.
+              {t("cognitive.success.description")}
             </Text>
             <TouchableOpacity style={styles.btn} onPress={submit}>
-              <Text style={styles.btnTxt}>View Results</Text>
+              <Text style={styles.btnTxt}>{t("cognitive.success.returnHome")}</Text>
             </TouchableOpacity>
           </InfoScreen>
         )}
@@ -1036,14 +1043,122 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   btnTxt: { color: C.white, fontSize: 17, fontWeight: "700" },
+  // ── Instruction screen layout ──────────────────────────────────────────────
+  sdmtInstrScreen: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 28,
+    gap: 14,
+    justifyContent: "center",
+  },
+  instrKeyWrap: {
+    backgroundColor: C.white,
+    borderRadius: 18,
+    padding: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  instrExample: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: C.greenLt,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  instrExSymBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: C.white,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  instrExSym: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: C.ink,
+  },
+  instrExArrow: {
+    fontSize: 20,
+    color: C.muted,
+    fontWeight: "300",
+  },
+  instrExDigBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 2.5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: C.white,
+  },
+  instrExDig: {
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  instrExHint: {
+    flex: 1,
+    fontSize: 13,
+    color: C.mid,
+    fontWeight: "500",
+  },
+  // ── Task screen — symbol display card ─────────────────────────────────────
+  symCard: {
+    flex: 1,
+    marginVertical: 10,
+    backgroundColor: C.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: C.border,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    minHeight: 90,
+    maxHeight: 160,
+  },
+  // ── Timer pill ─────────────────────────────────────────────────────────────
+  timerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: C.greenLt,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  // ── Practice "X left" pill ─────────────────────────────────────────────────
+  pracPillWrap: {
+    backgroundColor: C.subtle,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  pracPillTxt: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: C.muted,
+  },
+  // ── Key styles ─────────────────────────────────────────────────────────────
   keyOuter: {
     backgroundColor: C.subtle,
     borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   keyLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     color: "#94A3B8",
     textTransform: "uppercase",
@@ -1052,7 +1167,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   keyRow: { flexDirection: "row", justifyContent: "space-between" },
-  keyCell: { alignItems: "center" },
+  keyCell: { alignItems: "center", gap: 2 },
   keySym: {
     fontSize: Math.min(15, W * 0.038),
     fontWeight: "800",
@@ -1062,18 +1177,12 @@ const styles = StyleSheet.create({
     height: 1.5,
     width: "70%",
     backgroundColor: C.border,
-    marginVertical: 3,
+    marginVertical: 2,
   },
   keyDig: {
     fontSize: Math.min(13, W * 0.034),
     fontWeight: "800",
     color: C.green,
-  },
-  symArea: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: 70,
   },
   symTxt: { fontSize: Math.min(64, W * 0.18), color: C.ink, fontWeight: "800" },
   fbBadge: {
@@ -1103,7 +1212,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   numpadTxt: { fontWeight: "800", color: C.ink },
-  timerTxt: { fontSize: 14, fontWeight: "700", color: "#94A3B8" },
+  timerTxt: { fontSize: 13, fontWeight: "700", color: C.green },
   pauseScreen: {
     flex: 1,
     justifyContent: "center",
