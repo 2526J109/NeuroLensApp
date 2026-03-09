@@ -16,6 +16,8 @@ interface DrawingCanvasProps {
     strokeWidth?: number;
     onDrawingUpdate?: (points: DrawingPoint[]) => void;
     onDrawingComplete?: (points: DrawingPoint[]) => void;
+    onDrawingStart?: () => void;
+    onDrawingEnd?: () => void;
 }
 
 export const DrawingCanvas = ({
@@ -26,6 +28,8 @@ export const DrawingCanvas = ({
     strokeWidth = 3,
     onDrawingUpdate,
     onDrawingComplete,
+    onDrawingStart,
+    onDrawingEnd,
 }: DrawingCanvasProps) => {
     // Support both size (square) and width/height (rectangle)
     const canvasWidth = width || size || 300;
@@ -45,8 +49,11 @@ export const DrawingCanvas = ({
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: () => true,
+            onPanResponderTerminationRequest: () => false,
+            onShouldBlockNativeResponder: () => true,
             
             onPanResponderGrant: (evt: GestureResponderEvent) => {
+                if (onDrawingStart) onDrawingStart();
                 // Only set start time on the very first touch
                 if (drawingPointsRef.current.length === 0) {
                     startTimeRef.current = Date.now();
@@ -118,7 +125,11 @@ export const DrawingCanvas = ({
                 if (onDrawingComplete) {
                     onDrawingComplete([...drawingPointsRef.current]);
                 }
+                if (onDrawingEnd) onDrawingEnd();
             },
+            onPanResponderTerminate: () => {
+                if (onDrawingEnd) onDrawingEnd();
+            }
         })
     ).current;
 

@@ -36,6 +36,7 @@ export default function DrawingTestScreen() {
     const [canvasKey, setCanvasKey] = useState(0);
     const [completedTests, setCompletedTests] = useState<TestType[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDrawing, setIsDrawing] = useState(false);
 
     // Store JSON data for both tests
     const [spiralDataJSON, setSpiralDataJSON] = useState<DrawingDataJSON | null>(null);
@@ -166,6 +167,7 @@ export default function DrawingTestScreen() {
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={!isDrawing}
             >
                 {/* Progress Indicator */}
                 <View style={styles.progressContainer}>
@@ -214,6 +216,8 @@ export default function DrawingTestScreen() {
                             strokeWidth={3}
                             onDrawingUpdate={handleDrawingUpdate}
                             onDrawingComplete={handleDrawingComplete}
+                            onDrawingStart={() => setIsDrawing(true)}
+                            onDrawingEnd={() => setIsDrawing(false)}
                         />
                     </View>
                 </View>
