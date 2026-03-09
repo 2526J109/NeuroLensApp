@@ -22,6 +22,7 @@ export default function SpiralTestScreen() {
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
     const [patternsCompleted, setPatternsCompleted] = useState(0);
     const [canvasKey, setCanvasKey] = useState(0);
+    const [isDrawing, setIsDrawing] = useState(false);
 
     const handleDrawingUpdate = (points: DrawingPoint[]) => {
         setDrawingData(points);
@@ -77,6 +78,7 @@ export default function SpiralTestScreen() {
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={!isDrawing}
             >
                 {/* Title and Description */}
                 <View style={styles.header}>
@@ -101,6 +103,8 @@ export default function SpiralTestScreen() {
                             strokeWidth={3}
                             onDrawingUpdate={handleDrawingUpdate}
                             onDrawingComplete={handleDrawingComplete}
+                            onDrawingStart={() => setIsDrawing(true)}
+                            onDrawingEnd={() => setIsDrawing(false)}
                         />
                     </View>
                 </View>
