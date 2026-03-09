@@ -27,7 +27,7 @@ export const ProgressCard = () => {
     const handleViewResults = () => {
         if (completedTasks.length > 0) {
             router.push({
-                pathname: '/multimodal-results' as any,
+                pathname: '/(tabs)/results' as any,
                 params: { sessionId }
             });
         } else {

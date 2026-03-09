@@ -54,7 +54,7 @@ class MultimodalAggregator:
 
         # Normalize all to 0.0-1.0 scale
         normalized_scores = {
-            "wearable": wearable_score if wearable_score is not None else None,
+            "wearable": wearable_score / 100.0 if wearable_score is not None else None,
             "voice": voice_score / 100.0 if voice_score is not None else None,
             "drawing": drawing_score / 100.0 if drawing_score is not None else None,
             "cognitive": cognitive_score if cognitive_score is not None else None
@@ -78,7 +78,7 @@ class MultimodalAggregator:
 
         # Normalize all to 0.0-1.0 scale, fallback to 0.0 for missing
         normalized_scores = {
-            "wearable": wearable_score if wearable_score is not None else 0.0,
+            "wearable": wearable_score / 100.0 if wearable_score is not None else 0.0,
             "voice": voice_score / 100.0 if voice_score is not None else 0.0,
             "drawing": drawing_score / 100.0 if drawing_score is not None else 0.0,
             "cognitive": cognitive_score if cognitive_score is not None else 0.0

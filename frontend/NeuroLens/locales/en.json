@@ -238,7 +238,7 @@
             "kineticTitle": "Kinetic Tremor",
             "restingDesc": "Place your hands comfortably in your lap. Try to relax and remain as still as possible.",
             "posturalDesc": "Stretch your arms straight out in front of you, palms facing down, and keep them level.",
-            "kineticDesc": "Slowly and repeatedly touch your finger to your nose, then extend your arm back out."
+            "kineticDesc": "Slowly and repeatedly touch your index finger to your nose."
         },
         "startRecording": "Start Recording",
         "recordingStatus": "Recording %{type}...",
@@ -273,7 +273,7 @@
             "step1": "Fasten the wearable securely to your wrist.",
             "step2": "After pressing Start, place your phone down on the table.",
             "step3": "Rest your hands completely still in your lap and relax.",
-            "step4": "Wait for the assessment to complete (approx. 45 seconds). The result screen will appear automatically."
+            "step4": "Wait for the assessment to complete (approx. 90 seconds). The result screen will appear automatically."
         },
         "modal": {
             "selectDevice": "Select Device",

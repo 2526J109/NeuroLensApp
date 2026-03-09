@@ -20,7 +20,7 @@ const getApiBaseUrl = () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Platform } = require('react-native');
     if (Platform.OS === 'android') return 'https://neurolens-api-903113706545.asia-south1.run.app';
-    return 'http://localhost:8000';
+    return 'https://neurolens-api-903113706545.asia-south1.run.app';
   }
   // Production URL (include /api prefix to match backend)
   return 'https://neurolens-api-903113706545.asia-south1.run.app';
