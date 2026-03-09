@@ -28,7 +28,7 @@ async def predict_cognitive(request: CognitiveAnalysisRequest):
 
         # Save to Firestore
         try:
-            cognitive_dao.save_result(request.user_id, result)
+            cognitive_dao.save_result(request.user_id, result, session_id=request.session_id)
         except Exception as db_err:
             import logging
             logging.getLogger(__name__).warning(

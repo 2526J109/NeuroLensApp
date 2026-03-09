@@ -159,15 +159,16 @@ def send_to_model_server(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def save_prediction_for_user(user_id: str, prediction: Dict[str, Any]) -> Dict[str, Any]:
+def save_prediction_for_user(user_id: str, prediction: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
     """Save prediction for user in Firestore"""
     dao = DrawingPredictionDAO()
-    return dao.save_prediction(user_id, prediction)
+    return dao.save_prediction(user_id, prediction, session_id)
 
 
-from app.utils.kinematic_features import extract_kinematic_features
+from app.utils.kinematic_features import extract_kinematic_features, extract_rfe_features
+from app.models.drawing_local_predictor import predict_drawing_risk
 
-def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, Any]:
+def analyze_and_save(user_id: str, drawing_data: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
     """Send drawing data to model server, save prediction, and return result"""
     
     # Extract kinematic features from input data
@@ -189,6 +190,40 @@ def analyze_and_save(user_id: str, drawing_data: Dict[str, Any]) -> Dict[str, An
     # Save only core fields to Firestore — exclude debug_model_input because
     # Firestore does not support nested arrays (list of lists).
     prediction_to_save = {k: v for k, v in prediction.items() if k != "debug_model_input"}
-    save_result = save_prediction_for_user(user_id, prediction_to_save)
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
     
+    return {"prediction": prediction, "save_result": save_result}
+
+
+def analyze_with_local_model(user_id: str, drawing_data: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    # pixel_ratio converts React Native logical pixels → physical pixels so that
+    # coordinate-scale-dependent features (wavy_wave_rmse) match the training
+    # data which was collected in physical pixels on the Vivo X27 (1080px wide).
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
+
+    # Fetch age from Firestore profile so the model gets the real value
+    age: float = 0.0
+    try:
+        from app.dao.user_dao import UserDAO
+        from datetime import date
+        user = UserDAO().get_by_firebase_uid(user_id)
+        if user and user.get("birthday"):
+            birth = date.fromisoformat(str(user["birthday"])[:10])
+            age = round((date.today() - birth).days / 365.25, 1)
+    except Exception:
+        pass  
+
+    rfe_features = extract_rfe_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    rfe_features["age"] = age   # inject so scaler finds it if model was trained with age
+
+    prediction = predict_drawing_risk(rfe_features)
+    prediction["rfe_features"] = rfe_features   # returned to caller for transparency
+
+    prediction_to_save = {
+        k: v for k, v in prediction.items() if k not in ("rfe_features", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
     return {"prediction": prediction, "save_result": save_result}

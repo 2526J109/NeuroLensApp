@@ -7,12 +7,13 @@ class VoiceAnalysisDAO:
     def __init__(self):
         self.db = get_firestore_service()
 
-    def save_result(self, user_id: str, result: Dict[str, Any]) -> Dict[str, Any]:
+    def save_result(self, user_id: str, result: Dict[str, Any], session_id: str = None) -> Dict[str, Any]:
         """
         Persist only the risk score (no audio) to Firestore under 'voice_analyses'.
         """
         record = {
             'user_id': user_id,
+            'session_id': session_id,
             'percentage': result.get('percentage', 0),
             'status': result.get('status', 'warning'),
             'description': result.get('description', ''),

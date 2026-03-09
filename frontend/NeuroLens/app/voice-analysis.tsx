@@ -16,6 +16,8 @@ import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import { API_ENDPOINTS } from '../constants/api';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAssessment } from '@/contexts/AssessmentContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PROMPTS = [
   {
@@ -29,6 +31,8 @@ const PROMPTS = [
 export default function VoiceAnalysisScreen() {
   const { t } = useLanguage();
   const router = useRouter();
+  const { sessionId, markTaskComplete } = useAssessment();
+  const { userProfile } = useAuth();
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -357,6 +361,10 @@ export default function VoiceAnalysisScreen() {
         } as any);
       });
 
+      // Add session_id and user_id to formData
+      if (sessionId) formData.append('session_id', sessionId);
+      if (userProfile?.firebase_uid) formData.append('user_id', userProfile.firebase_uid);
+
       // Log the form data entries for debugging
       console.log('FormData prepared, submitting to:', API_ENDPOINTS.VOICE_ANALYSIS.PREDICT_MULTIMODAL_AUDIO);
 
@@ -384,6 +392,10 @@ export default function VoiceAnalysisScreen() {
       const status = riskCategory === 'Low Risk' ? 'good' : 'warning';
 
       const description = `Voice analysis completed. Risk: ${result?.risk_percentage} (${riskCategory})`;
+
+      // Mark task as complete
+      markTaskComplete('voice');
+
       router.push(
         `/voice-test-results?percentage=${Math.round(percentage)}&status=${status}&description=${encodeURIComponent(description)}`
       );

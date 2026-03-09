@@ -3,6 +3,7 @@ from typing import Optional, List
 
 class CognitiveAnalysisRequest(BaseModel):
     user_id: str
+    session_id: Optional[str] = None
     tmt_a: Optional[float] = None   # seconds — None if user didn't finish
     sdmtotal: float                  # total correct in SDMT task
     dvs_lns: Optional[float] = None  # not in app — will be imputed

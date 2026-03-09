@@ -8,31 +8,18 @@ logger = logging.getLogger(__name__)
 class CognitiveAnalysisDAO:
     """Saves cognitive analysis results to Firestore."""
 
-    def save_result(self, user_id: str, result: dict):
+    def save_result(self, user_id: str, result: dict, session_id: str = None):
         """
         Saves to: users/{user_id}/cognitive_results/{date}
-
-        Stored document:
-        {
-            risk_probability: 0.3611,
-            percentile_rank: 34,
-            module: "cognitive",
-            created_at: "2026-03-05T..."
-        }
         """
         db = get_firestore_service().db
 
-        # Empty .document() = Firebase auto-generates unique ID
-        # This means multiple tests on the same day are all kept
-        doc_ref = (
-            db.collection("users")
-            .document(user_id)
-            .collection("cognitive_results")
-            .document()
-        )
-
+        doc_ref = db.collection("cognitive_results").document()
+        
         doc_ref.set({
             **result,
+            "user_id": user_id,
+            "session_id": session_id,
             "created_at": datetime.now().isoformat(),
         })
 

@@ -46,8 +46,10 @@
         "recommendations": "Recommendations",
         "importantNotice": "Important Notice",
         "disclaimer": "This AI assessment is NOT a medical diagnosis. Always consult a qualified healthcare professional for proper evaluation.",
+        "noPrediction": "No Result",
         "backToHome": "Back to Home",
         "status": {
+            "label": "Status",
             "good": "Good",
             "warning": "Warning"
         },
@@ -191,6 +193,7 @@
             "title": "Your Progress",
             "subtitle": "1 of 4 tests completed",
             "viewResults": "View Results",
+            "viewFinalAnalysis": "View Final Analysis",
             "complete": "Complete"
         },
         "assessmentTests": "Assessment Tests",
@@ -235,7 +238,7 @@
             "kineticTitle": "Kinetic Tremor",
             "restingDesc": "Place your hands comfortably in your lap. Try to relax and remain as still as possible.",
             "posturalDesc": "Stretch your arms straight out in front of you, palms facing down, and keep them level.",
-            "kineticDesc": "Slowly and repeatedly touch your finger to your nose, then extend your arm back out."
+            "kineticDesc": "Slowly and repeatedly touch your index finger to your nose."
         },
         "startRecording": "Start Recording",
         "recordingStatus": "Recording %{type}...",
@@ -270,7 +273,7 @@
             "step1": "Fasten the wearable securely to your wrist.",
             "step2": "After pressing Start, place your phone down on the table.",
             "step3": "Rest your hands completely still in your lap and relax.",
-            "step4": "Wait for the assessment to complete (approx. 45 seconds). The result screen will appear automatically."
+            "step4": "Wait for the assessment to complete (approx. 90 seconds). The result screen will appear automatically."
         },
         "modal": {
             "selectDevice": "Select Device",
@@ -307,6 +310,7 @@
         "clear": "Clear",
         "nextWave": "Next: Wave",
         "complete": "Complete",
+        "analyzing": "Analyzing…",
         "saveDrawing": "Save Drawing",
         "patternsCompleted": "Patterns completed",
         "data": {
@@ -371,6 +375,15 @@
             "low": "%{title} shows low risk indicators. Results are within normal parameters.",
             "medium": "%{title} shows moderate risk. Some abnormalities detected. Monitor regularly.",
             "high": "%{title} shows elevated risk. Significant abnormalities detected. Consult healthcare provider."
+        },
+        "multimodal": {
+            "header": "Final Assessment",
+            "overallScore": "Overall Risk Score",
+            "summary": "This score is a weighted aggregation of your performance across all four tests using clinical AUC weights.",
+            "breakdown": "Module Breakdown",
+            "startNew": "Start New Session",
+            "loading": "Aggregating your results...",
+            "error": "Could not calculate aggregated score. Individual results are saved."
         }
     },
     "cognitive": {

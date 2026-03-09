@@ -68,7 +68,7 @@ class FirestoreService:
     def get_user_by_firebase_uid(self, firebase_uid: str) -> Optional[Dict[str, Any]]:
         """Get user by Firebase UID"""
         users_ref = self.db.collection('users')
-        query = users_ref.where('firebase_uid', '==', firebase_uid).limit(1)
+        query = users_ref.where(filter=firestore.FieldFilter('firebase_uid', '==', firebase_uid)).limit(1)
         docs = query.get()
         
         for doc in docs:
@@ -80,7 +80,7 @@ class FirestoreService:
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
         users_ref = self.db.collection('users')
-        query = users_ref.where('email', '==', email).limit(1)
+        query = users_ref.where(filter=firestore.FieldFilter('email', '==', email)).limit(1)
         docs = query.get()
         
         for doc in docs:
@@ -115,7 +115,7 @@ class FirestoreService:
     def get_user_test_results(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all test results for a user"""
         results_ref = self.db.collection('test_results')
-        query = results_ref.where('user_id', '==', user_id).order_by('created_at', direction=firestore.Query.DESCENDING)
+        query = results_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('created_at', direction=firestore.Query.DESCENDING)
         docs = query.get()
         
         results = []
@@ -136,7 +136,7 @@ class FirestoreService:
     def get_user_voice_analyses(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all voice analyses for a user"""
         analyses_ref = self.db.collection('voice_analyses')
-        query = analyses_ref.where('user_id', '==', user_id).order_by('created_at', direction=firestore.Query.DESCENDING)
+        query = analyses_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('created_at', direction=firestore.Query.DESCENDING)
         docs = query.get()
         
         analyses = []
@@ -145,7 +145,52 @@ class FirestoreService:
             data['id'] = doc.id
             analyses.append(data)
         return analyses
+        
+    # Wearable prediction operations
+    def create_wearable_prediction(self, prediction_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new wearable prediction document"""
+        prediction_ref = self.db.collection('wearable_predictions').document()
+        prediction_data['id'] = prediction_ref.id
+        prediction_ref.set(prediction_data)
+        return prediction_data
+    
+    def get_user_wearable_predictions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all wearable predictions for a user"""
+        predictions_ref = self.db.collection('wearable_predictions')
+        query = predictions_ref.where('user_id', '==', user_id).order_by('created_at', direction=firestore.Query.DESCENDING)
+        docs = query.get()
+        
+        predictions = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            predictions.append(data)
+        return predictions
 
+    def get_user_assessment_history(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get all multimodal assessment history for a user"""
+        history_ref = self.db.collection('assessment_history')
+        query = history_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING)
+        docs = query.get()
+        
+        history = []
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            history.append(data)
+        return history
+
+    def get_latest_assessment(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get the single most recent multimodal assessment for a user"""
+        history_ref = self.db.collection('assessment_history')
+        query = history_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(1)
+        docs = query.get()
+        
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            return data
+        return None
 
 # Get Firestore service instance (lazy singleton)
 def get_firestore_service() -> FirestoreService:
