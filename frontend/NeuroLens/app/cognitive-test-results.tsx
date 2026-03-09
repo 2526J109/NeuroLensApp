@@ -70,10 +70,10 @@ export default function CognitiveTestResultsScreen() {
 
     // Interpretation helper
     const getInterpretation = (rank: number): string => {
-        if (rank <= 25) return t('cognitiveResults.interp1').replace('%{rank}', String(rank));
-        if (rank <= 50) return t('cognitiveResults.interp2').replace('%{rank}', String(rank));
-        if (rank <= 75) return t('cognitiveResults.interp3').replace('%{rank}', String(rank));
-        return t('cognitiveResults.interp4').replace('%{rank}', String(rank));
+        if (rank <= 25) return t('cognitiveResults.interp1', { rank: String(rank) });
+        if (rank <= 50) return t('cognitiveResults.interp2', { rank: String(rank) });
+        if (rank <= 75) return t('cognitiveResults.interp3', { rank: String(rank) });
+        return t('cognitiveResults.interp4', { rank: String(rank) });
     };
 
     // Recommendation helper
@@ -201,13 +201,13 @@ export default function CognitiveTestResultsScreen() {
                     {percentileRank <= 50 ? (
                         <View style={[styles.summaryPill, { backgroundColor: activeBucket.lightBg }]}>
                             <Text style={[styles.summaryText, { color: activeBucket.color }]}>
-                                {t('cognitiveResults.summaryHealthy').replace('%{pct}', String(100 - percentileRank))}
+                                {t('cognitiveResults.summaryHealthy', { pct: String(100 - percentileRank) })}
                             </Text>
                         </View>
                     ) : (
                         <View style={[styles.summaryPill, { backgroundColor: activeBucket.lightBg }]}>
                             <Text style={[styles.summaryText, { color: activeBucket.color }]}>
-                                {t('cognitiveResults.summaryRange').replace('%{range}', t(`cognitiveResults.${activeBucket.labelKey}`).toLowerCase())}
+                                {t('cognitiveResults.summaryRange', { range: t(`cognitiveResults.${activeBucket.labelKey}`).toLowerCase() })}
                             </Text>
                         </View>
                     )}
