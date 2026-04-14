@@ -41,7 +41,7 @@ export const analyzeDrawingQuadstream = async (
   console.log('[QuadStream] Sending drawing prediction request:', requestData);
 
   const response = await api.post<DrawingPredictionResponse>(
-    '/api/drawing-prediction/analyze-quadstream',
+    '/api/drawing-prediction/analyze-quadstream-v2',
     requestData,
     { headers }
   );

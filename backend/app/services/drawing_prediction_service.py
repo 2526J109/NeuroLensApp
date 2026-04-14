@@ -246,35 +246,94 @@ def analyze_with_improved_quadstream_model(
 
     The NB09 quadstream model is NOT affected by this function.
     """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
     from app.utils.quadstream_features import (
         extract_quadstream_features,
         streams_to_feature_dict,
     )
     from app.models.improved_quadstream_predictor import predict_improved_quadstream_risk
 
-    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
-    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    # ── STEP 1: parse input ──────────────────────────────────────────────────
+    spiral_data  = drawing_data.get("spiral_data") or {}
+    wave_data    = drawing_data.get("wave_data")   or {}
+    spiral_points = spiral_data.get("points") or []
+    wave_points   = wave_data.get("points")   or []
     pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
 
-    streams = extract_quadstream_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    _log.info(
+        "[NB12] STEP1 input — user=%s  spiral_pts=%d  wave_pts=%d  pixel_ratio=%.2f",
+        user_id, len(spiral_points), len(wave_points), pixel_ratio,
+    )
+    if spiral_points:
+        _log.info("[NB12] spiral[0]=%s  spiral[-1]=%s", spiral_points[0], spiral_points[-1])
+    else:
+        _log.warning("[NB12] spiral_points is EMPTY — spiral features will be zero")
+    if wave_points:
+        _log.info("[NB12] wave[0]=%s  wave[-1]=%s", wave_points[0], wave_points[-1])
+    else:
+        _log.warning("[NB12] wave_points is EMPTY — wave features will be zero")
 
+    # ── STEP 2: extract features ─────────────────────────────────────────────
+    try:
+        streams = extract_quadstream_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    except Exception as exc:
+        _log.error("[NB12] STEP2 feature extraction CRASHED: %s", exc, exc_info=True)
+        raise
+
+    feat_dict = streams_to_feature_dict(streams)
+    all_zero  = all(v == 0.0 for v in feat_dict.values())
+    _log.info(
+        "[NB12] STEP2 features — all_zero=%s  s1=%s  s2=%s  s3=%s  s4=%s",
+        all_zero,
+        streams["s1"].tolist(),
+        streams["s2"].tolist(),
+        streams["s3"].tolist(),
+        streams["s4"].tolist(),
+    )
+    if all_zero:
+        _log.warning(
+            "[NB12] All 16 features are zero — model will output near-0 probability. "
+            "Check that spiral_data/wave_data contain a 'points' list with "
+            "at least 5 items each, keyed as {x, y, timestamp}."
+        )
+
+    # ── STEP 3: run model ────────────────────────────────────────────────────
     try:
         prediction = predict_improved_quadstream_risk(streams, mc_dropout=mc_dropout)
-    except RuntimeError as exc:
-        import logging
-        logging.getLogger(__name__).warning(
-            "[ImprovedQuadStream] Falling back to NB09 model: %s", exc
+        _log.info(
+            "[NB12] STEP3 model output — risk=%.2f%%  level=%s  label=%s  conf=%.2f%%  "
+            "gates=%s  mc_dropout=%s",
+            prediction["risk_percentage"],
+            prediction["risk_level"],
+            prediction["label"],
+            prediction["confidence"],
+            prediction.get("stream_gates"),
+            mc_dropout,
         )
+    except RuntimeError as exc:
+        _log.warning("[NB12] STEP3 model unavailable — falling back to NB09: %s", exc)
         return analyze_with_quadstream_model(user_id, drawing_data, session_id)
+    except Exception as exc:
+        _log.error("[NB12] STEP3 model CRASHED: %s", exc, exc_info=True)
+        raise
 
-    prediction["quadstream_features"] = streams_to_feature_dict(streams)
+    # ── STEP 4: save & return ────────────────────────────────────────────────
+    prediction["quadstream_features"] = feat_dict
 
     prediction_to_save = {
         k: v
         for k, v in prediction.items()
         if k not in ("quadstream_features", "stream_gates", "source")
     }
-    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
+    try:
+        save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+        _log.info("[NB12] STEP4 saved — session=%s  save_result=%s", session_id, save_result)
+    except Exception as exc:
+        _log.error("[NB12] STEP4 Firestore save failed: %s", exc, exc_info=True)
+        raise
 
     return {"prediction": prediction, "save_result": save_result}
 
