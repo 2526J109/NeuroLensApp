@@ -42,16 +42,20 @@ def _load_bundle() -> Optional[Dict[str, Any]]:
     return _bundle
 
 
-# The LR model's raw probability is bounded to ~37–63% by its small coefficients
-# (trained on 58 subjects). Rescale to 0–100 so Low/Moderate/High are all reachable.
-_MODEL_PROB_MIN = 0.3689
-_MODEL_PROB_MAX = 0.6291
+# The LR model outputs raw P(PD) in roughly 0.30–0.70 for this small dataset.
+# We stretch that range to 0–100 so the UI risk bars are meaningful, but
+# we NEVER clamp below 1 — a score of exactly 0 looks like "no data received"
+# rather than "very low risk".
+_MODEL_PROB_MIN = 0.30
+_MODEL_PROB_MAX = 0.70
 
 
 def _rescale_prob(prob: float) -> float:
-    """Map raw model P(PD) from [MODEL_MIN, MODEL_MAX] → [0, 100]."""
-    rescaled = (prob - _MODEL_PROB_MIN) / (_MODEL_PROB_MAX - _MODEL_PROB_MIN) * 100.0
-    return max(0.0, min(100.0, rescaled))
+    """Stretch raw P(PD) from [0.30, 0.70] → [1, 99] so all subjects get a
+    visible, non-zero score and the risk levels (Low/Moderate/High) are usable.
+    Values outside [0.30, 0.70] are clipped to [1, 99]."""
+    rescaled = (prob - _MODEL_PROB_MIN) / (_MODEL_PROB_MAX - _MODEL_PROB_MIN) * 98.0 + 1.0
+    return round(max(1.0, min(99.0, rescaled)), 2)
 
 
 def _risk_level(risk_pct: float) -> str:

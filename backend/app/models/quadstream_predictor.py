@@ -159,10 +159,12 @@ def predict_quadstream_risk(
     dict with keys: risk_percentage, risk_level, label, confidence, source
     """
     if not _load():
+        # Files may exist but torch failed to initialise (e.g. missing VC++ runtime).
+        # Check server logs for the exact load error.
         raise RuntimeError(
-            "TunedQuadStream model files not found. "
-            "Download quadstream_tuned_final.pt and quadstream_tuned_scalers.pkl "
-            "from Google Colab (NB09) and place them in: " + _DIR
+            "TunedQuadStream model unavailable — torch failed to load or model files "
+            "are missing. Check logs for '[QuadStreamPredictor] Failed to load'. "
+            "Expected files in: " + _DIR
         )
 
     import torch

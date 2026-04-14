@@ -229,11 +229,64 @@ def analyze_with_local_model(user_id: str, drawing_data: Dict[str, Any], session
     return {"prediction": prediction, "save_result": save_result}
 
 
+def analyze_with_improved_quadstream_model(
+    user_id: str,
+    drawing_data: Dict[str, Any],
+    session_id: str = None,
+    mc_dropout: bool = False,
+) -> Dict[str, Any]:
+    """
+    Run NB12 ImprovedQuadStream inference (339 params, AUC=98.45%).
+
+    Identical input contract to analyze_with_quadstream_model().
+    Extra return keys:
+      - stream_gates     : {S1..S4} learned gate values (0-1)
+      - uncertainty      : MC Dropout std × 100  (only when mc_dropout=True)
+      - is_borderline    : True when uncertainty std > 0.15  (only when mc_dropout=True)
+
+    The NB09 quadstream model is NOT affected by this function.
+    """
+    from app.utils.quadstream_features import (
+        extract_quadstream_features,
+        streams_to_feature_dict,
+    )
+    from app.models.improved_quadstream_predictor import predict_improved_quadstream_risk
+
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
+
+    streams = extract_quadstream_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+
+    try:
+        prediction = predict_improved_quadstream_risk(streams, mc_dropout=mc_dropout)
+    except RuntimeError as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "[ImprovedQuadStream] Falling back to NB09 model: %s", exc
+        )
+        return analyze_with_quadstream_model(user_id, drawing_data, session_id)
+
+    prediction["quadstream_features"] = streams_to_feature_dict(streams)
+
+    prediction_to_save = {
+        k: v
+        for k, v in prediction.items()
+        if k not in ("quadstream_features", "stream_gates", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
+    return {"prediction": prediction, "save_result": save_result}
+
+
 def analyze_with_quadstream_model(
     user_id: str,
     drawing_data: Dict[str, Any],
     session_id: str = None,
 ) -> Dict[str, Any]:
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
     from app.utils.quadstream_features import (
         extract_quadstream_features,
         streams_to_feature_dict,
@@ -244,16 +297,22 @@ def analyze_with_quadstream_model(
     wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
     pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
 
+    _log.info(
+        "[QuadStream] Input — spiral_pts=%d  wave_pts=%d  pixel_ratio=%.2f  "
+        "spiral_sample=%s  wave_sample=%s",
+        len(spiral_points), len(wave_points), pixel_ratio,
+        spiral_points[:1], wave_points[:1],
+    )
+
     streams = extract_quadstream_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    _log.info("[QuadStream] Extracted streams — s1=%s  s2=%s  s3=%s  s4=%s",
+              streams["s1"].tolist(), streams["s2"].tolist(),
+              streams["s3"].tolist(), streams["s4"].tolist())
 
     try:
         prediction = predict_quadstream_risk(streams)
     except RuntimeError as exc:
-        # Model files not yet on disk — degrade gracefully to LR model.
-        import logging
-        logging.getLogger(__name__).warning(
-            "[QuadStream] Falling back to LR model: %s", exc
-        )
+        _log.warning("[QuadStream] Falling back to LR model: %s", exc)
         return analyze_with_local_model(user_id, drawing_data, session_id)
 
     prediction["quadstream_features"] = streams_to_feature_dict(streams)
