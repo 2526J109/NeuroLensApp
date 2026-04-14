@@ -42,6 +42,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Whisper failed to load at startup: %s", e)
 
+    # 3. TunedQuadStream drawing model (torch, 237 params)
+    try:
+        from app.models.quadstream_predictor import _load
+        if _load():
+            logger.info("QuadStream model — ready")
+        else:
+            logger.warning("QuadStream model — .pth files not found, fallback to LR active")
+    except Exception as e:
+        logger.error("QuadStream failed to load at startup: %s", e)
+
     logger.info("=== Startup complete — ready to serve requests ===")
     yield
     # (shutdown logic can go here if needed)

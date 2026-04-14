@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { analyzeDrawingPrediction } from '../services/drawingPredictionService';
+import { analyzeDrawingQuadstream } from '../services/drawingPredictionService';
 import {
     View,
     Text,
@@ -106,7 +106,7 @@ export default function DrawingTestScreen() {
                 try {
                     const firebaseToken = user ? await user.getIdToken() : undefined;
                     const userId = user?.uid || '';
-                    const predictionResponse = await analyzeDrawingPrediction(
+                    const predictionResponse = await analyzeDrawingQuadstream(
                         userId,
                         spiralDataJSON!,
                         jsonData!,

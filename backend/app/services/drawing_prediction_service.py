@@ -227,3 +227,42 @@ def analyze_with_local_model(user_id: str, drawing_data: Dict[str, Any], session
     save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
 
     return {"prediction": prediction, "save_result": save_result}
+
+
+def analyze_with_quadstream_model(
+    user_id: str,
+    drawing_data: Dict[str, Any],
+    session_id: str = None,
+) -> Dict[str, Any]:
+    from app.utils.quadstream_features import (
+        extract_quadstream_features,
+        streams_to_feature_dict,
+    )
+    from app.models.quadstream_predictor import predict_quadstream_risk
+
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
+
+    streams = extract_quadstream_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+
+    try:
+        prediction = predict_quadstream_risk(streams)
+    except RuntimeError as exc:
+        # Model files not yet on disk — degrade gracefully to LR model.
+        import logging
+        logging.getLogger(__name__).warning(
+            "[QuadStream] Falling back to LR model: %s", exc
+        )
+        return analyze_with_local_model(user_id, drawing_data, session_id)
+
+    prediction["quadstream_features"] = streams_to_feature_dict(streams)
+
+    prediction_to_save = {
+        k: v
+        for k, v in prediction.items()
+        if k not in ("quadstream_features", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
+    return {"prediction": prediction, "save_result": save_result}
