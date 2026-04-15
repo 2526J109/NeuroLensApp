@@ -21,8 +21,11 @@ import { formatDrawingData, DrawingDataJSON } from '@/utils/dataExport';
 import { useAssessment } from '@/contexts/AssessmentContext';
 
 const CANVAS_SIZE = Math.min(Dimensions.get('window').width - 80, 350);
-const WAVE_WIDTH = CANVAS_SIZE;
-const WAVE_HEIGHT = 220;
+// Wave canvas is portrait (tall): matches training data orientation where
+// the finger moves top→bottom (y=172→1980 px physical on Vivo X27).
+// At 3× DPR: 300×560 pt → 900×1680 px ≈ training 949×1808 px.
+const WAVE_WIDTH = Math.min(Dimensions.get('window').width - 80, 300);
+const WAVE_HEIGHT = 560;
 
 type TestType = 'spiral' | 'wave';
 
@@ -204,7 +207,7 @@ export default function DrawingTestScreen() {
                         {isSpiral ? (
                             <SpiralGuide size={CANVAS_SIZE} rounds={2} />
                         ) : (
-                            <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={60} />
+                            <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={120} />
                         )}
 
                         {/* Drawing Canvas */}

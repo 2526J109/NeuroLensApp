@@ -3,7 +3,7 @@
 
 Produces 4 streams from raw touch-point lists:
   S1 — Spiral Geometric  (3): residual_std, curvature_std, R²
-  S2 — Spiral Kinematic  (5): mean_speed, speed_std, mean_accel, mean_jerk, stroke_length
+  S2 — Spiral Kinematic  (5): mean_speed, speed_std, mean_accel, mean_jerk, duration
   S3 — Wave Geometric    (3): sine_rmse, amplitude, curvature_std
   S4 — Wave Kinematic    (5): mean_speed, speed_std, mean_accel, mean_jerk, stroke_length
 
@@ -24,7 +24,7 @@ STREAM_DIMS: Tuple[int, int, int, int] = (3, 5, 3, 5)
 
 S1_NAMES = ["spiral_residual_std", "spiral_curvature_std", "spiral_r2"]
 S2_NAMES = ["spiral_mean_speed", "spiral_speed_std", "spiral_mean_accel",
-            "spiral_mean_jerk", "spiral_stroke_length"]
+            "spiral_mean_jerk", "spiral_duration"]
 S3_NAMES = ["wave_sine_rmse", "wave_amplitude", "wave_curvature_std"]
 S4_NAMES = ["wave_mean_speed", "wave_speed_std", "wave_mean_accel",
             "wave_mean_jerk", "wave_stroke_length"]
@@ -51,18 +51,27 @@ def _sine_model(x: np.ndarray, A: float, w: float, phi: float, c: float) -> np.n
 def _points_to_arrays(
     points: List[Dict[str, float]],
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Convert list of {x, y, timestamp} dicts → (x, y, t_seconds) arrays."""
+    """Convert list of {x, y, timestamp} dicts → (x, y, t_ms) arrays.
+
+    Timestamps are kept in milliseconds — the training dataset (.txt files) stored
+    timestamps in ms, so velocity (px/ms), acceleration (px/ms²), and duration (ms)
+    all match the scale the StandardScalers were fitted on.
+    """
     x = np.array([p["x"] for p in points], dtype=float)
     y = np.array([p["y"] for p in points], dtype=float)
-    # App sends timestamps in milliseconds; divide by 1000 to match training units.
-    t = np.array([p["timestamp"] for p in points], dtype=float) / 1000.0
+    t = np.array([p["timestamp"] for p in points], dtype=float)   # keep in ms
     return x, y, t
 
 
 def _velocity_from_positions(
     x: np.ndarray, y: np.ndarray, t: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Compute vx, vy via gradient — matches NB09 when pre-computed vx/vy absent."""
+    """Compute vx, vy in px/ms.
+
+    Uses np.gradient for both numerator and denominator so that the first point
+    gets dt[0] = t[1]-t[0] (not zero), avoiding the 1/1e-6 blow-up that
+    np.diff(t, prepend=t[0]) causes at index 0.
+    """
     dt = np.gradient(t)
     dt[dt == 0] = 1e-6
     vx = np.gradient(x) / dt
@@ -99,8 +108,8 @@ def extract_spiral_kinematic(
     x: np.ndarray, y: np.ndarray, t: np.ndarray
 ) -> np.ndarray:
     """
-    Returns [mean_speed, speed_std, mean_accel, mean_jerk, stroke_length].
-    Matches NB09 spiral_kinematic() exactly.
+    Returns [mean_speed, speed_std, mean_accel, mean_jerk, duration].
+    Matches NB09/NB12 spiral_kinematic() exactly — S2[4] is elapsed time (t[-1]-t[0]).
     """
     vx, vy = _velocity_from_positions(x, y, t)
     speed = np.sqrt(vx**2 + vy**2)
@@ -110,10 +119,10 @@ def extract_spiral_kinematic(
     acc  = np.sqrt(ax**2 + ay**2)
     jerk = np.sqrt(np.gradient(ax)**2 + np.gradient(ay)**2)
 
-    stroke_length = float(np.sum(np.sqrt(np.diff(x)**2 + np.diff(y)**2)))
+    duration = float(t[-1] - t[0]) if len(t) > 1 else 1.0
 
     return np.array(
-        [speed.mean(), speed.std(), acc.mean(), jerk.mean(), stroke_length],
+        [speed.mean(), speed.std(), acc.mean(), jerk.mean(), duration],
         dtype=float,
     )
 
