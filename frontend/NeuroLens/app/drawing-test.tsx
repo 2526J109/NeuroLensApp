@@ -207,7 +207,7 @@ export default function DrawingTestScreen() {
                         {isSpiral ? (
                             <SpiralGuide size={CANVAS_SIZE} rounds={2} />
                         ) : (
-                            <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={3} amplitude={120} />
+                            <WaveGuide width={WAVE_WIDTH} height={WAVE_HEIGHT} waves={2} amplitude={100} />
                         )}
 
                         {/* Drawing Canvas */}
