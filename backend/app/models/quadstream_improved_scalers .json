@@ -1,19 +1,20 @@
 {
   "config": {
-    "hidden": 4,
-    "embed": 3,
-    "fusion_hidden": 4,
-    "dropout": 0.6,
+    "spiral_hidden": 6,
+    "wave_hidden": 4,
+    "spiral_embed": 4,
+    "wave_embed": 3,
+    "fusion_hidden": 6,
+    "dropout": 0.35,
     "weight_decay": 0.0005,
     "lr": 0.001,
     "aug_copies": 5,
     "noise_frac": 0.01,
     "batch_size": 16,
     "use_scheduler": false,
-    "class_weight": false,
-    "activation": "elu",
     "epochs": 200,
-    "patience": 40
+    "patience": 40,
+    "activation": "elu"
   },
   "stream_dims": [
     3,
@@ -38,5 +39,11 @@
     "S4: Wave mean accel",
     "S4: Wave mean jerk",
     "S4: Wave stroke length"
+  ],
+  "final_gates": [
+    0.4574061334133148,
+    0.4390227198600769,
+    0.5010467767715454,
+    0.5605592727661133
   ]
 }
