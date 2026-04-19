@@ -28,3 +28,18 @@ class CognitiveAnalysisDAO:
             f"risk={result['risk_probability']} "
             f"percentile={result['percentile_rank']}"
         )
+
+    def save_raw_data(self, data: dict):
+        """
+        Saves raw cognitive task data for validation / research.
+        Collection: cognitive_raw_data
+        """
+        db = get_firestore_service().db
+        doc_ref = db.collection("cognitive_raw_data").document()
+        data["created_at"] = datetime.now().isoformat()
+        doc_ref.set(data)
+
+        logger.info(
+            f"Cognitive raw data saved — user={data.get('user_id')} "
+            f"session={data.get('session_id')}"
+        )
