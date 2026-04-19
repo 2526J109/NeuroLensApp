@@ -20,7 +20,9 @@ import { WaveGuide } from '@/components/WaveGuide';
 import { formatDrawingData, DrawingDataJSON } from '@/utils/dataExport';
 import { useAssessment } from '@/contexts/AssessmentContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useDataCollection } from '../contexts/DataCollectionContext';
 import { analyzeDrawing } from '../services/drawingPredictionService';
+import { saveRawDrawing } from '../services/adminService';
 import {
     DRAWING_MODEL_OPTIONS,
     DrawingModelKey,
@@ -185,10 +187,13 @@ function LiveDataPanel({ points }: { points: DrawingPoint[] }) {
 // ── Main Screen ────────────────────────────────────────────────────────────────
 
 export default function DrawingTestScreen() {
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
     const { t } = useLanguage();
     const { sessionId, markTaskComplete } = useAssessment();
+    const { activeParticipant, markTaskDone } = useDataCollection();
     const router = useRouter();
+
+    const isDataCollectionMode = isAdmin && activeParticipant != null;
 
     const [currentTest, setCurrentTest]         = useState<TestType>('spiral');
     const [drawingData, setDrawingData]         = useState<DrawingPoint[]>([]);
@@ -227,36 +232,73 @@ export default function DrawingTestScreen() {
                 setIsSubmitting(true);
                 try {
                     const firebaseToken = user ? await user.getIdToken() : undefined;
-                    const userId = user?.uid || '';
-                    const predictionResponse = await analyzeDrawing(
-                        selectedModel.key as DrawingModelKey,
-                        userId,
-                        spiralDataJSON!,
-                        jsonData!,
-                        firebaseToken,
-                        PixelRatio.get(),
-                        sessionId || undefined,
-                    );
-                    markTaskComplete('drawing');
-                    router.push({
-                        pathname: '/test-results',
-                        params: {
-                            spiralData:  spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
-                            waveData:    jsonData ? JSON.stringify(jsonData) : '',
-                            prediction:  JSON.stringify(predictionResponse),
-                            modelLabel:  selectedModel.label,
-                        },
-                    });
+
+                    if (isDataCollectionMode) {
+                        // ── Admin data-collection path ──────────────────────
+                        // Run the ML prediction first (for research output)
+                        let predictionResult: any = null;
+                        try {
+                            const resp = await analyzeDrawing(
+                                selectedModel.key as DrawingModelKey,
+                                user!.uid,
+                                spiralDataJSON!,
+                                jsonData!,
+                                firebaseToken,
+                                PixelRatio.get(),
+                                sessionId || undefined,
+                            );
+                            predictionResult = resp.prediction;
+                        } catch (e) {
+                            console.warn('[Drawing] Prediction skipped in data-collection mode:', e);
+                        }
+
+                        // Save raw drawing points + prediction to admin collection
+                        await saveRawDrawing(firebaseToken!, activeParticipant!.id, {
+                            session_id:       sessionId || undefined,
+                            spiral_points:    spiralDataJSON?.points ?? [],
+                            wave_points:      jsonData?.points ?? [],
+                            pixel_ratio:      PixelRatio.get(),
+                            model_key:        selectedModel.key,
+                            prediction_result: predictionResult,
+                        });
+
+                        markTaskDone('drawing');
+                        router.replace('/data-collection/tasks');
+                    } else {
+                        // ── Normal user path ────────────────────────────────
+                        const userId = user?.uid || '';
+                        const predictionResponse = await analyzeDrawing(
+                            selectedModel.key as DrawingModelKey,
+                            userId,
+                            spiralDataJSON!,
+                            jsonData!,
+                            firebaseToken,
+                            PixelRatio.get(),
+                            sessionId || undefined,
+                        );
+                        markTaskComplete('drawing');
+                        router.push({
+                            pathname: '/test-results',
+                            params: {
+                                spiralData:  spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
+                                waveData:    jsonData ? JSON.stringify(jsonData) : '',
+                                prediction:  JSON.stringify(predictionResponse),
+                                modelLabel:  selectedModel.label,
+                            },
+                        });
+                    }
                 } catch (err) {
-                    console.error('[Drawing] Prediction error:', err);
-                    router.push({
-                        pathname: '/test-results',
-                        params: {
-                            spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
-                            waveData:   jsonData ? JSON.stringify(jsonData) : '',
-                            modelLabel: selectedModel.label,
-                        },
-                    });
+                    console.error('[Drawing] Error:', err);
+                    if (!isDataCollectionMode) {
+                        router.push({
+                            pathname: '/test-results',
+                            params: {
+                                spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
+                                waveData:   jsonData ? JSON.stringify(jsonData) : '',
+                                modelLabel: selectedModel.label,
+                            },
+                        });
+                    }
                 } finally {
                     setIsSubmitting(false);
                 }
@@ -286,6 +328,20 @@ export default function DrawingTestScreen() {
                 showsVerticalScrollIndicator={false}
                 scrollEnabled={!isDrawing}
             >
+                {/* Admin data-collection banner */}
+                {isDataCollectionMode && (
+                    <View style={styles.adminBanner}>
+                        <View style={styles.adminBannerDot} />
+                        <Text style={styles.adminBannerText}>
+                            Data Collection · <Text style={styles.adminBannerCode}>{activeParticipant!.participant_code}</Text>
+                            {'  '}
+                            <Text style={styles.adminBannerMeta}>
+                                {activeParticipant!.pd_status === 'pd' ? 'PD' : 'HC'} · {activeParticipant!.age}y
+                            </Text>
+                        </Text>
+                    </View>
+                )}
+
                 {/* Model Selector */}
                 <ModelSelector selected={selectedModel} onSelect={setSelectedModel} />
 
@@ -398,6 +454,11 @@ export default function DrawingTestScreen() {
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+    adminBanner:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0F172A', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, marginBottom: 14, gap: 8, width: '100%' },
+    adminBannerDot:  { width: 8, height: 8, borderRadius: 4, backgroundColor: '#14B8A6' },
+    adminBannerText: { fontSize: 13, color: '#94A3B8', flex: 1 },
+    adminBannerCode: { color: '#14B8A6', fontWeight: '700' },
+    adminBannerMeta: { color: '#64748B' },
     container:       { flex: 1, backgroundColor: '#FFFFFF' },
     scrollContent:   { padding: 24, alignItems: 'center' },
     progressContainer: { width: '100%', marginBottom: 24 },

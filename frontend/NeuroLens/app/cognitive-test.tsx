@@ -15,6 +15,8 @@ import api from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAssessment } from "../contexts/AssessmentContext";
+import { useDataCollection } from "../contexts/DataCollectionContext";
+import { saveRawCognitive } from "../services/adminService";
 
 const SCREEN = Dimensions.get("window");
 const W = SCREEN.width;
@@ -178,9 +180,11 @@ function tmtFeatures(taps: TmtTap[]) {
 
 export default function CognitiveAssessment() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { t } = useLanguage();
   const { sessionId, markTaskComplete } = useAssessment();
+  const { activeParticipant, markTaskDone } = useDataCollection();
+  const isDataCollectionMode = isAdmin && activeParticipant != null;
   const [stage, setStage] = useState<Stage>("intro");
 
   // TMT
@@ -371,21 +375,64 @@ export default function CognitiveAssessment() {
   const submit = useCallback(async () => {
     const tmt = tmtFeatures(realTaps.current);
     const sdmt = sdmtFeatures(realTrials.current);
+
+    if (isDataCollectionMode) {
+      // ── Admin data-collection path ──────────────────────────────────────────
+      try {
+        const token = await user!.getIdToken();
+        let predictionResult: any = null;
+        try {
+          const profileResponse = await api.get('/api/auth/me');
+          const profile = profileResponse.data;
+          const userAge = profile?.birthday
+            ? new Date().getFullYear() - new Date(profile.birthday).getFullYear()
+            : activeParticipant!.age;
+          const mappedSex = profile?.gender === "Female" ? 0 : 1;
+          const res = await api.post("/api/cognitive-analysis/predict", {
+            user_id: user?.uid,
+            sdmtotal: Math.round(sdmt.sdmtTotal * 1.5),
+            tmt_a: tmt.tmtA ? tmt.tmtA / 1000 : null,
+            dvs_lns: null,
+            age_at_visit: userAge,
+            SEX: mappedSex,
+            fampd: profile?.family_history ?? 0,
+            rem: profile?.rem_sleep ?? 0,
+            session_id: sessionId || null,
+          });
+          predictionResult = res.data;
+        } catch (e) {
+          console.warn("[Cognitive] Prediction skipped in data-collection mode:", e);
+        }
+
+        await saveRawCognitive(token, activeParticipant!.id, {
+          session_id: sessionId || undefined,
+          age: activeParticipant!.age,
+          sdmt_score: sdmt.sdmtTotal,
+          tmt_a_score: tmt.tmtA ? tmt.tmtA / 1000 : 0,
+          lns_score: 0,
+          prediction_result: predictionResult,
+        });
+
+        markTaskDone('cognitive');
+        router.replace('/data-collection/tasks');
+      } catch (error) {
+        console.error("Cognitive save failed:", error);
+        router.replace('/data-collection/tasks');
+      }
+      return;
+    }
+
+    // ── Normal user path ────────────────────────────────────────────────────────
     try {
       const profileResponse = await api.get('/api/auth/me');
       const profile = profileResponse.data;
-      console.log("Fresh user profile:", JSON.stringify(profile));
 
       let userAge = 65;
       if (profile?.birthday) {
         const birthYear = new Date(profile.birthday).getFullYear();
         userAge = new Date().getFullYear() - birthYear;
       }
-
-      let mappedSex = 1;
-      if (profile?.gender === "Male") mappedSex = 1;
-      else if (profile?.gender === "Female") mappedSex = 0;
-      else mappedSex = 1;
+      const mappedSex = profile?.gender === "Female" ? 0 : 1;
 
       const response = await api.post("/api/cognitive-analysis/predict", {
         user_id: user?.uid || "test_user_123",
@@ -400,9 +447,6 @@ export default function CognitiveAssessment() {
       });
 
       const result = response.data;
-      console.log("SUCCESS:", result);
-
-      // Mark task as complete
       markTaskComplete('cognitive');
       router.replace(
         `/cognitive-test-results?percentile_rank=${result.percentile_rank}&risk_probability=${result.risk_probability}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
@@ -413,7 +457,7 @@ export default function CognitiveAssessment() {
         "/cognitive-test-results?percentile_rank=50&risk_probability=0.5&contributing_factors=%5B%5D"
       );
     }
-  }, [router, user]);
+  }, [router, user, isDataCollectionMode, activeParticipant, sessionId, markTaskDone, markTaskComplete]);
 
   const DOT_R = cvW > 0 ? Math.max(18, Math.min(24, cvW * 0.058)) : 22;
 

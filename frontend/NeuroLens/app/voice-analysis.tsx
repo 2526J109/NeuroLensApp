@@ -18,6 +18,8 @@ import { API_ENDPOINTS } from '../constants/api';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAssessment } from '@/contexts/AssessmentContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataCollection } from '@/contexts/DataCollectionContext';
+import { saveRawVoice } from '@/services/adminService';
 
 const PROMPTS = [
   {
@@ -32,7 +34,9 @@ export default function VoiceAnalysisScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const { sessionId, markTaskComplete } = useAssessment();
-  const { userProfile } = useAuth();
+  const { userProfile, user, isAdmin } = useAuth();
+  const { activeParticipant, markTaskDone } = useDataCollection();
+  const isDataCollectionMode = isAdmin && activeParticipant != null;
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -393,12 +397,23 @@ export default function VoiceAnalysisScreen() {
 
       const description = `Voice analysis completed. Risk: ${result?.risk_percentage} (${riskCategory})`;
 
-      // Mark task as complete
-      markTaskComplete('voice');
-
-      router.push(
-        `/voice-test-results?percentage=${Math.round(percentage)}&status=${status}&description=${encodeURIComponent(description)}`
-      );
+      if (isDataCollectionMode) {
+        // ── Admin data-collection path ────────────────────────────────────────
+        const token = await user!.getIdToken();
+        await saveRawVoice(token, activeParticipant!.id, {
+          session_id: sessionId || undefined,
+          features: result,
+          prediction_result: { risk_percentage: percentage, status, risk_category: riskCategory },
+        });
+        markTaskDone('voice');
+        router.replace('/data-collection/tasks');
+      } else {
+        // ── Normal user path ──────────────────────────────────────────────────
+        markTaskComplete('voice');
+        router.push(
+          `/voice-test-results?percentage=${Math.round(percentage)}&status=${status}&description=${encodeURIComponent(description)}`
+        );
+      }
     } catch (error: any) {
       console.error('Error analyzing voice recordings:', error);
       Alert.alert(

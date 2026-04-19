@@ -31,9 +31,10 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     """Schema for user response"""
-    id: str  # Firestore uses string document IDs
+    id: str
     firebase_uid: str
-    created_at: str  # ISO format datetime string
-    
+    created_at: str
+    role: Optional[str] = None  # "admin" | None
+
     class Config:
         from_attributes = True

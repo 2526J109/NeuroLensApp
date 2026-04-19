@@ -37,7 +37,7 @@ export const API_ENDPOINTS = {
     ANALYZE_LOCAL: `${API_BASE_URL}/api/drawing-prediction/analyze-local`,
     ANALYZE_QUADSTREAM: `${API_BASE_URL}/api/drawing-prediction/analyze-quadstream`,
     ANALYZE_QUADSTREAM_V2: `${API_BASE_URL}/api/drawing-prediction/analyze-quadstream-v2`,
-    ANALYZE_MICRO: `${API_BASE_URL}/api/drawing-prediction/analyze-micro`,
+    ANALYZE_MICRO: `${API_BASE_URL}/api/drawing-prediction/analyze-quadstream-v3`,
     ANALYZE_SCALE_NORM: `${API_BASE_URL}/api/drawing-prediction/analyze-scale-norm`,
     ANALYZE_NORMQUAD: `${API_BASE_URL}/api/drawing-prediction/analyze-normquad`,
   },

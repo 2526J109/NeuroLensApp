@@ -11,6 +11,7 @@ from app.routes import voice_multimodal
 from app.routes import cognitive_analysis    
 from app.routes import wearable_prediction
 from app.routes import multimodal_result
+from app.routes import admin as admin_routes
 from app.core.config import settings
 import logging
 import uvicorn
@@ -82,6 +83,7 @@ app.include_router(voice_multimodal.router, prefix=settings.API_V1_STR)
 app.include_router(cognitive_analysis.router, prefix=settings.API_V1_STR) 
 app.include_router(wearable_prediction.router, prefix=settings.API_V1_STR)
 app.include_router(multimodal_result.router, prefix=settings.API_V1_STR)
+app.include_router(admin_routes.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
