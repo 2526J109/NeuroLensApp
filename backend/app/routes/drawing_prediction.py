@@ -5,6 +5,9 @@ from app.services.drawing_prediction_service import (
     analyze_with_local_model,
     analyze_with_quadstream_model,
     analyze_with_improved_quadstream_model,
+    analyze_with_micro_quadstream_model,
+    analyze_with_scale_norm_lr_model,
+    analyze_with_nb20_normquadstream_model,
 )
 from app.core.firebase import verify_firebase_token
 import logging
@@ -158,5 +161,77 @@ async def analyze_drawing_quadstream_v2(request: Request):
         return analyze_with_improved_quadstream_model(
             user_id, body, session_id=session_id, mc_dropout=mc_dropout
         )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post(
+    "/analyze-micro",
+    status_code=status.HTTP_200_OK,
+    summary="Analyze drawing via MicroQuadStream NN (NB13 — 53 params, no BatchNorm, Tanh, 89.7% LOOCV accuracy)",
+)
+async def analyze_drawing_micro(request: Request):
+    """
+    NB13 MicroQuadStream: same 16 absolute-scale features as NB09/NB12
+    but with a 53-parameter architecture (no BatchNorm, Tanh encoders, linear fusion).
+    Falls back to NB12 if model file not present.
+    Optional: pass mc_dropout=true for uncertainty estimation.
+    """
+    body, user_id = await _extract_and_verify(request)
+    try:
+        session_id = body.get("session_id")
+        mc_dropout = bool(body.get("mc_dropout", False))
+        return analyze_with_micro_quadstream_model(
+            user_id, body, session_id=session_id, mc_dropout=mc_dropout
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post(
+    "/analyze-scale-norm",
+    status_code=status.HTTP_200_OK,
+    summary="Analyze drawing via Scale-Normalised LR (NB19 — 14 CV features, RFECV, mobile-robust)",
+)
+async def analyze_drawing_scale_norm(request: Request):
+    """
+    NB19: Logistic Regression with 14 scale-invariant features (vel_cv, jerk_cv,
+    pause_ratio, curvature_std, Gaussian RMSE, radius_resid_std, direction_change_rate)
+    per task. Trained with Time Warp augmentation and RFECV feature selection.
+    Best model for real-world mobile generalisation.
+    Returns 503 if nb19_lr_model.pkl has not been placed in the models directory.
+    """
+    body, user_id = await _extract_and_verify(request)
+    try:
+        session_id = body.get("session_id")
+        return analyze_with_scale_norm_lr_model(user_id, body, session_id=session_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"Model unavailable: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post(
+    "/analyze-normquad",
+    status_code=status.HTTP_200_OK,
+    summary="Analyze drawing via NormQuadStream NN (NB20 — scale-normalised 14 features, no BatchNorm, ELU)",
+)
+async def analyze_drawing_normquad(request: Request):
+    """
+    NB20 NormQuadStream: QuadStream NN trained on the same 14 scale-normalised CV
+    features as NB19 (no BatchNorm, ELU activation, dropout=0.25, MC Dropout support).
+    Stream dims: s1(3)+s2(4)+s3(3)+s4(4). Mobile-robust by design.
+    Returns 503 if nb20_normquadstream_final.pth has not been placed in models directory.
+    Optional: pass mc_dropout=true for uncertainty estimation.
+    """
+    body, user_id = await _extract_and_verify(request)
+    try:
+        session_id = body.get("session_id")
+        mc_dropout = bool(body.get("mc_dropout", False))
+        return analyze_with_nb20_normquadstream_model(
+            user_id, body, session_id=session_id, mc_dropout=mc_dropout
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=f"Model unavailable: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

@@ -338,6 +338,142 @@ def analyze_with_improved_quadstream_model(
     return {"prediction": prediction, "save_result": save_result}
 
 
+def analyze_with_micro_quadstream_model(
+    user_id: str,
+    drawing_data: Dict[str, Any],
+    session_id: str = None,
+    mc_dropout: bool = False,
+) -> Dict[str, Any]:
+    """
+    Run NB13 MicroQuadStream inference (53 params, no BatchNorm, Tanh encoders).
+
+    Uses the same 16 absolute-scale feature streams as NB09/NB12 (s1-s4).
+    Falls back to NB12 ImprovedQuadStream on RuntimeError (model file missing).
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
+    from app.utils.quadstream_features import (
+        extract_quadstream_features,
+        streams_to_feature_dict,
+    )
+    from app.models.micro_quadstream_predictor import predict_micro_quadstream_risk
+
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
+
+    _log.info(
+        "[NB13] Input — user=%s  spiral_pts=%d  wave_pts=%d",
+        user_id, len(spiral_points), len(wave_points),
+    )
+
+    streams   = extract_quadstream_features(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    feat_dict = streams_to_feature_dict(streams)
+
+    try:
+        prediction = predict_micro_quadstream_risk(streams, mc_dropout=mc_dropout)
+    except RuntimeError as exc:
+        _log.warning("[NB13] Falling back to NB12: %s", exc)
+        return analyze_with_improved_quadstream_model(user_id, drawing_data, session_id)
+
+    prediction["quadstream_features"] = feat_dict
+
+    prediction_to_save = {
+        k: v for k, v in prediction.items()
+        if k not in ("quadstream_features", "stream_gates", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
+    return {"prediction": prediction, "save_result": save_result}
+
+
+def analyze_with_scale_norm_lr_model(
+    user_id: str,
+    drawing_data: Dict[str, Any],
+    session_id: str = None,
+) -> Dict[str, Any]:
+    """
+    Run NB19 scale-normalised LR inference (14 CV features, RFECV selected).
+
+    Uses scale-invariant features (vel_cv, jerk_cv, pause_ratio, Gaussian RMSE,
+    curvature_std, radius_resid_std, direction_change_rate) — device-independent.
+    Raises HTTPException(503) if model file is missing (not yet run on Colab).
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
+    from app.utils.scale_norm_features import extract_scale_norm_flat, FEATURE_NAMES
+    from app.models.nb19_lr_predictor import predict_nb19_lr_risk
+
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
+
+    _log.info(
+        "[NB19] Input — user=%s  spiral_pts=%d  wave_pts=%d",
+        user_id, len(spiral_points), len(wave_points),
+    )
+
+    features = extract_scale_norm_flat(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    _log.info("[NB19] Features: %s", features)
+
+    prediction = predict_nb19_lr_risk(features)
+    prediction["scale_norm_features"] = features
+
+    prediction_to_save = {
+        k: v for k, v in prediction.items()
+        if k not in ("scale_norm_features", "selected_features", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
+    return {"prediction": prediction, "save_result": save_result}
+
+
+def analyze_with_nb20_normquadstream_model(
+    user_id: str,
+    drawing_data: Dict[str, Any],
+    session_id: str = None,
+    mc_dropout: bool = False,
+) -> Dict[str, Any]:
+    """
+    Run NB20 NormQuadStream inference (scale-normalised 14 features, no BatchNorm).
+
+    Uses the same CV features as NB19 but in 4 streams for the QuadStream NN.
+    Stream dims: s1(3) spiral geom, s2(4) spiral kin, s3(3) wave geom, s4(4) wave kin.
+    Raises HTTPException(503) if model file is missing (not yet run on Colab).
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
+    from app.utils.scale_norm_features import extract_scale_norm_streams, streams_to_flat
+    from app.models.nb20_normquadstream_predictor import predict_nb20_normquadstream_risk
+
+    spiral_points = (drawing_data.get("spiral_data") or {}).get("points") or []
+    wave_points   = (drawing_data.get("wave_data")   or {}).get("points") or []
+    pixel_ratio: float = float(drawing_data.get("pixel_ratio") or 1.0)
+
+    _log.info(
+        "[NB20] Input — user=%s  spiral_pts=%d  wave_pts=%d",
+        user_id, len(spiral_points), len(wave_points),
+    )
+
+    streams   = extract_scale_norm_streams(spiral_points, wave_points, pixel_ratio=pixel_ratio)
+    feat_dict = streams_to_flat(streams)
+    _log.info("[NB20] Streams: %s", feat_dict)
+
+    prediction = predict_nb20_normquadstream_risk(streams, mc_dropout=mc_dropout)
+    prediction["scale_norm_features"] = feat_dict
+
+    prediction_to_save = {
+        k: v for k, v in prediction.items()
+        if k not in ("scale_norm_features", "stream_gates", "source")
+    }
+    save_result = save_prediction_for_user(user_id, prediction_to_save, session_id)
+
+    return {"prediction": prediction, "save_result": save_result}
+
+
 def analyze_with_quadstream_model(
     user_id: str,
     drawing_data: Dict[str, Any],

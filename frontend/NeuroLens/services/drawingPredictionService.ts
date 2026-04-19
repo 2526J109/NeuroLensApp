@@ -1,5 +1,6 @@
 import api from './api';
 import { DrawingDataJSON } from '../utils/dataExport';
+import { API_ENDPOINTS, DrawingModelKey } from '../constants/api';
 
 export interface DrawingPredictionRequest {
   user_id: string;
@@ -7,6 +8,7 @@ export interface DrawingPredictionRequest {
   spiral_data?: DrawingDataJSON;
   wave_data?: DrawingDataJSON;
   pixel_ratio?: number;
+  mc_dropout?: boolean;
 }
 
 export interface DrawingPredictionResponse {
@@ -14,74 +16,61 @@ export interface DrawingPredictionResponse {
   save_result: any;
 }
 
+function buildHeaders(firebaseToken?: string): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (firebaseToken) headers['Authorization'] = `Bearer ${firebaseToken}`;
+  return headers;
+}
 
-export const analyzeDrawingQuadstream = async (
+/**
+ * Send drawing data to the specified model endpoint.
+ * Single unified function — the modelKey selects the backend endpoint.
+ */
+export const analyzeDrawing = async (
+  modelKey: DrawingModelKey,
   userId: string,
   spiralData?: DrawingDataJSON,
   waveData?: DrawingDataJSON,
   firebaseToken?: string,
   pixelRatio?: number,
-  sessionId?: string
+  sessionId?: string,
+  mcDropout?: boolean,
 ): Promise<DrawingPredictionResponse> => {
-  const requestData: DrawingPredictionRequest = {
+  const endpoint = API_ENDPOINTS.DRAWING_ANALYSIS[modelKey];
+  const body: DrawingPredictionRequest = {
     user_id: userId,
     session_id: sessionId,
     spiral_data: spiralData,
     wave_data: waveData,
     pixel_ratio: pixelRatio,
+    mc_dropout: mcDropout,
   };
-
-  const headers: any = {
-    'Content-Type': 'application/json',
-  };
-  if (firebaseToken) {
-    headers['Authorization'] = `Bearer ${firebaseToken}`;
-  }
-
-  console.log('[QuadStream] Sending drawing prediction request:', requestData);
-
-  const response = await api.post<DrawingPredictionResponse>(
-    '/api/drawing-prediction/analyze-quadstream-v2',
-    requestData,
-    { headers }
-  );
-
-  console.log('[QuadStream] Received response:', response.data);
+  console.log(`[Drawing] POST ${endpoint}`, { modelKey, points: spiralData?.points?.length });
+  const response = await api.post<DrawingPredictionResponse>(endpoint, body, {
+    headers: buildHeaders(firebaseToken),
+  });
+  console.log(`[Drawing] Response from ${modelKey}:`, response.data?.prediction?.risk_percentage);
   return response.data;
 };
 
-export const analyzeDrawingPrediction = async (
+// ── Legacy named exports (kept so existing callers don't break) ───────────────
+
+export const analyzeDrawingPrediction = (
   userId: string,
   spiralData?: DrawingDataJSON,
   waveData?: DrawingDataJSON,
   firebaseToken?: string,
   pixelRatio?: number,
-  sessionId?: string
-): Promise<DrawingPredictionResponse> => {
-  const requestData: DrawingPredictionRequest = {
-    user_id: userId,
-    session_id: sessionId,
-    spiral_data: spiralData,
-    wave_data: waveData,
-    pixel_ratio: pixelRatio,
-  };
+  sessionId?: string,
+) =>
+  analyzeDrawing('ANALYZE_LOCAL', userId, spiralData, waveData, firebaseToken, pixelRatio, sessionId);
 
-  const headers: any = {
-    'Content-Type': 'application/json',
-  };
-  if (firebaseToken) {
-    headers['Authorization'] = `Bearer ${firebaseToken}`;
-  }
-
-  console.log('Sending drawing prediction request:', requestData);
-  console.log('With headers:', headers);
-
-  const response = await api.post<DrawingPredictionResponse>(
-    '/api/drawing-prediction/analyze-local',
-    requestData,
-    { headers }
-  );
-
-  console.log('Received drawing prediction response:', response.data);
-  return response.data;
-};
+export const analyzeDrawingQuadstream = (
+  userId: string,
+  spiralData?: DrawingDataJSON,
+  waveData?: DrawingDataJSON,
+  firebaseToken?: string,
+  pixelRatio?: number,
+  sessionId?: string,
+) =>
+  analyzeDrawing('ANALYZE_QUADSTREAM_V2', userId, spiralData, waveData, firebaseToken, pixelRatio, sessionId);
