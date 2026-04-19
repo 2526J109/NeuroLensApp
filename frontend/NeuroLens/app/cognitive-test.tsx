@@ -402,6 +402,28 @@ export default function CognitiveAssessment() {
       const result = response.data;
       console.log("SUCCESS:", result);
 
+      // Save raw cognitive data for validation (fire-and-forget)
+      try {
+        await api.post("/api/cognitive-raw-data/save", {
+          user_id: user?.uid || "test_user_123",
+          session_id: sessionId || null,
+          timestamp: Date.now(),
+          age_at_visit: userAge,
+          SEX: mappedSex,
+          fampd: profile?.family_history ?? 0,
+          rem: profile?.rem_sleep ?? 0,
+          sdmtotal: Math.round(sdmt.sdmtTotal * 1.5),
+          tmt_a: tmt.tmtA ? tmt.tmtA / 1000 : null,
+          tmt_taps: realTaps.current,
+          sdmt_trials: realTrials.current,
+          model_risk_probability: result.risk_probability,
+          model_percentile_rank: result.percentile_rank,
+        });
+        console.log("Raw cognitive data saved");
+      } catch (rawErr) {
+        console.warn("Raw data save failed (non-blocking):", rawErr);
+      }
+
       // Mark task as complete
       markTaskComplete('cognitive');
       router.replace(
