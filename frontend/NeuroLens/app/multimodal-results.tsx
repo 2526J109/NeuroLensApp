@@ -75,7 +75,7 @@ export default function MultimodalResultsScreen() {
 
     const handleReset = () => {
         resetSession();
-        router.replace('/(tabs)');
+        router.replace('/');
     };
 
     if (loading) {

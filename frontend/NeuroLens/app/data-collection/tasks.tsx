@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { CheckCircle, Circle, PenLine, Mic, Brain, ArrowLeft } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { useDataCollection } from '@/contexts/DataCollectionContext';
 
 const TASKS = [
@@ -40,7 +41,7 @@ export default function TasksScreen() {
 
   useEffect(() => {
     if (!activeParticipant) {
-      router.replace('/data-collection' as any);
+      router.replace('/');
     }
   }, [activeParticipant, router]);
 
@@ -66,20 +67,32 @@ export default function TasksScreen() {
   };
 
   const handleFinish = () => {
-    Alert.alert(
-      'Session complete',
-      `All tasks done for ${activeParticipant.participant_code}. Go back to participant list?`,
-      [
-        { text: 'Stay', style: 'cancel' },
-        {
-          text: 'Finish',
-          onPress: () => {
-            setActiveParticipant(null);
-            router.replace('/data-collection' as any);
-          },
-        },
-      ],
-    );
+    const doFinish = () => {
+      const code = activeParticipant?.participant_code || 'Participant';
+      setActiveParticipant(null);
+      Toast.show({
+        type: 'success',
+        text1: 'Session Complete',
+        text2: `All tasks finished for ${code}.`,
+      });
+      router.replace('/');
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `All tasks done for ${activeParticipant.participant_code}. Go back to participant list?`
+      );
+      if (confirmed) doFinish();
+    } else {
+      Alert.alert(
+        'Session complete',
+        `All tasks done for ${activeParticipant.participant_code}. Go back to participant list?`,
+        [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Finish', onPress: doFinish },
+        ],
+      );
+    }
   };
 
   return (
@@ -92,7 +105,7 @@ export default function TasksScreen() {
             style={styles.backBtn}
             onPress={() => {
               setActiveParticipant(null);
-              router.replace('/data-collection' as any);
+              router.replace('/');
             }}
           >
             <ArrowLeft size={18} color="#64748B" />

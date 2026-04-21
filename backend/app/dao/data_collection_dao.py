@@ -36,7 +36,6 @@ class DataCollectionDAO:
         docs = (
             self.db.db.collection("participants")
             .where(filter=FieldFilter("admin_uid", "==", admin_uid))
-            .order_by("created_at", direction="DESCENDING")
             .stream()
         )
         results = []
@@ -44,6 +43,9 @@ class DataCollectionDAO:
             d = doc.to_dict()
             d["id"] = doc.id
             results.append(d)
+            
+        # Sort in Python to avoid needing a Firestore composite index
+        results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return results
 
     def get_participant(self, participant_id: str) -> Optional[Dict[str, Any]]:

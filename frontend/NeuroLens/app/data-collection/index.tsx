@@ -1,17 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Plus, User, CheckCircle, LogOut, ChevronRight } from 'lucide-react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { Plus, User, CheckCircle, LogOut, ChevronRight, Mail } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataCollection, Participant } from '@/contexts/DataCollectionContext';
 import { listParticipants } from '@/services/adminService';
 
 export default function DataCollectionHome() {
-  const { user, logout } = useAuth();
+  const { user, userProfile, logout } = useAuth();
   const { setActiveParticipant } = useDataCollection();
   const router = useRouter();
 
@@ -20,6 +22,7 @@ export default function DataCollectionHome() {
 
   const load = useCallback(async () => {
     try {
+      setLoading(true);
       const token = await user!.getIdToken();
       const list = await listParticipants(token);
       setParticipants(list);
@@ -30,7 +33,11 @@ export default function DataCollectionHome() {
     }
   }, [user]);
 
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const handleSelect = (p: Participant) => {
     setActiveParticipant(p);
@@ -38,14 +45,31 @@ export default function DataCollectionHome() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Log out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Log out', style: 'destructive', onPress: logout },
-    ]);
+    const performLogout = async () => {
+      await logout();
+      Toast.show({
+        type: 'info',
+        text1: 'Logged Out',
+        text2: 'You have been successfully logged out.',
+      });
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to log out?');
+      if (confirmed) performLogout();
+    } else {
+      Alert.alert('Log out', 'Are you sure you want to log out?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log out', style: 'destructive', onPress: performLogout },
+      ]);
+    }
   };
 
   const allDone = (p: Participant) =>
     ['drawing', 'voice', 'cognitive'].every(t => p.tasks_completed.includes(t));
+
+  const displayName = userProfile?.full_name || user?.displayName || 'Admin';
+  const displayEmail = userProfile?.email || user?.email || '';
 
   const renderParticipant = ({ item }: { item: Participant }) => {
     const done = allDone(item);
@@ -79,6 +103,25 @@ export default function DataCollectionHome() {
         <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
           <LogOut size={20} color="#94A3B8" />
         </TouchableOpacity>
+      </View>
+
+      {/* Admin User Info Card */}
+      <View style={styles.userCard}>
+        <View style={styles.userAvatar}>
+          <Text style={styles.userAvatarText}>
+            {displayName.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{displayName}</Text>
+          <View style={styles.userEmailRow}>
+            <Mail size={12} color="#94A3B8" />
+            <Text style={styles.userEmail}>{displayEmail}</Text>
+          </View>
+        </View>
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleBadgeText}>Admin</Text>
+        </View>
       </View>
 
       {/* Stats */}
@@ -143,7 +186,18 @@ const styles = StyleSheet.create({
   headerTitle:  { fontSize: 22, fontWeight: '800', color: '#0F172A' },
   headerSub:    { fontSize: 12, color: '#14B8A6', fontWeight: '600', marginTop: 2 },
   logoutBtn:    { padding: 8 },
-  statRow:      { flexDirection: 'row', marginHorizontal: 24, marginVertical: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' },
+
+  userCard:     { flexDirection: 'row', alignItems: 'center', marginHorizontal: 24, marginTop: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+  userAvatar:   { width: 44, height: 44, borderRadius: 22, backgroundColor: '#14B8A6', alignItems: 'center', justifyContent: 'center' },
+  userAvatarText: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+  userInfo:     { flex: 1 },
+  userName:     { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  userEmailRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
+  userEmail:    { fontSize: 12, color: '#94A3B8' },
+  roleBadge:    { backgroundColor: '#F0FDFA', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1, borderColor: '#99F6E4' },
+  roleBadgeText: { fontSize: 11, fontWeight: '700', color: '#14B8A6' },
+
+  statRow:      { flexDirection: 'row', marginHorizontal: 24, marginVertical: 12, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' },
   stat:         { flex: 1, alignItems: 'center' },
   statVal:      { fontSize: 22, fontWeight: '800', color: '#0F172A' },
   statLab:      { fontSize: 11, color: '#94A3B8', marginTop: 2 },
@@ -162,3 +216,4 @@ const styles = StyleSheet.create({
   emptyHint:    { fontSize: 13, color: '#CBD5E1' },
   fab:          { position: 'absolute', bottom: 32, right: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: '#14B8A6', alignItems: 'center', justifyContent: 'center', elevation: 6 },
 });
+
