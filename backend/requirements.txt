@@ -16,7 +16,8 @@ pydantic-settings
 numpy
 pandas
 
-# ML Framework (
+# ML Framework
+torch==2.2.2+cpu --extra-index-url https://download.pytorch.org/whl/cpu  # TunedQuadStream (NB09) — CPU-only, no CUDA DLLs needed
 scikit-learn==1.6.1
 joblib>=1.3.0
 xgboost

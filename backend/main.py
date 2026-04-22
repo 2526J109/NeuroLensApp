@@ -12,6 +12,7 @@ from app.routes import cognitive_analysis
 from app.routes import cognitive_raw_data
 from app.routes import wearable_prediction
 from app.routes import multimodal_result
+from app.routes import admin as admin_routes
 from app.core.config import settings
 import logging
 import uvicorn
@@ -42,6 +43,16 @@ async def lifespan(app: FastAPI):
         logger.info("Whisper model — ready")
     except Exception as e:
         logger.error("Whisper failed to load at startup: %s", e)
+
+    # 3. TunedQuadStream drawing model (torch, 237 params)
+    try:
+        from app.models.quadstream_predictor import _load
+        if _load():
+            logger.info("QuadStream model — ready")
+        else:
+            logger.warning("QuadStream model — .pth files not found, fallback to LR active")
+    except Exception as e:
+        logger.error("QuadStream failed to load at startup: %s", e)
 
     logger.info("=== Startup complete — ready to serve requests ===")
     yield
@@ -74,6 +85,7 @@ app.include_router(cognitive_analysis.router, prefix=settings.API_V1_STR)
 app.include_router(cognitive_raw_data.router, prefix=settings.API_V1_STR)
 app.include_router(wearable_prediction.router, prefix=settings.API_V1_STR)
 app.include_router(multimodal_result.router, prefix=settings.API_V1_STR)
+app.include_router(admin_routes.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

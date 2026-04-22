@@ -45,14 +45,16 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Dict[str, Any]:
-    """
-    Get current active user
-    
-    Args:
-        current_user: Current user from get_current_user
-        
-    Returns:
-        dict: Current active user data
-    """
-    # You can add additional checks here (e.g., is_active flag)
+    return current_user
+
+
+async def get_current_admin(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Require role == 'admin' in the Firestore user doc."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
     return current_user

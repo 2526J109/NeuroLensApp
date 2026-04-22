@@ -1,27 +1,27 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Index() {
   const router = useRouter();
+  const { user, isAdmin, loading } = useAuth();
 
   useEffect(() => {
-    // Use requestAnimationFrame to ensure navigation happens after render
-    const frameId = requestAnimationFrame(() => {
-      // Check if onboarding is completed (you can use AsyncStorage or similar)
-      // For now, always show onboarding first
-      // TODO: Add logic to check if user has completed onboarding
-      const hasCompletedOnboarding = false; // Replace with actual check
+    if (loading) return;
 
-      if (hasCompletedOnboarding) {
-        router.replace('/login');
-      } else {
+    const frameId = requestAnimationFrame(() => {
+      if (!user) {
         router.replace('/onboarding');
+      } else if (isAdmin) {
+        router.replace('/data-collection');
+      } else {
+        router.replace('/(tabs)');
       }
     });
 
     return () => cancelAnimationFrame(frameId);
-  }, [router]);
+  }, [router, user, isAdmin, loading]);
 
   return (
     <View style={styles.container}>
@@ -38,4 +38,3 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
 });
-

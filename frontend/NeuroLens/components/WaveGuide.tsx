@@ -10,32 +10,34 @@ interface WaveGuideProps {
     color?: string;
 }
 
-export const WaveGuide = ({ 
-    width = 300, 
-    height = 200,
+export const WaveGuide = ({
+    width = 300,
+    height = 560,
     waves = 3,
-    amplitude = 40,
-    color = '#0F172A' 
+    amplitude = 120,
+    color = '#0F172A'
 }: WaveGuideProps) => {
-    // Generate sine wave path
+    // Generate vertical sine wave path — progress goes top→bottom (y direction),
+    // oscillation goes left↔right (x direction). This matches the training dataset
+    // orientation (Smartphone Dataset: y=[172,1980], x oscillates [76,1025]).
     const generateWavePath = () => {
         const points: string[] = [];
         const totalPoints = waves * 50; // 50 points per wave for smoothness
-        const wavelength = width / waves;
-        const centerY = height / 2;
-        
+        const wavelength = height / waves;
+        const centerX = width / 2;
+
         for (let i = 0; i <= totalPoints; i++) {
-            const x = (i / totalPoints) * width;
-            const progress = (x / wavelength) * 2 * Math.PI;
-            const y = centerY + amplitude * Math.sin(progress);
-            
+            const y = (i / totalPoints) * height;
+            const progress = (y / wavelength) * 2 * Math.PI;
+            const x = centerX + amplitude * Math.sin(progress);
+
             if (i === 0) {
                 points.push(`M ${x} ${y}`);
             } else {
                 points.push(`L ${x} ${y}`);
             }
         }
-        
+
         return points.join(' ');
     };
 

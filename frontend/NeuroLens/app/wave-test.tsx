@@ -7,19 +7,20 @@ import {
     ScrollView,
     Dimensions,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RotateCcw } from 'lucide-react-native';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DrawingCanvas, DrawingPoint } from '@/components/DrawingCanvas';
 import { WaveGuide } from '@/components/WaveGuide';
 
-const CANVAS_WIDTH = Math.min(Dimensions.get('window').width - 80, 350);
-const CANVAS_HEIGHT = 220;
+// Wave canvas is portrait (tall): matches training data orientation where
+// the finger moves top→bottom (y=172→1980 px physical on Vivo X27).
+const CANVAS_WIDTH = Math.min(Dimensions.get('window').width - 80, 300);
+const CANVAS_HEIGHT = 560;
 
 export default function WaveTestScreen() {
     const { t } = useLanguage();
-    const router = useRouter();
     const [drawingData, setDrawingData] = useState<DrawingPoint[]>([]);
     const [patternsCompleted, setPatternsCompleted] = useState(0);
     const [canvasKey, setCanvasKey] = useState(0);
@@ -95,7 +96,7 @@ export default function WaveTestScreen() {
                 <View style={styles.canvasContainer}>
                     <View style={styles.canvasWrapper}>
                         {/* Wave Guide - positioned absolutely */}
-                        <WaveGuide width={CANVAS_WIDTH} height={CANVAS_HEIGHT} waves={3} amplitude={40} />
+                        <WaveGuide width={CANVAS_WIDTH} height={CANVAS_HEIGHT} waves={3} amplitude={120} />
 
                         {/* Drawing Canvas - positioned absolutely on top */}
                         <DrawingCanvas

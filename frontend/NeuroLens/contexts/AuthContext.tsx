@@ -21,11 +21,13 @@ interface UserProfile {
   handedness?: string;
   family_history?: number;
   rem_sleep?: number;
+  role?: string;  // "admin" | undefined
 }
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
+  isAdmin: boolean;
   loading: boolean;
   signUp: (
     email: string,
@@ -62,12 +64,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile from backend
+  const isAdmin = userProfile?.role === 'admin';
+
   const fetchUserProfile = async (firebaseUser: User) => {
     try {
       const token = await firebaseUser.getIdToken();
       await AsyncStorage.setItem('authToken', token);
-      console.log('Token: ', token);
       const profile = await authService.getUserProfile();
       setUserProfile(profile);
     } catch (error) {
@@ -75,9 +77,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-
-
-  // Monitor Firebase auth state
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
@@ -95,7 +94,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return unsubscribe;
   }, []);
 
-  // Sign up with email and password
   const signUp = async (
     email: string,
     password: string,
@@ -116,7 +114,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Sign in with email and password
   const signIn = async (email: string, password: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -126,7 +123,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Logout
   const logout = async () => {
     try {
       await signOut(auth);
@@ -137,7 +133,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Reset password
   const resetPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -146,7 +141,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Refresh user profile from backend
   const refreshUserProfile = async () => {
     if (user) {
       await fetchUserProfile(user);
@@ -156,6 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     userProfile,
+    isAdmin,
     loading,
     signUp,
     signIn,

@@ -9,12 +9,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { API_ENDPOINTS } from '../constants/api';
 import { useAssessment } from '../contexts/AssessmentContext';
+import { useDataCollection } from '../contexts/DataCollectionContext';
+import { saveRawWearable } from '../services/adminService';
 
 export default function WearableScreen() {
     const router = useRouter();
-    const { userProfile, user } = useAuth();
+    const { userProfile, user, isAdmin } = useAuth();
     const { t } = useLanguage();
     const { sessionId, markTaskComplete } = useAssessment();
+    const { activeParticipant, markTaskDone } = useDataCollection();
+    const isDataCollectionMode = isAdmin && activeParticipant != null;
     const manager = useMemo(() => new BleManager(), []);
     const [isScanning, setIsScanning] = useState(false);
     const [devices, setDevices] = useState<Device[]>([]);
@@ -78,7 +82,17 @@ export default function WearableScreen() {
                         console.error('Failed to save wearable prediction', await response.text());
                     } else {
                         console.log('Wearable prediction saved successfully');
-                        markTaskComplete('wearable');
+                        if (isDataCollectionMode) {
+                            await saveRawWearable(token, activeParticipant!.id, {
+                                session_id: sessionId || undefined,
+                                sensor_readings: payload,
+                                prediction_result: { global_verdict: payload.global_verdict, probability_score: payload.probability_score },
+                            });
+                            markTaskDone('wearable');
+                            router.replace('/data-collection/tasks');
+                        } else {
+                            markTaskComplete('wearable');
+                        }
                     }
                 } catch (error) {
                     console.error('Error saving wearable prediction:', error);
