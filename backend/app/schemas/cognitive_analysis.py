@@ -23,3 +23,5 @@ class CognitiveAnalysisResponse(BaseModel):
     percentile_rank: int
     contributing_factors: List[ContributingFactor]  # top 3 by |SHAP|
     status: str = "success"
+    age_matched_percentile: Optional[int] = None
+    age_cohort_label: Optional[str] = None

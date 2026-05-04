@@ -427,7 +427,7 @@ export default function CognitiveAssessment() {
       // Mark task as complete
       markTaskComplete('cognitive');
       router.replace(
-        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&risk_probability=${result.risk_probability}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}`
+        `/cognitive-test-results?percentile_rank=${result.percentile_rank}&risk_probability=${result.risk_probability}&contributing_factors=${encodeURIComponent(JSON.stringify(result.contributing_factors))}&age_matched_percentile=${result.age_matched_percentile ?? ''}&age_cohort_label=${encodeURIComponent(result.age_cohort_label ?? '')}`
       );
     } catch (error) {
       console.error("Cognitive submit failed:", error);

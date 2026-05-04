@@ -52,9 +52,29 @@ export default function CognitiveTestResultsScreen() {
         ? Number(params.risk_probability as string)
         : percentileRank / 100;
 
-    const factorsParam = params.contributing_factors
-        ? JSON.parse(decodeURIComponent(params.contributing_factors as string)) as ContributingFactor[]
-        : [];
+    const factorsParam = (() => {
+        try {
+            const raw = params.contributing_factors;
+            console.log('[DEBUG] raw factors:', raw, typeof raw);
+            if (!raw) return [] as ContributingFactor[];
+            
+            // If Expo Router already parsed it into an object/array
+            if (Array.isArray(raw)) return raw as ContributingFactor[];
+            
+            let decoded = raw as string;
+            try { decoded = decodeURIComponent(decoded); } catch(e) {}
+            
+            const parsed = JSON.parse(decoded);
+            console.log('[DEBUG] parsed factors:', parsed);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.error('[DEBUG] Factors parse error:', e);
+            return [] as ContributingFactor[];
+        }
+    })();
+
+    const ageMatchedPercentile = parseInt(params.age_matched_percentile as string) || null;
+    const ageCohortLabel = params.age_cohort_label || null;
 
     const bucketIdx   = getBucketIndex(percentileRank);
     const activeBucket = BUCKETS[bucketIdx];
@@ -69,11 +89,30 @@ export default function CognitiveTestResultsScreen() {
     const riskInfo = getRiskLabel(riskProbability);
 
     // Interpretation helper
-    const getInterpretation = (rank: number): string => {
-        if (rank <= 25) return t('cognitiveResults.interp1', { rank: String(rank) });
-        if (rank <= 50) return t('cognitiveResults.interp2', { rank: String(rank) });
-        if (rank <= 75) return t('cognitiveResults.interp3', { rank: String(rank) });
-        return t('cognitiveResults.interp4', { rank: String(rank) });
+    const getInterpretation = (percentileRank: number, ageMatchedPercentile: number | null, ageCohortLabel: string | null): string => {
+        const rank = ageMatchedPercentile || percentileRank || 50;
+        const cohortText = ageCohortLabel || 'your age group';
+
+        if (rank <= 25)
+            return `Your cognitive patterns show no concerning markers in this assessment. ` +
+                   `Your processing speed and attention are performing well compared to ` +
+                   `${cohortText}.`;
+
+        if (rank <= 50)
+            return `Your results are within an acceptable range compared to ${cohortText}. ` +
+                   `Some patterns are slightly outside what is typical — this is often ` +
+                   `influenced by temporary factors like fatigue or stress on the day. ` +
+                   `Regular check-ins over time will give a clearer picture.`;
+
+        if (rank <= 75)
+            return `Some patterns in your results are worth monitoring over time compared to ` +
+                   `${cohortText}. This is not a diagnosis — a single session is just a snapshot. ` +
+                   `Completing regular assessments helps track whether these patterns change.`;
+
+        return `Your results show some patterns worth discussing with a healthcare ` +
+               `professional. Compared to ${cohortText}, your score is in the higher range. ` +
+               `This is not a diagnosis — we recommend mentioning these results at your ` +
+               `next routine check-up.`;
     };
 
     // Recommendation helper
@@ -198,19 +237,13 @@ export default function CognitiveTestResultsScreen() {
                         <Text style={styles.tickText}>90%</Text>
                     </View>
 
-                    {percentileRank <= 50 ? (
-                        <View style={[styles.summaryPill, { backgroundColor: activeBucket.lightBg }]}>
-                            <Text style={[styles.summaryText, { color: activeBucket.color }]}>
-                                {t('cognitiveResults.summaryHealthy', { pct: String(100 - percentileRank) })}
-                            </Text>
-                        </View>
-                    ) : (
-                        <View style={[styles.summaryPill, { backgroundColor: activeBucket.lightBg }]}>
-                            <Text style={[styles.summaryText, { color: activeBucket.color }]}>
-                                {t('cognitiveResults.summaryRange', { range: t(`cognitiveResults.${activeBucket.labelKey}`).toLowerCase() })}
-                            </Text>
-                        </View>
-                    )}
+                    <View style={[styles.summaryPill, { backgroundColor: activeBucket.lightBg }]}>
+                        <Text style={[styles.summaryText, { color: activeBucket.color }]}>
+                            {percentileRank <= 50
+                                ? `Your results are in a healthy range compared to ${ageCohortLabel || 'your age group'}`
+                                : `You are in the higher monitoring range compared to ${ageCohortLabel || 'your age group'}`}
+                        </Text>
+                    </View>
                 </Animated.View>
 
                 {/* ── 3. WHAT THIS MEANS ── */}
@@ -218,10 +251,10 @@ export default function CognitiveTestResultsScreen() {
                     style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
                 >
                     <Text style={styles.cardTitle}>{t('cognitiveResults.whatThisMeansTitle')}</Text>
-                    <Text style={styles.cardBody}>{getInterpretation(percentileRank)}</Text>
+                    <Text style={styles.cardBody}>{getInterpretation(percentileRank, ageMatchedPercentile, ageCohortLabel as string | null)}</Text>
                 </Animated.View>
 
-                {/* ── 4. KEY FACTORS (SHAP) ── */}
+                {/* ── 4. KEY FACTORS ── */}
                 {factorsParam.length > 0 && (
                     <Animated.View
                         style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
