@@ -316,57 +316,48 @@ export default function HistoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<AssessmentEntry[]>([]);
 
-  useEffect(() => {
-    // Keeping data hardcoded for now as requested
-    const hardcodedData: AssessmentEntry[] = [
-      {
-        id: '1',
-        date: 'Mar 8, 2026',
-        overallScore: 28,
-        trend: 'down',
-        categories: { wearable: 32, voice: 25, drawing: 15, brain: 40 }
-      },
-      {
-        id: '2',
-        date: 'Mar 5, 2026',
-        overallScore: 35,
-        trend: 'up',
-        categories: { wearable: 38, voice: 30, drawing: 22, brain: 50 }
-      },
-      {
-        id: '3',
-        date: 'Feb 28, 2026',
-        overallScore: 30,
-        trend: 'stable',
-        categories: { wearable: 35, voice: 28, drawing: 18, brain: 39 }
-      },
-      {
-        id: '4',
-        date: 'Feb 20, 2026',
-        overallScore: 42,
-        trend: 'down',
-        categories: { wearable: 45, voice: 40, drawing: 35, brain: 48 }
-      },
-      {
-        id: '5',
-        date: 'Feb 10, 2026',
-        overallScore: 55,
-        trend: 'stable',
-        categories: { wearable: 60, voice: 55, drawing: 50, brain: 55 }
-      }
-    ];
-
-    setHistoryData(hardcodedData);
-    setLoading(false);
-  }, []);
-
   const fetchHistory = async () => {
-    // API fetching disabled for now
     setLoading(true);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const response = await api.get('/api/multimodal/history');
+      const raw: BackendHistoryEntry[] = response.data;
+
+      const entries: AssessmentEntry[] = raw.map((item, index) => {
+        const overallScore = Math.round(item.final_multimodal_risk);
+        const prevScore = index < raw.length - 1 ? raw[index + 1].final_multimodal_risk : null;
+
+        let trend: 'up' | 'down' | 'stable' = 'stable';
+        if (prevScore !== null) {
+          if (overallScore > prevScore + 2) trend = 'up';
+          else if (overallScore < prevScore - 2) trend = 'down';
+        }
+
+        return {
+          id: item.id,
+          date: formatDate(item.timestamp),
+          overallScore,
+          trend,
+          categories: {
+            wearable: Math.round(item.individual_scores.wearable),
+            voice: Math.round(item.individual_scores.voice),
+            drawing: Math.round(item.individual_scores.drawing),
+            brain: Math.round(item.individual_scores.cognitive),
+          },
+        };
+      });
+
+      setHistoryData(entries);
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'Failed to load assessment history');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
+
+  useEffect(() => {
+    fetchHistory();
+  }, []);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
