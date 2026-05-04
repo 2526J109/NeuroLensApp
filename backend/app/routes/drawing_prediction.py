@@ -1,6 +1,8 @@
 
 from fastapi import APIRouter, HTTPException, status, Request
-from app.services.drawing_prediction_service import analyze_and_save, analyze_with_local_model
+from app.services.drawing_prediction_service import (
+    analyze_and_save, analyze_with_local_model, analyze_with_normquadstream,
+)
 from app.core.firebase import verify_firebase_token
 
 router = APIRouter(prefix="/drawing-prediction", tags=["drawing-prediction"])
@@ -52,5 +54,19 @@ async def analyze_drawing_local(request: Request):
     try:
         session_id = body.get("session_id")
         return analyze_with_local_model(user_id, body, session_id=session_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post(
+    "/analyze-normquadstream",
+    status_code=status.HTTP_200_OK,
+    summary="Analyze drawing via NormQuadStream NN (12 scale-invariant features, NB22)",
+)
+async def analyze_drawing_normquadstream(request: Request):
+    body, user_id = await _extract_and_verify(request)
+    try:
+        session_id = body.get("session_id")
+        return analyze_with_normquadstream(user_id, body, session_id=session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

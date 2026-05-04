@@ -9,10 +9,18 @@ import {
     ScrollView,
     Dimensions,
     PixelRatio,
+    Modal,
+    Pressable,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RotateCcw } from 'lucide-react-native';
+import { RotateCcw, ChevronDown, Check } from 'lucide-react-native';
+
+const MODELS = [
+    { label: 'NormQuadStream (NB22)', value: 'normquadstream', endpoint: '/api/drawing-prediction/analyze-normquadstream' },
+    { label: 'Standard Analysis', value: 'standard', endpoint: '/api/drawing-prediction/analyze' },
+    { label: 'Local Analysis', value: 'local', endpoint: '/api/drawing-prediction/analyze-local' },
+] as const;
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DrawingCanvas, DrawingPoint } from '@/components/DrawingCanvas';
 import { SpiralGuide } from '@/components/SpiralGuide';
@@ -37,6 +45,8 @@ export default function DrawingTestScreen() {
     const [completedTests, setCompletedTests] = useState<TestType[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [selectedModel, setSelectedModel] = useState<typeof MODELS[number]>(MODELS[0]);
+    const [modelPickerOpen, setModelPickerOpen] = useState(false);
 
     // Store JSON data for both tests
     const [spiralDataJSON, setSpiralDataJSON] = useState<DrawingDataJSON | null>(null);
@@ -112,7 +122,8 @@ export default function DrawingTestScreen() {
                         jsonData!,
                         firebaseToken,
                         PixelRatio.get(),
-                        sessionId || undefined
+                        sessionId || undefined,
+                        selectedModel.endpoint
                     );
 
                     // Mark task as complete
@@ -124,7 +135,8 @@ export default function DrawingTestScreen() {
                         params: {
                             spiralData: spiralDataJSON ? JSON.stringify(spiralDataJSON) : '',
                             waveData: jsonData ? JSON.stringify(jsonData) : '',
-                            prediction: JSON.stringify(predictionResponse)
+                            prediction: JSON.stringify(predictionResponse),
+                            modelName: selectedModel.label,
                         }
                     });
                 } catch (err) {
@@ -164,11 +176,48 @@ export default function DrawingTestScreen() {
                 }}
             />
 
+            {/* Model picker modal */}
+            <Modal visible={modelPickerOpen} transparent animationType="fade">
+                <Pressable style={styles.modalOverlay} onPress={() => setModelPickerOpen(false)}>
+                    <View style={styles.modalSheet}>
+                        <Text style={styles.modalTitle}>Select Model</Text>
+                        {MODELS.map(model => (
+                            <TouchableOpacity
+                                key={model.value}
+                                style={styles.modalOption}
+                                onPress={() => { setSelectedModel(model); setModelPickerOpen(false); }}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={[styles.modalOptionText, selectedModel.value === model.value && styles.modalOptionTextSelected]}>
+                                    {model.label}
+                                </Text>
+                                {selectedModel.value === model.value && (
+                                    <Check size={16} color="#F97316" />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </Pressable>
+            </Modal>
+
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 scrollEnabled={!isDrawing}
             >
+                {/* Model Selector */}
+                <View style={styles.modelSelectorRow}>
+                    <Text style={styles.modelSelectorLabel}>Model</Text>
+                    <TouchableOpacity
+                        style={styles.modelSelectorButton}
+                        onPress={() => setModelPickerOpen(true)}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.modelSelectorValue}>{selectedModel.label}</Text>
+                        <ChevronDown size={14} color="#64748B" />
+                    </TouchableOpacity>
+                </View>
+
                 {/* Progress Indicator */}
                 <View style={styles.progressContainer}>
                     <View style={styles.progressDots}>
@@ -451,5 +500,73 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
         fontStyle: 'italic',
         marginTop: 8,
+    },
+
+    // Model selector
+    modelSelectorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 20,
+    },
+    modelSelectorLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#64748B',
+    },
+    modelSelectorButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+    },
+    modelSelectorValue: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#0F172A',
+    },
+
+    // Modal
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 32,
+    },
+    modalSheet: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+    },
+    modalTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#0F172A',
+        marginBottom: 16,
+    },
+    modalOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+    },
+    modalOptionText: {
+        fontSize: 14,
+        color: '#475569',
+        fontWeight: '500',
+    },
+    modalOptionTextSelected: {
+        color: '#F97316',
+        fontWeight: '600',
     },
 });

@@ -9,13 +9,16 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { PenTool, ShieldCheck, AlertTriangle, AlertCircle, ChevronRight } from 'lucide-react-native';
+import { PenTool, ShieldCheck, AlertTriangle, AlertCircle, ChevronRight, Activity } from 'lucide-react-native';
 
 interface ModelPrediction {
     risk_percentage: number;
     risk_level: 'Low' | 'Moderate' | 'High';
     label: string;
     confidence: number;
+    uncertainty_pct?: number;
+    borderline?: boolean;
+    source?: string;
     message?: string;
 }
 
@@ -41,6 +44,8 @@ export default function TestResultsScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
 
+    const modelName = (params.modelName as string | undefined) ?? 'NormQuadStream · NB22';
+
     let prediction: ModelPrediction | null = null;
     if (params.prediction) {
         try {
@@ -54,6 +59,8 @@ export default function TestResultsScreen() {
     const riskLevel = (prediction?.risk_level ?? 'Low') as keyof typeof RISK;
     const riskPct = prediction?.risk_percentage ?? 0;
     const confidence = prediction?.confidence ?? 0;
+    const uncertaintyPct = prediction?.uncertainty_pct ?? 0;
+    const borderline = prediction?.borderline ?? false;
     const label = prediction?.label ?? t('results.noPrediction');
 
     const { color, bg, border, Icon } = RISK[riskLevel];
@@ -86,6 +93,17 @@ export default function TestResultsScreen() {
                             {t('results.riskDescription', { riskLevel: t(`results.riskLevel.${riskLevel}`), label })}
                         </Text>
                     </View>
+
+                    {borderline && (
+                        <View style={styles.borderlineBadge}>
+                            <Activity color="#D97706" size={13} />
+                            <Text style={styles.borderlineText}>
+                                High uncertainty — specialist review recommended
+                            </Text>
+                        </View>
+                    )}
+
+                    <Text style={styles.modelLabel}>{modelName}</Text>
                 </View>
 
                 {/* Scores */}
@@ -108,6 +126,16 @@ export default function TestResultsScreen() {
                             </View>
                             <Text style={[styles.scoreRowValue, { color: '#14B8A6' }]}>{confidence.toFixed(1)}%</Text>
                         </View>
+
+                        {uncertaintyPct > 0 && (
+                            <View style={styles.scoreRow}>
+                                <Text style={styles.scoreRowLabel}>Uncertainty</Text>
+                                <View style={styles.barTrack}>
+                                    <View style={[styles.barFill, { width: `${Math.min(uncertaintyPct, 100)}%` as any, backgroundColor: '#F59E0B' }]} />
+                                </View>
+                                <Text style={[styles.scoreRowValue, { color: '#F59E0B' }]}>{uncertaintyPct.toFixed(1)}%</Text>
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -294,6 +322,29 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     bold: { fontWeight: '700' },
+    borderlineBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: '#FFFBEB',
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+    },
+    borderlineText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#D97706',
+    },
+    modelLabel: {
+        marginTop: 10,
+        fontSize: 11,
+        color: '#94A3B8',
+        fontWeight: '500',
+    },
 
     // Button
     homeBtn: {

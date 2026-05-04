@@ -15,6 +15,10 @@ pydantic-settings
 # Data processing
 numpy
 pandas
+scipy
+
+# Deep learning (NormQuadStream NB22 model)
+torch
 
 # ML Framework (
 scikit-learn==1.6.1

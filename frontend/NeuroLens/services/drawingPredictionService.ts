@@ -9,8 +9,20 @@ export interface DrawingPredictionRequest {
   pixel_ratio?: number;
 }
 
+export interface NormQuadStreamPrediction {
+  risk_percentage: number;
+  risk_level: 'Low' | 'Moderate' | 'High';
+  label: string;
+  confidence: number;
+  uncertainty_pct: number;
+  borderline: boolean;
+  source: string;
+  nqs_features?: Record<string, number>;
+  message?: string;
+}
+
 export interface DrawingPredictionResponse {
-  prediction: any;
+  prediction: NormQuadStreamPrediction;
   save_result: any;
 }
 
@@ -21,7 +33,8 @@ export const analyzeDrawingPrediction = async (
   waveData?: DrawingDataJSON,
   firebaseToken?: string,
   pixelRatio?: number,
-  sessionId?: string
+  sessionId?: string,
+  endpoint?: string
 ): Promise<DrawingPredictionResponse> => {
   const requestData: DrawingPredictionRequest = {
     user_id: userId,
@@ -41,8 +54,9 @@ export const analyzeDrawingPrediction = async (
   console.log('Sending drawing prediction request:', requestData);
   console.log('With headers:', headers);
 
+  const url = endpoint ?? '/api/drawing-prediction/analyze-normquadstream';
   const response = await api.post<DrawingPredictionResponse>(
-    '/api/drawing-prediction/analyze-local',
+    url,
     requestData,
     { headers }
   );
