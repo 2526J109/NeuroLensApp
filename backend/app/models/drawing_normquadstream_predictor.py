@@ -137,19 +137,38 @@ def _load_predictor() -> Optional[_Predictor]:
     if _predictor_loaded:
         return _predictor
     _predictor_loaded = True
+    
     missing = [p for p in (_MODEL_PATH, _SCALERS_PATH) if not os.path.exists(p)]
     if missing:
-        logger.warning(
-            "[NQSPredictor] Model files not found: %s  "
-            "Place nb22_normquadstream_noaug_final.pth + scalers.pkl in app/models/",
-            missing,
+        logger.error(
+            "[NQSPredictor] CRITICAL: Model files not found at startup. "
+            "Missing files: %s. "
+            "Expected paths:\n"
+            "  - %s (pth file)\n"
+            "  - %s (scalers file)\n"
+            "Place both files in app/models/ directory.",
+            missing, _MODEL_PATH, _SCALERS_PATH,
         )
         return None
+    
     try:
+        logger.info(f"[NQSPredictor] Loading model from {_MODEL_PATH} and scalers from {_SCALERS_PATH}...")
         _predictor = _Predictor(_MODEL_PATH, _SCALERS_PATH)
-    except Exception as exc:
-        logger.error("[NQSPredictor] Load failed: %s", exc)
+        logger.info("[NQSPredictor] Successfully loaded NormQuadStream model and scalers")
+    except ImportError as e:
+        logger.error(
+            "[NQSPredictor] Import error (likely missing torch): %s. "
+            "Ensure torch is installed: pip install torch",
+            e, exc_info=True
+        )
         _predictor = None
+    except FileNotFoundError as e:
+        logger.error("[NQSPredictor] File not found during loading: %s", e, exc_info=True)
+        _predictor = None
+    except Exception as exc:
+        logger.error("[NQSPredictor] Failed to load model: %s (type: %s)", exc, type(exc).__name__, exc_info=True)
+        _predictor = None
+    
     return _predictor
 
 
@@ -186,17 +205,36 @@ def predict_normquadstream_risk(
     predictor = _load_predictor()
     if predictor is None:
         raise RuntimeError(
-            "NormQuadStream model files not found. "
-            f"Expected: {_MODEL_PATH}  and  {_SCALERS_PATH}"
+            "NormQuadStream model failed to load. "
+            f"Model file: {_MODEL_PATH} "
+            f"Scalers file: {_SCALERS_PATH} "
+            "Check logs for detailed error. Ensure both .pth and .pkl files exist and are readable."
+        )
+
+    # Validate input shapes
+    expected_shapes = [(3,), (3,), (3,), (3,)]
+    actual_shapes = [s1.shape, s2.shape, s3.shape, s4.shape]
+    if actual_shapes != expected_shapes:
+        raise ValueError(
+            f"Feature shape mismatch. Expected {expected_shapes}, got {actual_shapes}. "
+            "Each stream must have exactly 3 features."
         )
 
     feat = np.concatenate([s1, s2, s3, s4])
-    if not np.all(np.isfinite(feat)):
-        non_finite = [i for i, v in enumerate(feat) if not np.isfinite(v)]
-        raise ValueError(f"Non-finite features at indices {non_finite}. "
-                         "Drawing may be too short or degenerate.")
+    non_finite_indices = [i for i, v in enumerate(feat) if not np.isfinite(v)]
+    if non_finite_indices:
+        raise ValueError(
+            f"Non-finite features (NaN/Inf) at indices {non_finite_indices} (values: {feat[non_finite_indices]}). "
+            "Drawing may be too short, degenerate, or contain invalid points. "
+            "Ensure drawing points have valid x, y, timestamp values."
+        )
 
-    prob, unc = predictor.predict(s1, s2, s3, s4, n_mc=n_mc)
+    try:
+        prob, unc = predictor.predict(s1, s2, s3, s4, n_mc=n_mc)
+    except Exception as e:
+        logger.error(f"[NQSPredictor] Inference failed on valid features: {e}", exc_info=True)
+        raise RuntimeError(f"Model inference failed: {str(e)}")
+    
     risk_pct  = round(prob * 100, 2)
 
     return {

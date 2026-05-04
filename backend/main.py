@@ -12,6 +12,7 @@ from app.routes import cognitive_analysis
 from app.routes import cognitive_raw_data
 from app.routes import wearable_prediction
 from app.routes import multimodal_result
+from app.routes import health
 from app.core.config import settings
 import logging
 import uvicorn
@@ -22,21 +23,32 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Startup: eagerly load all heavy ML models (Whisper + multimodal predictor)
+    Startup: eagerly load all heavy ML models (Whisper + multimodal predictor + NormQuadStream)
     so the first real request is never blocked by model loading.
     Cloud Run will mark the container as ready only after startup completes,
     which prevents 503s caused by cold-start timeouts.
     """
     logger.info("=== NeuroLens API startup: warming up ML models ===")
 
-    # 1. Multimodal predictor (joblib sklearn models)
+    # 1. NormQuadStream predictor (PyTorch model)
+    try:
+        from app.models.drawing_normquadstream_predictor import _load_predictor
+        nqs_predictor = _load_predictor()
+        if nqs_predictor:
+            logger.info("NormQuadStream NB22 predictor — ready")
+        else:
+            logger.error("NormQuadStream NB22 predictor — FAILED to load (check model files)")
+    except Exception as e:
+        logger.error("NormQuadStream NB22 predictor failed to load at startup: %s", e, exc_info=True)
+
+    # 2. Multimodal predictor (joblib sklearn models)
     try:
         voice_multimodal.get_predictor()
         logger.info("Multimodal predictor — ready")
     except Exception as e:
         logger.error("Multimodal predictor failed to load at startup: %s", e)
 
-    # 2. Whisper speech-to-text (tiny model, ~75 MB)
+    # 3. Whisper speech-to-text (tiny model, ~75 MB)
     try:
         voice_multimodal._load_whisper_eagerly()
         logger.info("Whisper model — ready")
@@ -66,6 +78,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(health.router)  # Health checks (no API prefix)
 app.include_router(voice_analysis.router, prefix=settings.API_V1_STR)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(drawing_prediction.router, prefix=settings.API_V1_STR)
@@ -81,8 +94,9 @@ async def root():
     return {"message": "Welcome to NeuroLens API"}
 
 
-@app.get("/health")
+@app.get("/health-simple")
 async def health_check():
+    """Simple health check for load balancers (deprecated - use /health/ready or /health/diagnostics)."""
     return {"status": "healthy"}
 
 
