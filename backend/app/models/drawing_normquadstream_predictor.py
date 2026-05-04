@@ -88,7 +88,7 @@ class _Predictor:
                 return samples.mean(0), samples.std(0)
 
         # ── Load weights ──────────────────────────────────────────────────────
-        ckpt = torch.load(model_path, map_location="cpu")
+        ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
         cfg  = ckpt["config"]
         dims = tuple(ckpt["stream_dims"])
 
