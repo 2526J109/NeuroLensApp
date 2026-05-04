@@ -40,7 +40,7 @@ export const ProgressCard = () => {
             <View style={styles.contentContainer}>
                 <View style={styles.textContainer}>
                     <Text style={styles.cardTitle}>{t('home.progress.title')}</Text>
-                    <Text style={styles.subtitle}>{t('home.progress.subtitle')}</Text>
+                    <Text style={styles.subtitle}>{t('home.progress.subtitle', { completed: completedTasks.length, total: 4 })}</Text>
 
                     <TouchableOpacity
                         style={[styles.button, completedTasks.length === 0 && styles.buttonDisabled]}

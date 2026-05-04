@@ -189,7 +189,7 @@
         "healthAssessment": "சுகாதார மதிப்பீடு",
         "progress": {
             "title": "உங்கள் முன்னேற்றம்",
-            "subtitle": "4 சோதனைகளில் 1 முடிந்தது",
+            "subtitle": "%{total} சோதனைகளில் %{completed} முடிந்தது",
             "viewResults": "முடிவுகளைக் காண்க",
             "complete": "முடிந்தது"
         },
