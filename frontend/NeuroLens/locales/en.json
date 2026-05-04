@@ -400,6 +400,7 @@
         "tmtInstrLabel": "The dot you tap next glows green",
         "tmtInstrNote": "You'll practice with 5 dots first.",
         "startPractice": "Start Practice",
+        "skipPractice": "Skip Practice",
         "practiceTag": "PRACTICE",
         "tapNext": "Tap",
         "glowHint": "The glowing dot is where to tap next",

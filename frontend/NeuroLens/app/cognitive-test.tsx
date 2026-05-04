@@ -666,6 +666,12 @@ export default function CognitiveAssessment() {
                 ]}
               />
             </View>
+            <TouchableOpacity
+              style={styles.skipBtn}
+              onPress={() => setStage("tmt_rest")}
+            >
+              <Text style={styles.skipBtnTxt}>{t("cognitive.skipPractice")}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -823,6 +829,17 @@ export default function CognitiveAssessment() {
 
             {/* Numpad — unchanged handler */}
             <Numpad onPress={handleSdmt} />
+
+            {/* Skip practice */}
+            <TouchableOpacity
+              style={styles.skipBtn}
+              onPress={() => {
+                setSdmtPhase("real");
+                setStage("sdmt_instr");
+              }}
+            >
+              <Text style={styles.skipBtnTxt}>{t("cognitive.skipPractice")}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -1248,4 +1265,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   pauseSub: { fontSize: 15, color: "#94A3B8", textAlign: "center" },
+  skipBtn: {
+    marginTop: 10,
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.white,
+  },
+  skipBtnTxt: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: C.muted,
+  },
 });
