@@ -176,23 +176,25 @@ export default function WearableScreen() {
                         return;
                     }
                     if (characteristic?.value) {
-                        const decoded = decodeBase64(characteristic.value);
-                        console.log("BLE Received:", decoded);
+                        try {
+                            const decoded = decodeBase64(characteristic.value).replace(/[\0\r\n\t\x00-\x1F\x7F]/g, '');
+                            console.log("BLE Received:", decoded);
 
-                        // Expected formats: 
-                        // "PROG:15:23" -> Gathering data, window 15 of 23
-                        // "DONE:PD:0.35" -> Session finished, Parkinson's Detected (35% positive windows)
-                        // "DONE:OK:0.04" -> Session finished, Healthy (4% positive windows)
+                            // Flexible matching for PROG:X:Y
+                            if (decoded.includes("PROG")) {
+                                const progMatch = decoded.match(/PROG.*?(\d+).*?(\d+)/);
+                                if (progMatch) {
+                                    setSessionStatus('GATHERING');
+                                    setSessionProgress(parseInt(progMatch[1], 10) || 0);
+                                    setSessionTotal(parseInt(progMatch[2], 10) || 23);
+                                }
+                            } else if (decoded.includes("DONE")) {
+                                const isParkinsons = decoded.includes("PD");
+                                const resultType = isParkinsons ? 'PARKINSONS' : 'HEALTHY';
 
-                        const parts = decoded.split(":");
-                        if (parts.length >= 3) {
-                            if (parts[0] === "PROG") {
-                                setSessionStatus('GATHERING');
-                                setSessionProgress(parseInt(parts[1], 10) || 0);
-                                setSessionTotal(parseInt(parts[2], 10) || 23);
-                            } else if (parts[0] === "DONE") {
-                                const resultType = parts[1] === "PD" ? 'PARKINSONS' : 'HEALTHY';
-                                const ratio = parts[2] || "0.00";
+                                // Extract the ratio (decimal number)
+                                const ratioMatch = decoded.match(/\d+\.\d+/);
+                                const ratio = ratioMatch ? ratioMatch[0] : "0.00";
                                 const currentStep = assessmentStepRef.current;
 
                                 // Store step result
@@ -210,6 +212,8 @@ export default function WearableScreen() {
                                     setTimeout(() => setAssessmentStep(4), 1500);
                                 }
                             }
+                        } catch (err) {
+                            console.error("BLE Parse Error:", err, "Value:", characteristic.value);
                         }
                     }
                 }
@@ -406,8 +410,8 @@ export default function WearableScreen() {
                                                 })}
                                             </Text>
                                             <Text style={styles.progressText}>{t('wearable.observation', { current: sessionProgress, total: sessionTotal })}</Text>
-                                            <View style={styles.progressBarBackground}>
-                                                <View style={{ height: '100%', backgroundColor: '#14B8A6', borderRadius: 6, width: `${Math.round((sessionProgress / Math.max(1, sessionTotal)) * 100)}%` as any }} />
+                                            <View style={[styles.progressBarBackground, { marginVertical: 10 }]}>
+                                                <View style={[styles.progressBarFill, { width: `${sessionTotal > 0 ? Math.min(100, Math.round((sessionProgress / sessionTotal) * 100)) : 0}%` as any }]} />
                                             </View>
                                             <Text style={styles.progressHint}>{t('wearable.continueHint')}</Text>
                                             <ActivityIndicator style={{ marginTop: 16 }} size="small" color="#14B8A6" />
@@ -471,7 +475,14 @@ export default function WearableScreen() {
                                         </Text>
                                     </View>
 
-                                    <Text style={styles.summaryHeader}>{t('wearable.detailedBreakdown')}</Text>
+                                    <View style={styles.disclaimerCard}>
+                                        <Text style={styles.disclaimerTitle}>{t('results.importantNotice')}</Text>
+                                        <Text style={styles.disclaimerText}>
+                                            {t('results.disclaimer')}
+                                        </Text>
+                                    </View>
+
+                                    {/* <Text style={styles.summaryHeader}>{t('wearable.detailedBreakdown')}</Text>
 
                                     {[1, 2, 3].map((step) => (
                                         <View key={step} style={styles.summaryItem}>
@@ -488,15 +499,20 @@ export default function WearableScreen() {
                                                 {t('wearable.ofWindows', { total: sessionTotal, current: Math.round(parseFloat(stepResults[step - 1]?.ratio || "0") * sessionTotal) })}
                                             </Text>
                                         </View>
-                                    ))}
+                                    ))} */}
 
                                     <TouchableOpacity
-                                        style={[styles.startButton, { marginTop: 32, width: '100%', backgroundColor: '#0F172A' }]}
+                                        style={[styles.startButton, {
+                                            marginTop: 32,
+                                            alignSelf: 'stretch',
+                                            alignItems: 'center',
+                                            backgroundColor: '#2dc485ff'
+                                        }]}
                                         onPress={() => {
                                             router.replace('/(tabs)');
                                         }}
                                     >
-                                        <Text style={styles.startButtonText}>{t('results.backToHome')}</Text>
+                                        <Text style={[styles.startButtonText, { textAlign: 'center' }]}>{t('results.backToHome')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -696,7 +712,7 @@ const styles = StyleSheet.create({
         lineHeight: 22,
     },
     startButton: {
-        backgroundColor: '#3B82F6', // Blue 500
+        backgroundColor: '#000000ff', // Blue 500
         paddingVertical: 14,
         paddingHorizontal: 32,
         borderRadius: 30,
@@ -996,5 +1012,24 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
         textAlign: 'center',
         fontStyle: 'italic',
+    },
+    disclaimerCard: {
+        backgroundColor: '#FEF3C7',
+        borderLeftWidth: 4,
+        borderLeftColor: '#F59E0B',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 20,
+    },
+    disclaimerTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#92400E',
+        marginBottom: 8,
+    },
+    disclaimerText: {
+        fontSize: 14,
+        color: '#92400E',
+        lineHeight: 20,
     },
 });

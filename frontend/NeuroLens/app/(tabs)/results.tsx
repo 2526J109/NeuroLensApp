@@ -360,8 +360,8 @@ export default function ResultsScreen() {
           {t('resultsTab.disclaimerFull')}
         </Text>
 
-        {/* View Multimodal Results Button */}
-        {isSessionComplete && (
+        {/* View Multimodal Results Button - Hidden as requested */}
+        {/* {isSessionComplete && (
           <TouchableOpacity
             style={styles.multimodalButton}
             onPress={() => router.push('/multimodal-results' as any)}
@@ -376,7 +376,7 @@ export default function ResultsScreen() {
             </View>
             <ArrowLeft size={20} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
-        )}
+        )} */}
 
         {/* Bottom padding for tab bar */}
         <View style={{ height: 20 }} />

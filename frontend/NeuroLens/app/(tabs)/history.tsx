@@ -27,6 +27,7 @@ import api from '@/services/api';
 interface AssessmentEntry {
   id: string;
   date: string;
+  rawDate: Date;
   overallScore: number; // This will be risk score (0-100, where lower is better)
   trend: 'up' | 'down' | 'stable';
   categories: {
@@ -66,6 +67,7 @@ const getRiskColor = (riskLevel: 'low' | 'medium' | 'high'): string => {
 const createAssessmentEntry = (
   id: string,
   date: string,
+  rawDate: Date,
   overallHealthy: number, // Model output (healthy percentage)
   categoriesHealthy: { wearable: number; voice: number; drawing: number; brain: number }
 ): AssessmentEntry => {
@@ -73,6 +75,7 @@ const createAssessmentEntry = (
   return {
     id,
     date,
+    rawDate,
     overallScore: overallRisk, // Store as risk score
     trend: 'stable', // Will be calculated later
     categories: {
@@ -269,20 +272,20 @@ const LineGraph = ({ data, title }: { data: AssessmentEntry[]; title: string }) 
             // Show all labels if 5 or fewer, otherwise show every nth label
             const showLabel = data.length <= 5 || index % Math.ceil(data.length / 5) === 0 || index === data.length - 1;
             if (showLabel) {
-              // Handle different date formats
               let shortDate = point.date;
-              if (point.date.includes(',')) {
-                // Format: 'Dec 12,2025' -> 'Dec 12'
-                const dateParts = point.date.split(',');
-                shortDate = dateParts[0];
-              } else if (point.date.includes('Week')) {
-                // Format: 'Week 4' -> keep as is
-                shortDate = point.date;
-              } else if (point.date.includes(' ')) {
-                // Format: 'Dec 2025' -> 'Dec'
-                const dateParts = point.date.split(' ');
-                shortDate = dateParts[0];
+              
+              // If it's a "Wk Oct 12" format, keep it as is or shorten to "Oct 12"
+              if (shortDate.startsWith('Wk ')) {
+                // Keep as is or maybe remove 'Wk' if space is tight
+                shortDate = shortDate.replace('Wk ', '');
+              } else if (shortDate.includes(' ') && !isNaN(Date.parse(shortDate))) {
+                // If it's something like "Oct 12, 2023", maybe just show "Oct 12"
+                const parts = shortDate.split(' ');
+                if (parts.length >= 2) {
+                  shortDate = `${parts[0]} ${parts[1].replace(',', '')}`;
+                }
               }
+              
               return (
                 <SvgText
                   key={index}
@@ -336,6 +339,7 @@ export default function HistoryScreen() {
         return {
           id: item.id,
           date: formatDate(item.timestamp),
+          rawDate: new Date(item.timestamp),
           overallScore,
           trend,
           categories: {
@@ -370,10 +374,68 @@ export default function HistoryScreen() {
     ? Math.round(historyData.reduce((sum, e) => sum + e.overallScore, 0) / totalAssessments)
     : 0;
 
-  // Filter for graphs
-  const dailyData = [...historyData].slice(0, 7).reverse();
-  const weeklyData = [...historyData].slice(0, 4).reverse();
-  const monthlyData = [...historyData].slice(0, 6).reverse();
+  // Aggregation helpers
+  const aggregateData = (data: AssessmentEntry[], period: 'day' | 'week' | 'month') => {
+    if (data.length === 0) return [];
+
+    const groups: Record<string, AssessmentEntry[]> = {};
+    
+    data.forEach(entry => {
+      let key = '';
+      const d = entry.rawDate;
+      
+      if (period === 'day') {
+        // Key by YYYY-MM-DD for accurate grouping across years
+        key = d.toISOString().split('T')[0];
+      } else if (period === 'week') {
+        // Group by year and week number
+        const startOfWeek = new Date(d);
+        startOfWeek.setDate(d.getDate() - d.getDay());
+        key = `${startOfWeek.getFullYear()}-W${Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000))}`;
+      } else if (period === 'month') {
+        key = `${d.getFullYear()}-${d.getMonth()}`;
+      }
+      
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(entry);
+    });
+
+    return Object.keys(groups).map(key => {
+      const groupEntries = groups[key];
+      const count = groupEntries.length;
+      const d = groupEntries[0].rawDate;
+      
+      let displayDate = '';
+      if (period === 'day') {
+        displayDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      } else if (period === 'week') {
+        const startOfWeek = new Date(d);
+        startOfWeek.setDate(d.getDate() - d.getDay());
+        displayDate = `Wk ${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+      } else if (period === 'month') {
+        displayDate = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      }
+      
+      return {
+        id: key,
+        date: displayDate,
+        rawDate: d,
+        overallScore: Math.round(groupEntries.reduce((sum, e) => sum + e.overallScore, 0) / count),
+        trend: 'stable' as const,
+        categories: {
+          wearable: Math.round(groupEntries.reduce((sum, e) => sum + e.categories.wearable, 0) / count),
+          voice: Math.round(groupEntries.reduce((sum, e) => sum + e.categories.voice, 0) / count),
+          drawing: Math.round(groupEntries.reduce((sum, e) => sum + e.categories.drawing, 0) / count),
+          brain: Math.round(groupEntries.reduce((sum, e) => sum + e.categories.brain, 0) / count),
+        }
+      };
+    }).sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+  };
+
+  // Filter and aggregate for graphs
+  const dailyData = aggregateData(historyData, 'day').slice(-7);
+  const weeklyData = aggregateData(historyData, 'week').slice(-6);
+  const monthlyData = aggregateData(historyData, 'month').slice(-6);
 
   if (loading) {
     return (
